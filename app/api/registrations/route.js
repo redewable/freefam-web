@@ -4,16 +4,14 @@ import { NextResponse } from 'next/server';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
-// Get the start of the current week (Monday)
 const getWeekKey = () => {
   const now = new Date();
   const day = now.getDay();
   const diff = now.getDate() - day + (day === 0 ? -6 : 1);
-  const monday = new Date(now.setDate(diff));
+  const monday = new Date(now.getFullYear(), now.getMonth(), diff);
   return monday.toISOString().split('T')[0];
 };
 
-// Get the current month key
 const getMonthKey = () => {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -21,67 +19,102 @@ const getMonthKey = () => {
 
 export async function GET(request) {
   try {
-    // Get query params for filtering
     const { searchParams } = new URL(request.url);
     const filter = searchParams.get('filter') || 'all';
     
-    // Fetch recent successful payments from Stripe
+    // 1. Fetch paid registrations from Stripe
     const sessions = await stripe.checkout.sessions.list({
       limit: 100,
       status: 'complete',
-      expand: ['data.customer_details', 'data.line_items'],
     });
 
-    // Get current period keys
+    // 2. Fetch free registrations from KV
+    let freeIds = [];
+    try {
+      freeIds = await kv.lrange('registrations:list', 0, -1) || [];
+    } catch (e) {}
+
+    const freeRegistrations = [];
+    for (const id of freeIds) {
+      try {
+        const reg = await kv.get(`registration:${id}`);
+        if (reg) freeRegistrations.push(reg);
+      } catch (e) {}
+    }
+
+    // 3. Get check-in statuses
     const weekKey = getWeekKey();
     const monthKey = getMonthKey();
-    
-    // Get check-in statuses for each session
     const checkinStatuses = {};
+
     for (const session of sessions.data) {
       const priceType = session.metadata?.priceType || 'single';
-      
-      // Check the appropriate key based on price type
       const periodKey = priceType === 'monthly' ? monthKey : weekKey;
       const keyPrefix = priceType === 'monthly' ? 'month' : 'week';
       const key = `checkin:${keyPrefix}:${periodKey}:${session.id}`;
-      
       try {
         const status = await kv.get(key);
-        if (status) {
-          checkinStatuses[session.id] = status;
-        }
-      } catch (e) {
-        // Key doesn't exist
-      }
+        if (status) checkinStatuses[session.id] = status;
+      } catch (e) {}
     }
 
-    // Format the registrations
-    const registrations = sessions.data
-      .filter(session => {
-        if (filter === 'all') return true;
-        return session.metadata?.priceType === filter;
-      })
-      .map(session => ({
-        id: session.id,
-        name: session.metadata?.customerName || session.customer_details?.name || 'Unknown',
-        email: session.customer_details?.email || 'Unknown',
-        ltdId: session.metadata?.ltdId || '',
-        uplinePlatinum: session.metadata?.uplinePlatinum || '',
-        priceType: session.metadata?.priceType || 'single',
-        source: session.metadata?.source || 'main', // Track if from BCS or main page
-        amount: session.amount_total / 100,
-        date: new Date(session.created * 1000).toLocaleDateString(),
-        checkedIn: checkinStatuses[session.id]?.checkedIn || false,
-        checkinTimestamp: checkinStatuses[session.id]?.timestamp || null,
-      }));
+    for (const reg of freeRegistrations) {
+      const key = `checkin:week:${weekKey}:${reg.id}`;
+      try {
+        const status = await kv.get(key);
+        if (status) checkinStatuses[reg.id] = status;
+      } catch (e) {}
+    }
 
-    return NextResponse.json({ registrations });
+    // 4. Format paid registrations
+    const paidRegs = sessions.data.map(session => ({
+      id: session.id,
+      name: session.metadata?.customerName || session.customer_details?.name || 'Unknown',
+      email: session.customer_details?.email || 'Unknown',
+      ltdId: session.metadata?.ltdId || '',
+      uplinePlatinum: session.metadata?.uplinePlatinum || '',
+      priceType: session.metadata?.priceType || 'single',
+      type: 'ibo',
+      source: session.metadata?.source || 'main',
+      amount: session.amount_total / 100,
+      date: new Date(session.created * 1000).toLocaleDateString(),
+      createdAt: new Date(session.created * 1000).toISOString(),
+      checkedIn: checkinStatuses[session.id]?.checkedIn || false,
+      checkedInAt: checkinStatuses[session.id]?.timestamp || null,
+    }));
+
+    // 5. Format free registrations
+    const freeRegs = freeRegistrations.map(reg => ({
+      id: reg.id,
+      name: reg.name,
+      email: reg.email,
+      ltdId: reg.ltdId || '',
+      uplinePlatinum: reg.uplinePlatinum || '',
+      priceType: reg.type,
+      type: reg.type,
+      invitedBy: reg.invitedBy || '',
+      visitNumber: reg.visitNumber || '',
+      source: reg.source || 'main',
+      amount: 0,
+      date: new Date(reg.createdAt).toLocaleDateString(),
+      createdAt: reg.createdAt,
+      checkedIn: checkinStatuses[reg.id]?.checkedIn || false,
+      checkedInAt: checkinStatuses[reg.id]?.timestamp || null,
+    }));
+
+    let all = [...paidRegs, ...freeRegs];
+
+    if (filter !== 'all') {
+      if (filter === 'ibo') all = all.filter(r => r.type === 'ibo');
+      else if (filter === 'apprentice') all = all.filter(r => r.type === 'apprentice');
+      else if (filter === 'guest') all = all.filter(r => r.type === 'guest');
+    }
+
+    all.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    return NextResponse.json({ registrations: all });
   } catch (error) {
     console.error('Error fetching registrations:', error);
-    return NextResponse.json(
-      { error: error.message },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
