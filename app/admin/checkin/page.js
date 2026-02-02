@@ -55,7 +55,14 @@ export default function CheckinPage() {
 
   const fetchRegs = async () => {
     setLoading(true);
-    try { const res = await fetch('/api/registrations'); const data = await res.json(); setRegs(data.registrations || []); } catch (e) {}
+    try { 
+      const res = await fetch('/api/registrations'); 
+      const data = await res.json(); 
+      console.log('Registrations response:', data);
+      setRegs(data.registrations || []); 
+    } catch (e) {
+      console.error('Fetch error:', e);
+    }
     setLoading(false);
   };
 

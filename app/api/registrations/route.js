@@ -23,117 +23,115 @@ export async function GET(request) {
     const filter = searchParams.get('filter') || 'all';
     
     // 1. Fetch paid registrations from Stripe
-    let sessions = { data: [] };
+    let paidRegs = [];
     try {
-      sessions = await stripe.checkout.sessions.list({
+      const sessions = await stripe.checkout.sessions.list({
         limit: 100,
         status: 'complete',
       });
-    } catch (e) {
-      console.error('Stripe error:', e);
+      
+      paidRegs = sessions.data.map(session => ({
+        id: session.id,
+        name: session.metadata?.customerName || session.customer_details?.name || 'Unknown',
+        email: session.customer_details?.email || 'Unknown',
+        ltdId: session.metadata?.ltdId || '',
+        uplinePlatinum: session.metadata?.uplinePlatinum || '',
+        priceType: session.metadata?.priceType || 'single',
+        type: 'ibo',
+        source: session.metadata?.source || 'main',
+        amount: session.amount_total / 100,
+        date: new Date(session.created * 1000).toLocaleDateString(),
+        createdAt: new Date(session.created * 1000).toISOString(),
+        checkedIn: false,
+        visitNumber: '',
+      }));
+    } catch (stripeError) {
+      console.error('Stripe error:', stripeError.message);
     }
 
-    // 2. Fetch free registrations from KV using keys pattern
-    const freeRegistrations = [];
+    // 2. Fetch free registrations from KV
+    let freeRegs = [];
     try {
+      // Get all keys that match registration:free_*
       const keys = await kv.keys('registration:free_*');
-      console.log('Found free registration keys:', keys);
-      for (const key of keys) {
-        const reg = await kv.get(key);
-        if (reg) {
-          console.log('Found registration:', reg);
-          freeRegistrations.push(reg);
-        }
+      console.log('Found registration keys:', keys);
+      
+      if (keys && keys.length > 0) {
+        // Fetch all registrations in parallel
+        const registrations = await Promise.all(
+          keys.map(key => kv.get(key))
+        );
+        
+        freeRegs = registrations
+          .filter(reg => reg !== null)
+          .map(reg => ({
+            id: reg.id,
+            name: reg.name,
+            email: reg.email,
+            ltdId: reg.ltdId || '',
+            uplinePlatinum: reg.uplinePlatinum || '',
+            priceType: reg.type, // guest or apprentice
+            type: reg.type,
+            invitedBy: reg.invitedBy || '',
+            visitNumber: reg.visitNumber || '',
+            source: reg.source || 'main',
+            amount: 0,
+            date: new Date(reg.createdAt).toLocaleDateString(),
+            createdAt: reg.createdAt,
+            checkedIn: false,
+          }));
       }
-    } catch (e) {
-      console.error('KV keys error:', e);
-      // Fallback to list method
-      try {
-        const freeIds = await kv.lrange('registrations:list', 0, -1) || [];
-        console.log('Fallback - found IDs:', freeIds);
-        for (const id of freeIds) {
-          const reg = await kv.get(`registration:${id}`);
-          if (reg) freeRegistrations.push(reg);
-        }
-      } catch (e2) {
-        console.error('KV list error:', e2);
-      }
+      
+      console.log('Free registrations found:', freeRegs.length);
+    } catch (kvError) {
+      console.error('KV error:', kvError.message);
     }
 
     // 3. Get check-in statuses
     const weekKey = getWeekKey();
     const monthKey = getMonthKey();
-    const checkinStatuses = {};
-
-    for (const session of sessions.data) {
-      const priceType = session.metadata?.priceType || 'single';
-      const periodKey = priceType === 'monthly' ? monthKey : weekKey;
-      const keyPrefix = priceType === 'monthly' ? 'month' : 'week';
-      const key = `checkin:${keyPrefix}:${periodKey}:${session.id}`;
+    
+    // Update check-in status for all registrations
+    const allRegs = [...paidRegs, ...freeRegs];
+    
+    for (const reg of allRegs) {
       try {
+        const isMonthly = reg.priceType === 'monthly';
+        const periodKey = isMonthly ? monthKey : weekKey;
+        const keyPrefix = isMonthly ? 'month' : 'week';
+        const key = `checkin:${keyPrefix}:${periodKey}:${reg.id}`;
+        
         const status = await kv.get(key);
-        if (status) checkinStatuses[session.id] = status;
-      } catch (e) {}
+        if (status?.checkedIn) {
+          reg.checkedIn = true;
+          reg.checkedInAt = status.timestamp;
+        }
+      } catch (e) {
+        // Ignore check-in fetch errors
+      }
     }
 
-    for (const reg of freeRegistrations) {
-      const key = `checkin:week:${weekKey}:${reg.id}`;
-      try {
-        const status = await kv.get(key);
-        if (status) checkinStatuses[reg.id] = status;
-      } catch (e) {}
-    }
-
-    // 4. Format paid registrations
-    const paidRegs = sessions.data.map(session => ({
-      id: session.id,
-      name: session.metadata?.customerName || session.customer_details?.name || 'Unknown',
-      email: session.customer_details?.email || 'Unknown',
-      ltdId: session.metadata?.ltdId || '',
-      uplinePlatinum: session.metadata?.uplinePlatinum || '',
-      priceType: session.metadata?.priceType || 'single',
-      type: 'ibo',
-      source: session.metadata?.source || 'main',
-      amount: session.amount_total / 100,
-      date: new Date(session.created * 1000).toLocaleDateString(),
-      createdAt: new Date(session.created * 1000).toISOString(),
-      checkedIn: checkinStatuses[session.id]?.checkedIn || false,
-      checkedInAt: checkinStatuses[session.id]?.timestamp || null,
-    }));
-
-    // 5. Format free registrations
-    const freeRegs = freeRegistrations.map(reg => ({
-      id: reg.id,
-      name: reg.name,
-      email: reg.email,
-      ltdId: reg.ltdId || '',
-      uplinePlatinum: reg.uplinePlatinum || '',
-      priceType: reg.type,
-      type: reg.type,
-      invitedBy: reg.invitedBy || '',
-      visitNumber: reg.visitNumber || '',
-      source: reg.source || 'main',
-      amount: 0,
-      date: new Date(reg.createdAt).toLocaleDateString(),
-      createdAt: reg.createdAt,
-      checkedIn: checkinStatuses[reg.id]?.checkedIn || false,
-      checkedInAt: checkinStatuses[reg.id]?.timestamp || null,
-    }));
-
-    let all = [...paidRegs, ...freeRegs];
-    console.log('Total registrations:', all.length, 'Paid:', paidRegs.length, 'Free:', freeRegs.length);
-
+    // 4. Filter if needed
+    let filtered = allRegs;
     if (filter !== 'all') {
-      if (filter === 'ibo') all = all.filter(r => r.type === 'ibo');
-      else if (filter === 'apprentice') all = all.filter(r => r.type === 'apprentice');
-      else if (filter === 'guest') all = all.filter(r => r.type === 'guest');
+      if (filter === 'ibo') filtered = allRegs.filter(r => r.type === 'ibo');
+      else if (filter === 'apprentice') filtered = allRegs.filter(r => r.type === 'apprentice');
+      else if (filter === 'guest') filtered = allRegs.filter(r => r.type === 'guest');
     }
 
-    all.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    // Sort by date (newest first)
+    filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-    return NextResponse.json({ registrations: all });
+    return NextResponse.json({ 
+      registrations: filtered,
+      debug: {
+        paidCount: paidRegs.length,
+        freeCount: freeRegs.length,
+        totalCount: filtered.length,
+      }
+    });
   } catch (error) {
     console.error('Error fetching registrations:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: error.message, registrations: [] }, { status: 500 });
   }
 }
