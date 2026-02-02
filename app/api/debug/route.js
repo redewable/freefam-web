@@ -1,51 +1,98 @@
 import { kv } from '@vercel/kv';
 import { NextResponse } from 'next/server';
 
-// Test endpoint to verify KV is working
-// GET /api/debug - shows all registration keys
-// POST /api/debug - creates a test registration
+const getTodayKey = () => new Date().toISOString().split('T')[0];
 
 export async function GET() {
   try {
-    // Test basic KV connectivity
-    await kv.set('test:ping', 'pong');
-    const pong = await kv.get('test:ping');
+    const todayKey = getTodayKey();
     
-    // Get all registration keys
+    // Get all keys
     const regKeys = await kv.keys('registration:*');
     const historyKeys = await kv.keys('history:*');
     const checkinKeys = await kv.keys('checkin:*');
     
-    // Get all registrations
-    const registrations = [];
-    for (const key of regKeys || []) {
-      const reg = await kv.get(key);
-      registrations.push({ key, data: reg });
+    // Get today's history specifically
+    const todayHistoryKey = `history:${todayKey}`;
+    let todayHistory = [];
+    try {
+      const items = await kv.smembers(todayHistoryKey);
+      todayHistory = (items || []).map(item => {
+        try { return JSON.parse(item); } catch { return item; }
+      });
+    } catch (e) {
+      console.log('Error getting today history:', e);
+    }
+    
+    // Get all history data
+    const allHistory = {};
+    for (const key of historyKeys || []) {
+      try {
+        const items = await kv.smembers(key);
+        allHistory[key] = (items || []).map(item => {
+          try { return JSON.parse(item); } catch { return item; }
+        });
+      } catch (e) {
+        allHistory[key] = `Error: ${e.message}`;
+      }
     }
     
     return NextResponse.json({
-      kvWorking: pong === 'pong',
+      today: todayKey,
       keys: {
         registrations: regKeys || [],
         history: historyKeys || [],
         checkins: checkinKeys || [],
       },
-      registrationData: registrations,
+      todayHistory,
+      allHistory,
     });
   } catch (error) {
-    return NextResponse.json({ 
-      error: error.message,
-      kvWorking: false,
-    }, { status: 500 });
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
 
 export async function POST(request) {
   try {
     const { action } = await request.json();
+    const todayKey = getTodayKey();
+    const historyKey = `history:${todayKey}`;
     
-    if (action === 'test') {
-      // Create a test guest registration
+    if (action === 'test-history') {
+      // Test adding to history directly
+      const testEntry = JSON.stringify({
+        id: 'test_' + Date.now(),
+        name: 'Test Person',
+        type: 'guest',
+        priceType: 'guest',
+        visitNumber: '1st',
+        timestamp: new Date().toISOString(),
+      });
+      
+      console.log('Adding to history:', historyKey, testEntry);
+      await kv.sadd(historyKey, testEntry);
+      await kv.expire(historyKey, 365 * 24 * 60 * 60);
+      
+      // Verify
+      const items = await kv.smembers(historyKey);
+      
+      return NextResponse.json({ 
+        success: true, 
+        historyKey,
+        itemCount: items?.length || 0,
+        items: items || [],
+      });
+    }
+    
+    if (action === 'clear-history') {
+      const keys = await kv.keys('history:*');
+      for (const key of keys || []) {
+        await kv.del(key);
+      }
+      return NextResponse.json({ success: true, deleted: keys?.length || 0 });
+    }
+    
+    if (action === 'test-registration') {
       const id = `free_test_${Date.now()}`;
       const registration = {
         id,
@@ -54,8 +101,6 @@ export async function POST(request) {
         type: 'guest',
         invitedBy: 'Test Inviter',
         visitNumber: '1st',
-        ltdId: '',
-        uplinePlatinum: '',
         source: 'debug',
         createdAt: new Date().toISOString(),
       };
@@ -63,24 +108,10 @@ export async function POST(request) {
       await kv.set(`registration:${id}`, registration);
       const saved = await kv.get(`registration:${id}`);
       
-      return NextResponse.json({ 
-        success: true, 
-        id,
-        saved: !!saved,
-        registration: saved,
-      });
+      return NextResponse.json({ success: true, id, saved: !!saved });
     }
     
-    if (action === 'clear-test') {
-      // Clear test registrations
-      const keys = await kv.keys('registration:free_test_*');
-      for (const key of keys || []) {
-        await kv.del(key);
-      }
-      return NextResponse.json({ success: true, deleted: keys?.length || 0 });
-    }
-    
-    return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
+    return NextResponse.json({ error: 'Unknown action. Try: test-history, test-registration, clear-history' }, { status: 400 });
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

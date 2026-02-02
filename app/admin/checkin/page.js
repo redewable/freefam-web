@@ -67,7 +67,14 @@ export default function CheckinPage() {
   };
 
   const fetchHistory = async () => {
-    try { const res = await fetch('/api/history'); const data = await res.json(); setHistory(data.history || []); } catch (e) {}
+    try { 
+      const res = await fetch('/api/history'); 
+      const data = await res.json(); 
+      console.log('History response:', data);
+      setHistory(data.history || []); 
+    } catch (e) {
+      console.error('History fetch error:', e);
+    }
   };
 
   const fetchDateDetail = async (date) => {
@@ -135,7 +142,7 @@ export default function CheckinPage() {
       <div style={{ borderBottom: '1px solid rgba(26,26,26,0.1)', padding: '0 16px' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex' }}>
           {['checkin', 'history'].map(t => (
-            <button key={t} onClick={() => { setTab(t); setSelectedDate(null); }}
+            <button key={t} onClick={() => { setTab(t); setSelectedDate(null); if (t === 'history') fetchHistory(); }}
               style={{ padding: '12px 20px', background: 'none', border: 'none', borderBottom: tab === t ? `2px solid ${colors.dark}` : '2px solid transparent', color: tab === t ? colors.dark : 'rgba(26,26,26,0.4)', fontSize: '13px', fontWeight: tab === t ? 500 : 400, cursor: 'pointer', textTransform: 'capitalize' }}>
               {t === 'checkin' ? 'Check-In' : 'History'}
             </button>
