@@ -42,12 +42,6 @@ const Icons = {
       <path d="M16 2v4M8 2v4M3 10h18" />
     </svg>
   ),
-  Clock: ({ style }) => (
-    <svg style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <circle cx="12" cy="12" r="10" />
-      <path d="M12 6v6l4 2" />
-    </svg>
-  ),
   Share: ({ style }) => (
     <svg style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
       <circle cx="18" cy="5" r="3" />
@@ -120,7 +114,6 @@ const RegistrationModal = ({ isOpen, onClose, ticketType, setTicketType }) => {
     e.preventDefault();
     setProcessing(true);
 
-    // For IBO, redirect to Stripe (single session only for BCS)
     if (ticketType === 'ibo') {
       try {
         const response = await fetch('/api/checkout', {
@@ -135,23 +128,19 @@ const RegistrationModal = ({ isOpen, onClose, ticketType, setTicketType }) => {
             source: 'bcs',
           }),
         });
-        
         const data = await response.json();
-        
         if (data.url) {
           window.location.href = data.url;
         } else {
           throw new Error(data.error || 'Payment failed');
         }
       } catch (error) {
-        console.error('Payment error:', error);
         alert('Payment failed. Please try again.');
         setProcessing(false);
       }
       return;
     }
 
-    // For Guest and Apprentice (free)
     await new Promise(r => setTimeout(r, 1000));
     setProcessing(false);
     setComplete(true);
@@ -216,9 +205,7 @@ const RegistrationModal = ({ isOpen, onClose, ticketType, setTicketType }) => {
                       <h3 style={{ fontSize: '15px', color: colors.dark, margin: '0 0 2px 0' }}>{t.label}</h3>
                       <p style={{ fontSize: '12px', color: 'rgba(26,26,26,0.5)', margin: 0 }}>{t.sub}</p>
                     </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <p style={{ fontSize: '13px', color: colors.gold, margin: 0 }}>{t.price}</p>
-                    </div>
+                    <p style={{ fontSize: '13px', color: colors.gold, margin: 0 }}>{t.price}</p>
                   </button>
                 ))}
               </div>
@@ -235,7 +222,6 @@ const RegistrationModal = ({ isOpen, onClose, ticketType, setTicketType }) => {
               <h2 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: '22px', color: colors.dark, marginBottom: '16px' }}>Your Details</h2>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {/* Name */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                   <div>
                     <label style={labelStyle}>First Name</label>
@@ -247,13 +233,11 @@ const RegistrationModal = ({ isOpen, onClose, ticketType, setTicketType }) => {
                   </div>
                 </div>
 
-                {/* Email */}
                 <div>
                   <label style={labelStyle}>Email</label>
                   <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} style={inputStyle} required />
                 </div>
 
-                {/* Guest fields */}
                 {ticketType === 'guest' && (
                   <>
                     <div>
@@ -274,7 +258,6 @@ const RegistrationModal = ({ isOpen, onClose, ticketType, setTicketType }) => {
                   </>
                 )}
 
-                {/* IBO/Apprentice fields */}
                 {(ticketType === 'apprentice' || ticketType === 'ibo') && (
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                     <div>
@@ -288,13 +271,11 @@ const RegistrationModal = ({ isOpen, onClose, ticketType, setTicketType }) => {
                   </div>
                 )}
 
-                {/* Signature */}
                 <div>
                   <p style={labelStyle}>Signature</p>
                   <SignaturePad onChange={(sig) => setForm({ ...form, signature: sig })} />
                 </div>
 
-                {/* Disclosures */}
                 <div style={{ borderTop: '1px solid rgba(26,26,26,0.1)', paddingTop: '12px' }}>
                   <details style={{ fontSize: '10px', color: 'rgba(26,26,26,0.4)' }}>
                     <summary style={{ cursor: 'pointer', marginBottom: '6px' }}>LTD Disclosures</summary>
@@ -306,7 +287,6 @@ const RegistrationModal = ({ isOpen, onClose, ticketType, setTicketType }) => {
                   </label>
                 </div>
 
-                {/* Submit */}
                 <button type="submit" disabled={processing || !form.agreed || !form.signature}
                   style={{ width: '100%', padding: '14px', background: processing || !form.agreed || !form.signature ? 'rgba(26,26,26,0.2)' : colors.dark, color: processing || !form.agreed || !form.signature ? 'rgba(26,26,26,0.4)' : colors.bg, fontSize: '12px', letterSpacing: '0.1em', textTransform: 'uppercase', border: 'none', cursor: processing || !form.agreed || !form.signature ? 'not-allowed' : 'pointer', marginTop: '4px' }}>
                   {processing ? 'Processing...' : ticketType === 'ibo' ? 'Continue — $12' : 'Complete Registration'}
@@ -354,7 +334,6 @@ export default function BCSFreedomTeam() {
     }
   }, []);
 
-  // Schedule items
   const schedule = [
     { time: '7:00 PM', label: 'IBOs Arrive' },
     { time: '7:15 PM', label: 'Guests Arrive' },
@@ -365,118 +344,103 @@ export default function BCSFreedomTeam() {
 
   return (
     <div style={{ minHeight: '100vh', background: colors.bg, fontFamily: 'Inter, system-ui, sans-serif' }}>
-      {/* Fonts */}
       <style jsx global>{`
         @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&display=swap');
       `}</style>
       
       {/* Nav */}
       <nav style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 40, background: 'rgba(250,250,248,0.9)', backdropFilter: 'blur(12px)', borderBottom: '1px solid rgba(26,26,26,0.05)' }}>
-        <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '16px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <p style={{ fontSize: '11px', letterSpacing: '0.25em', textTransform: 'uppercase', color: colors.dark, margin: 0 }}>BCS Freedom Team</p>
-          <button onClick={() => setModalOpen(true)} style={{ fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase', color: colors.gold, background: 'none', border: 'none', cursor: 'pointer' }}>
+        <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <p style={{ fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase', color: colors.dark, margin: 0 }}>BCS Freedom Team</p>
+          <button onClick={() => setModalOpen(true)} style={{ fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', color: colors.gold, background: 'none', border: 'none', cursor: 'pointer' }}>
             Register
           </button>
         </div>
       </nav>
 
-      {/* Hero */}
-      <section style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '80px 24px 60px' }}>
-        <div style={{ maxWidth: '800px', textAlign: 'center' }}>
-          <p style={{ color: colors.gold, fontSize: '11px', letterSpacing: '0.35em', textTransform: 'uppercase', marginBottom: '24px' }}>Monthly Training</p>
-          
-          <h1 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 'clamp(40px, 9vw, 96px)', color: colors.dark, lineHeight: 0.95, marginBottom: '28px', fontWeight: 400 }}>
-            BCS Freedom
-            <br />
-            <em>Team</em>
-          </h1>
-          
-          <p style={{ fontSize: '18px', color: 'rgba(26,26,26,0.5)', maxWidth: '420px', margin: '0 auto 40px', lineHeight: 1.6 }}>
-            Shared vision. Building together. 100 Strong!
-          </p>
+      {/* Hero - Compact */}
+      <section style={{ paddingTop: '80px', paddingBottom: '40px', textAlign: 'center', padding: '80px 20px 40px' }}>
+        <p style={{ color: colors.gold, fontSize: '10px', letterSpacing: '0.3em', textTransform: 'uppercase', marginBottom: '16px' }}>Monthly Training</p>
+        
+        <h1 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 'clamp(36px, 8vw, 72px)', color: colors.dark, lineHeight: 0.95, marginBottom: '16px', fontWeight: 400 }}>
+          BCS Freedom <em>Team</em>
+        </h1>
+        
+        <p style={{ fontSize: '16px', color: 'rgba(26,26,26,0.5)', marginBottom: '24px' }}>
+          Shared vision. Building together. 100 Strong!
+        </p>
 
-          <button onClick={() => setModalOpen(true)}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '12px', padding: '16px 32px', background: colors.dark, color: colors.bg, fontSize: '12px', letterSpacing: '0.15em', textTransform: 'uppercase', border: 'none', cursor: 'pointer' }}>
-            Register Now
-            <Icons.ArrowRight style={{ width: '14px', height: '14px' }} />
-          </button>
-        </div>
+        <button onClick={() => setModalOpen(true)}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', padding: '14px 28px', background: colors.dark, color: colors.bg, fontSize: '11px', letterSpacing: '0.15em', textTransform: 'uppercase', border: 'none', cursor: 'pointer' }}>
+          Register Now
+          <Icons.ArrowRight style={{ width: '14px', height: '14px' }} />
+        </button>
       </section>
 
       {/* Divider */}
-      <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 24px' }}>
+      <div style={{ maxWidth: '600px', margin: '0 auto', padding: '0 20px' }}>
         <div style={{ height: '1px', background: 'linear-gradient(to right, transparent, rgba(26,26,26,0.1), transparent)' }} />
       </div>
 
-      {/* This Monday Event */}
-      <section style={{ padding: '80px 24px' }}>
-        <div style={{ maxWidth: '600px', margin: '0 auto' }}>
-          {/* Event Header */}
-          <p style={{ color: colors.gold, fontSize: '11px', letterSpacing: '0.3em', textTransform: 'uppercase', marginBottom: '16px' }}>This Monday</p>
+      {/* This Monday Event - Compact */}
+      <section style={{ padding: '40px 20px' }}>
+        <div style={{ maxWidth: '500px', margin: '0 auto' }}>
+          <p style={{ color: colors.gold, fontSize: '10px', letterSpacing: '0.25em', textTransform: 'uppercase', marginBottom: '12px' }}>This Monday</p>
           
-          <h2 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 'clamp(36px, 7vw, 56px)', color: colors.dark, marginBottom: '12px', fontWeight: 400, lineHeight: 1 }}>
+          <h2 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 'clamp(28px, 6vw, 40px)', color: colors.dark, marginBottom: '8px', fontWeight: 400, lineHeight: 1.1 }}>
             Showing The Plan
           </h2>
           
-          <p style={{ fontSize: '18px', color: 'rgba(26,26,26,0.5)', marginBottom: '32px' }}>
+          <p style={{ fontSize: '16px', color: 'rgba(26,26,26,0.5)', marginBottom: '24px' }}>
             Adrian &amp; Julia Williams
           </p>
 
-          {/* Event Details */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginBottom: '40px' }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
-              <Icons.Calendar style={{ width: '20px', height: '20px', color: colors.gold, marginTop: '2px', flexShrink: 0 }} />
-              <div>
-                <p style={{ color: colors.dark, margin: 0, fontSize: '16px' }}>Monday, February 2, 2025</p>
-                <p style={{ fontSize: '14px', color: 'rgba(26,26,26,0.5)', margin: 0 }}>7:30 PM — Arrive by 7:15</p>
-              </div>
+          {/* Event Details - Inline */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <Icons.Calendar style={{ width: '16px', height: '16px', color: colors.gold, flexShrink: 0 }} />
+              <span style={{ fontSize: '14px', color: colors.dark }}>Monday, February 2, 2025 · 7:30 PM</span>
             </div>
             
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
-              <Icons.MapPin style={{ width: '20px', height: '20px', color: colors.gold, marginTop: '2px', flexShrink: 0 }} />
-              <div>
-                <p style={{ color: colors.dark, margin: 0, fontSize: '16px' }}>Embassy Suites</p>
-                <p style={{ fontSize: '14px', color: 'rgba(26,26,26,0.5)', margin: 0 }}>201 University Dr E, College Station, TX</p>
-              </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <Icons.MapPin style={{ width: '16px', height: '16px', color: colors.gold, flexShrink: 0 }} />
+              <span style={{ fontSize: '14px', color: colors.dark }}>Embassy Suites · College Station, TX</span>
             </div>
           </div>
 
-          {/* Schedule */}
-          <div style={{ marginBottom: '40px' }}>
-            <p style={{ color: colors.gold, fontSize: '10px', letterSpacing: '0.25em', textTransform: 'uppercase', marginBottom: '16px' }}>Schedule</p>
-            
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
+          {/* Schedule - Compact Grid */}
+          <div style={{ background: 'rgba(26,26,26,0.02)', padding: '16px', marginBottom: '24px' }}>
+            <p style={{ color: colors.gold, fontSize: '9px', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '12px' }}>Schedule</p>
+            <div style={{ display: 'grid', gridTemplateColumns: '70px 1fr', gap: '6px 12px' }}>
               {schedule.map((item, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', padding: '12px 0', borderBottom: i < schedule.length - 1 ? '1px solid rgba(26,26,26,0.06)' : 'none' }}>
-                  <p style={{ width: '90px', fontSize: '14px', color: 'rgba(26,26,26,0.4)', margin: 0, fontVariantNumeric: 'tabular-nums' }}>{item.time}</p>
-                  <p style={{ fontSize: '15px', color: colors.dark, margin: 0 }}>{item.label}</p>
-                </div>
+                <React.Fragment key={i}>
+                  <span style={{ fontSize: '13px', color: 'rgba(26,26,26,0.4)', fontVariantNumeric: 'tabular-nums' }}>{item.time}</span>
+                  <span style={{ fontSize: '13px', color: colors.dark }}>{item.label}</span>
+                </React.Fragment>
               ))}
             </div>
           </div>
 
           {/* Action Buttons */}
-          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
             <button onClick={() => setModalOpen(true)}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', padding: '14px 28px', background: colors.dark, color: colors.bg, fontSize: '12px', letterSpacing: '0.1em', textTransform: 'uppercase', border: 'none', cursor: 'pointer' }}>
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '12px 20px', background: colors.dark, color: colors.bg, fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase', border: 'none', cursor: 'pointer' }}>
               Register Now
-              <Icons.ArrowRight style={{ width: '14px', height: '14px' }} />
+              <Icons.ArrowRight style={{ width: '12px', height: '12px' }} />
             </button>
             
             <button onClick={copyGuestLink}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', padding: '14px 28px', background: 'transparent', color: colors.dark, fontSize: '12px', letterSpacing: '0.1em', textTransform: 'uppercase', border: `1px solid ${colors.dark}`, cursor: 'pointer' }}>
-              <Icons.Share style={{ width: '14px', height: '14px' }} />
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '12px 20px', background: 'transparent', color: colors.dark, fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase', border: `1px solid rgba(26,26,26,0.2)`, cursor: 'pointer' }}>
+              <Icons.Share style={{ width: '12px', height: '12px' }} />
               Share Guest Link
             </button>
           </div>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer style={{ padding: '48px 24px', borderTop: '1px solid rgba(26,26,26,0.05)' }}>
-        <div style={{ maxWidth: '1280px', margin: '0 auto', textAlign: 'center' }}>
-          <p style={{ fontSize: '11px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.3)', margin: 0 }}>LTD · 100 Strong</p>
-        </div>
+      {/* Footer - Minimal */}
+      <footer style={{ padding: '32px 20px', borderTop: '1px solid rgba(26,26,26,0.05)' }}>
+        <p style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.25)', margin: 0, textAlign: 'center' }}>LTD · 100 Strong</p>
       </footer>
 
       {/* Modal */}
