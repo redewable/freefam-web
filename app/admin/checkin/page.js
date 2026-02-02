@@ -68,9 +68,15 @@ export default function CheckinPage() {
 
   const fetchHistory = async () => {
     try { 
+      console.log('Fetching history...');
       const res = await fetch('/api/history'); 
       const data = await res.json(); 
-      console.log('History response:', data);
+      console.log('History API response:', data);
+      
+      if (data.error) {
+        console.error('History API error:', data.error);
+      }
+      
       setHistory(data.history || []); 
     } catch (e) {
       console.error('History fetch error:', e);
@@ -224,7 +230,15 @@ export default function CheckinPage() {
         ) : (
           <>
             <h2 style={{ fontSize: '16px', color: colors.dark, marginBottom: '16px' }}>Meeting History</h2>
-            {history.length === 0 ? <p style={{ color: 'rgba(26,26,26,0.5)', textAlign: 'center', padding: '40px' }}>No history yet</p> : (
+            {history.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '40px' }}>
+                <p style={{ color: 'rgba(26,26,26,0.5)', marginBottom: '12px' }}>No history yet</p>
+                <p style={{ color: 'rgba(26,26,26,0.3)', fontSize: '12px' }}>Check-ins will appear here after you check people in</p>
+                <button onClick={fetchHistory} style={{ marginTop: '16px', padding: '8px 16px', background: colors.dark, color: colors.bg, border: 'none', fontSize: '12px', cursor: 'pointer' }}>
+                  Refresh History
+                </button>
+              </div>
+            ) : (
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
                   <thead>
