@@ -128,7 +128,7 @@ const RegistrationModal = ({ isOpen, onClose, ticketType, setTicketType }) => {
             <div style={{ padding: '40px 28px', textAlign: 'center' }}>
               <div style={{ width: '48px', height: '48px', margin: '0 auto 16px', borderRadius: '50%', border: `1px solid ${colors.gold}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icons.Check style={{ width: '24px', height: '24px', color: colors.gold }} /></div>
               <p style={{ color: colors.gold, fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '8px' }}>Confirmed</p>
-              <h3 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: '24px', color: colors.dark, marginBottom: '20px' }}>See You There</h3>
+              <h3 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: '24px', color: colors.dark, marginBottom: '20px' }}>{new Date().getDay() === 1 ? 'See You Tonight!' : 'See You Soon!'}</h3>
               <button onClick={close} style={{ fontSize: '12px', color: 'rgba(26,26,26,0.4)', background: 'none', border: 'none', cursor: 'pointer' }}>Close</button>
             </div>
           ) : step === 1 ? (

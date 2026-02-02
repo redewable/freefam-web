@@ -80,12 +80,19 @@ export default function CheckinPage() {
           sessionId: reg.id,
           action: reg.checkedIn ? 'checkout' : 'checkin',
           priceType: reg.priceType,
-          registrationData: { name: reg.name, type: reg.type, visitNumber: reg.visitNumber },
+          registrationData: {
+            name: reg.name,
+            type: reg.type,
+            visitNumber: reg.visitNumber || '',
+          },
         }),
       });
       const data = await res.json();
+      console.log('Check-in response:', data);
       if (data.success) setRegs(prev => prev.map(r => r.id === reg.id ? { ...r, checkedIn: data.checkedIn } : r));
-    } catch (e) {}
+    } catch (e) {
+      console.error('Check-in error:', e);
+    }
     setUpdating(null);
   };
 

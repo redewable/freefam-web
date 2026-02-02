@@ -94,7 +94,7 @@ export default function GuestPage() {
               <Icons.Check style={{ width: '28px', height: '28px', color: colors.gold }} />
             </div>
             <p style={{ color: colors.gold, fontSize: '11px', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '10px' }}>Confirmed</p>
-            <h1 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: '32px', color: colors.dark, marginBottom: '10px' }}>See You There!</h1>
+            <h1 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: '32px', color: colors.dark, marginBottom: '10px' }}>{new Date().getDay() === 1 ? 'See You Tonight!' : 'See You Soon!'}</h1>
             <p style={{ color: 'rgba(26,26,26,0.5)', fontSize: '15px', marginBottom: '32px' }}>You&#39;re registered as a guest</p>
             <div style={{ textAlign: 'left', background: 'white', padding: '20px', border: '1px solid rgba(26,26,26,0.1)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>

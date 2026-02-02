@@ -181,7 +181,7 @@ const RegistrationModal = ({ isOpen, onClose, ticketType, setTicketType }) => {
             <div style={{ padding: '40px 28px', textAlign: 'center' }}>
               <div style={{ width: '48px', height: '48px', margin: '0 auto 16px', borderRadius: '50%', border: `1px solid ${colors.gold}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icons.Check style={{ width: '24px', height: '24px', color: colors.gold }} /></div>
               <p style={{ color: colors.gold, fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '8px' }}>Confirmed</p>
-              <h3 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: '24px', color: colors.dark, marginBottom: '8px' }}>See You Monday</h3>
+              <h3 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: '24px', color: colors.dark, marginBottom: '8px' }}>{new Date().getDay() === 1 ? 'See You Tonight!' : 'See You Soon!'}</h3>
               <p style={{ color: 'rgba(26,26,26,0.5)', fontSize: '13px', marginBottom: '20px' }}>Embassy Suites · College Station</p>
               <button onClick={close} style={{ fontSize: '12px', color: 'rgba(26,26,26,0.4)', background: 'none', border: 'none', cursor: 'pointer' }}>Close</button>
             </div>
@@ -322,8 +322,7 @@ export default function FreedomFamily() {
 
       <section style={{ paddingTop: '100px', paddingBottom: '60px', textAlign: 'center', padding: '100px 20px 60px' }}>
         <p style={{ color: colors.gold, fontSize: '11px', letterSpacing: '0.35em', textTransform: 'uppercase', marginBottom: '20px' }}>The Round Table</p>
-        <h1 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 'clamp(40px, 9vw, 80px)', color: colors.dark, lineHeight: 0.95, marginBottom: '20px', fontWeight: 400 }}>Freedom <em>Family</em></h1>
-        <p style={{ fontSize: '17px', color: 'rgba(26,26,26,0.5)', maxWidth: '400px', margin: '0 auto 32px' }}>Monday nights. Building futures together.</p>
+        <h1 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 'clamp(40px, 9vw, 80px)', color: colors.dark, lineHeight: 0.95, marginBottom: '32px', fontWeight: 400 }}>Freedom <em>Family</em></h1>
         <button onClick={() => setModalOpen(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', padding: '16px 32px', background: colors.dark, color: colors.bg, fontSize: '12px', letterSpacing: '0.15em', textTransform: 'uppercase', border: 'none', cursor: 'pointer' }}>Register Now<Icons.ArrowRight style={{ width: '14px', height: '14px' }} /></button>
       </section>
 

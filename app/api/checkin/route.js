@@ -38,11 +38,17 @@ export async function POST(request) {
     }
 
     const isMonthly = priceType === 'monthly';
+    const isGuest = priceType === 'guest';
+    const isApprentice = priceType === 'apprentice';
+    
+    // All free registrations (guest/apprentice) use weekly keys
     const periodKey = isMonthly ? getMonthKey() : getWeekKey();
     const keyPrefix = isMonthly ? 'month' : 'week';
     const key = `checkin:${keyPrefix}:${periodKey}:${sessionId}`;
     const todayKey = getTodayKey();
     const historyKey = `history:${todayKey}`;
+    
+    console.log('Check-in request:', { sessionId, action, priceType, todayKey });
     
     if (action === 'checkin') {
       const timestamp = new Date().toISOString();
@@ -51,33 +57,39 @@ export async function POST(request) {
       const ttl = isMonthly ? getSecondsUntilEndOfMonth() : getSecondsUntilEndOfWeek();
       await kv.expire(key, ttl);
       
-      if (registrationData) {
-        await kv.sadd(historyKey, JSON.stringify({
-          id: sessionId,
-          name: registrationData.name || 'Unknown',
-          type: registrationData.type || 'ibo',
-          priceType,
-          visitNumber: registrationData.visitNumber || '',
-          timestamp,
-        }));
-        await kv.expire(historyKey, 365 * 24 * 60 * 60);
-      }
+      // Always save to history
+      const historyEntry = JSON.stringify({
+        id: sessionId,
+        name: registrationData?.name || 'Unknown',
+        type: registrationData?.type || (isGuest ? 'guest' : isApprentice ? 'apprentice' : 'ibo'),
+        priceType,
+        visitNumber: registrationData?.visitNumber || '',
+        timestamp,
+      });
+      
+      console.log('Saving to history:', historyKey, historyEntry);
+      await kv.sadd(historyKey, historyEntry);
+      await kv.expire(historyKey, 365 * 24 * 60 * 60);
       
       return NextResponse.json({ success: true, checkedIn: true, timestamp });
       
     } else if (action === 'checkout') {
       await kv.del(key);
       
+      // Remove from today's history
       try {
         const historyItems = await kv.smembers(historyKey) || [];
         for (const item of historyItems) {
           const parsed = JSON.parse(item);
           if (parsed.id === sessionId) {
             await kv.srem(historyKey, item);
+            console.log('Removed from history:', sessionId);
             break;
           }
         }
-      } catch (e) {}
+      } catch (e) {
+        console.log('Error removing from history:', e);
+      }
       
       return NextResponse.json({ success: true, checkedIn: false });
     }

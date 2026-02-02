@@ -23,23 +23,41 @@ export async function GET(request) {
     const filter = searchParams.get('filter') || 'all';
     
     // 1. Fetch paid registrations from Stripe
-    const sessions = await stripe.checkout.sessions.list({
-      limit: 100,
-      status: 'complete',
-    });
-
-    // 2. Fetch free registrations from KV
-    let freeIds = [];
+    let sessions = { data: [] };
     try {
-      freeIds = await kv.lrange('registrations:list', 0, -1) || [];
-    } catch (e) {}
+      sessions = await stripe.checkout.sessions.list({
+        limit: 100,
+        status: 'complete',
+      });
+    } catch (e) {
+      console.error('Stripe error:', e);
+    }
 
+    // 2. Fetch free registrations from KV using keys pattern
     const freeRegistrations = [];
-    for (const id of freeIds) {
+    try {
+      const keys = await kv.keys('registration:free_*');
+      console.log('Found free registration keys:', keys);
+      for (const key of keys) {
+        const reg = await kv.get(key);
+        if (reg) {
+          console.log('Found registration:', reg);
+          freeRegistrations.push(reg);
+        }
+      }
+    } catch (e) {
+      console.error('KV keys error:', e);
+      // Fallback to list method
       try {
-        const reg = await kv.get(`registration:${id}`);
-        if (reg) freeRegistrations.push(reg);
-      } catch (e) {}
+        const freeIds = await kv.lrange('registrations:list', 0, -1) || [];
+        console.log('Fallback - found IDs:', freeIds);
+        for (const id of freeIds) {
+          const reg = await kv.get(`registration:${id}`);
+          if (reg) freeRegistrations.push(reg);
+        }
+      } catch (e2) {
+        console.error('KV list error:', e2);
+      }
     }
 
     // 3. Get check-in statuses
@@ -103,6 +121,7 @@ export async function GET(request) {
     }));
 
     let all = [...paidRegs, ...freeRegs];
+    console.log('Total registrations:', all.length, 'Paid:', paidRegs.length, 'Free:', freeRegs.length);
 
     if (filter !== 'all') {
       if (filter === 'ibo') all = all.filter(r => r.type === 'ibo');
