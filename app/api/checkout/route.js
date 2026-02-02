@@ -6,12 +6,16 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 export async function POST(request) {
   try {
     const body = await request.json();
-    const { priceType, customerEmail, customerName, ltdId, uplinePlatinum } = body;
+    const { priceType, customerEmail, customerName, ltdId, uplinePlatinum, source } = body;
 
     // Select the correct price ID
     const priceId = priceType === 'monthly' 
       ? process.env.STRIPE_PRICE_MONTHLY 
       : process.env.STRIPE_PRICE_SINGLE;
+
+    // Determine return URL based on source
+    const origin = request.headers.get('origin');
+    const returnPath = source === 'bcs' ? '/bcs' : '';
 
     // Create Checkout Session
     const session = await stripe.checkout.sessions.create({
@@ -29,9 +33,10 @@ export async function POST(request) {
         ltdId,
         uplinePlatinum,
         priceType,
+        source: source || 'main',
       },
-      success_url: `${request.headers.get('origin')}?success=true&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${request.headers.get('origin')}?canceled=true`,
+      success_url: `${origin}${returnPath}?success=true&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${origin}${returnPath}?canceled=true`,
     });
 
     return NextResponse.json({ url: session.url });

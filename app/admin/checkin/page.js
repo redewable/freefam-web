@@ -27,12 +27,6 @@ const Icons = {
       <path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15" />
     </svg>
   ),
-  User: ({ style }) => (
-    <svg style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
-      <circle cx="12" cy="7" r="4" />
-    </svg>
-  ),
 };
 
 export default function CheckinPage() {
@@ -41,6 +35,7 @@ export default function CheckinPage() {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('all');
   const [updating, setUpdating] = useState(null);
+  const [sortBy, setSortBy] = useState('alpha'); // 'alpha' or 'recent'
 
   const fetchRegistrations = async () => {
     setLoading(true);
@@ -58,7 +53,7 @@ export default function CheckinPage() {
     fetchRegistrations();
   }, [filter]);
 
-  const toggleCheckin = async (sessionId, currentStatus) => {
+  const toggleCheckin = async (sessionId, currentStatus, priceType) => {
     setUpdating(sessionId);
     try {
       const res = await fetch('/api/checkin', {
@@ -67,6 +62,7 @@ export default function CheckinPage() {
         body: JSON.stringify({
           sessionId,
           action: currentStatus ? 'checkout' : 'checkin',
+          priceType,
         }),
       });
       const data = await res.json();
@@ -83,15 +79,22 @@ export default function CheckinPage() {
     setUpdating(null);
   };
 
-  // Filter by search
-  const filtered = registrations.filter(r => {
-    const searchLower = search.toLowerCase();
-    return (
-      r.name.toLowerCase().includes(searchLower) ||
-      r.email.toLowerCase().includes(searchLower) ||
-      r.ltdId.toLowerCase().includes(searchLower)
-    );
-  });
+  // Filter and sort
+  const filtered = registrations
+    .filter(r => {
+      const searchLower = search.toLowerCase();
+      return (
+        r.name.toLowerCase().includes(searchLower) ||
+        r.email.toLowerCase().includes(searchLower) ||
+        (r.ltdId && r.ltdId.toLowerCase().includes(searchLower))
+      );
+    })
+    .sort((a, b) => {
+      if (sortBy === 'alpha') {
+        return a.name.localeCompare(b.name);
+      }
+      return new Date(b.date) - new Date(a.date);
+    });
 
   // Stats
   const stats = {
@@ -104,148 +107,163 @@ export default function CheckinPage() {
   return (
     <div style={{ minHeight: '100vh', background: colors.bg, fontFamily: 'Inter, system-ui, sans-serif' }}>
       {/* Header */}
-      <header style={{ borderBottom: '1px solid rgba(26,26,26,0.1)', padding: '20px 32px' }}>
+      <header style={{ borderBottom: '1px solid rgba(26,26,26,0.1)', padding: '16px 16px' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <p style={{ fontSize: '11px', letterSpacing: '0.25em', textTransform: 'uppercase', color: colors.gold, marginBottom: '4px' }}>Admin</p>
-            <h1 style={{ fontSize: '24px', color: colors.dark, margin: 0, fontWeight: 500 }}>Check-In</h1>
+            <p style={{ fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase', color: colors.gold, marginBottom: '2px' }}>Admin</p>
+            <h1 style={{ fontSize: '20px', color: colors.dark, margin: 0, fontWeight: 500 }}>Check-In</h1>
           </div>
           <button
             onClick={fetchRegistrations}
-            style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', background: colors.dark, color: colors.bg, border: 'none', cursor: 'pointer', fontSize: '13px' }}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 12px', background: colors.dark, color: colors.bg, border: 'none', cursor: 'pointer', fontSize: '12px' }}
           >
-            <Icons.Refresh style={{ width: '16px', height: '16px' }} />
+            <Icons.Refresh style={{ width: '14px', height: '14px' }} />
             Refresh
           </button>
         </div>
       </header>
 
-      <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '32px' }}>
-        {/* Stats */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '32px' }}>
+      <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '16px' }}>
+        {/* Stats - 2x2 grid on mobile */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginBottom: '16px' }}>
           {[
-            { label: 'Total Registered', value: stats.total, color: colors.dark },
-            { label: 'Checked In', value: stats.checkedIn, color: '#22c55e' },
-            { label: 'Single ($12)', value: stats.single, color: colors.gold },
-            { label: 'Monthly ($40)', value: stats.monthly, color: colors.gold },
+            { label: 'Total', value: stats.total, color: colors.dark },
+            { label: 'In', value: stats.checkedIn, color: '#22c55e' },
+            { label: 'Single', value: stats.single, color: colors.gold },
+            { label: 'Monthly', value: stats.monthly, color: colors.gold },
           ].map((stat, i) => (
-            <div key={i} style={{ padding: '20px', background: 'white', border: '1px solid rgba(26,26,26,0.1)' }}>
-              <p style={{ fontSize: '11px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.5)', marginBottom: '8px' }}>{stat.label}</p>
-              <p style={{ fontSize: '32px', fontWeight: 600, color: stat.color, margin: 0 }}>{stat.value}</p>
+            <div key={i} style={{ padding: '12px 8px', background: 'white', border: '1px solid rgba(26,26,26,0.1)', textAlign: 'center' }}>
+              <p style={{ fontSize: '9px', letterSpacing: '0.05em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.5)', marginBottom: '4px' }}>{stat.label}</p>
+              <p style={{ fontSize: '24px', fontWeight: 600, color: stat.color, margin: 0 }}>{stat.value}</p>
             </div>
           ))}
         </div>
 
         {/* Search & Filters */}
-        <div style={{ display: 'flex', gap: '16px', marginBottom: '24px' }}>
-          <div style={{ flex: 1, position: 'relative' }}>
-            <Icons.Search style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', width: '18px', height: '18px', color: 'rgba(26,26,26,0.3)' }} />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' }}>
+          <div style={{ position: 'relative' }}>
+            <Icons.Search style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', width: '16px', height: '16px', color: 'rgba(26,26,26,0.3)' }} />
             <input
               type="text"
-              placeholder="Search by name, email, or LTD ID..."
+              placeholder="Search..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              style={{ width: '100%', padding: '12px 12px 12px 44px', border: '1px solid rgba(26,26,26,0.2)', background: 'white', fontSize: '14px', outline: 'none' }}
+              style={{ width: '100%', padding: '10px 10px 10px 40px', border: '1px solid rgba(26,26,26,0.2)', background: 'white', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
             />
           </div>
-          <div style={{ display: 'flex', gap: '8px' }}>
+          <div style={{ display: 'flex', gap: '6px' }}>
             {['all', 'single', 'monthly'].map(f => (
               <button
                 key={f}
                 onClick={() => setFilter(f)}
                 style={{
-                  padding: '12px 20px',
+                  padding: '8px 12px',
                   border: filter === f ? `1px solid ${colors.dark}` : '1px solid rgba(26,26,26,0.2)',
                   background: filter === f ? colors.dark : 'white',
                   color: filter === f ? colors.bg : colors.dark,
-                  fontSize: '13px',
+                  fontSize: '12px',
                   cursor: 'pointer',
                   textTransform: 'capitalize',
+                  flex: 1,
                 }}
               >
-                {f}
+                {f === 'all' ? 'All' : f === 'single' ? 'Single' : 'Monthly'}
               </button>
             ))}
+            <button
+              onClick={() => setSortBy(sortBy === 'alpha' ? 'recent' : 'alpha')}
+              style={{
+                padding: '8px 12px',
+                border: '1px solid rgba(26,26,26,0.2)',
+                background: 'white',
+                color: colors.dark,
+                fontSize: '12px',
+                cursor: 'pointer',
+              }}
+            >
+              {sortBy === 'alpha' ? 'A-Z' : 'New'}
+            </button>
           </div>
         </div>
 
         {/* Registration List */}
         {loading ? (
-          <div style={{ padding: '60px', textAlign: 'center', color: 'rgba(26,26,26,0.5)' }}>
-            Loading registrations...
+          <div style={{ padding: '40px', textAlign: 'center', color: 'rgba(26,26,26,0.5)' }}>
+            Loading...
           </div>
         ) : filtered.length === 0 ? (
-          <div style={{ padding: '60px', textAlign: 'center', color: 'rgba(26,26,26,0.5)' }}>
+          <div style={{ padding: '40px', textAlign: 'center', color: 'rgba(26,26,26,0.5)' }}>
             No registrations found
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             {filtered.map(reg => (
               <div
                 key={reg.id}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  padding: '16px 20px',
+                  padding: '10px 12px',
                   background: reg.checkedIn ? 'rgba(34, 197, 94, 0.08)' : 'white',
                   border: reg.checkedIn ? '1px solid rgba(34, 197, 94, 0.3)' : '1px solid rgba(26,26,26,0.1)',
-                  gap: '16px',
+                  gap: '10px',
                 }}
               >
+                {/* Info */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontSize: '14px', fontWeight: 500, color: colors.dark, margin: '0 0 2px 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{reg.name}</p>
+                  <p style={{ fontSize: '11px', color: 'rgba(26,26,26,0.5)', margin: 0 }}>{reg.ltdId || reg.email.split('@')[0]}</p>
+                </div>
+
+                {/* Badge */}
+                <div style={{
+                  padding: '3px 6px',
+                  background: reg.priceType === 'monthly' ? 'rgba(184, 149, 107, 0.15)' : 'rgba(26,26,26,0.05)',
+                  fontSize: '9px',
+                  fontWeight: 600,
+                  color: reg.priceType === 'monthly' ? colors.gold : 'rgba(26,26,26,0.5)',
+                  textTransform: 'uppercase',
+                }}>
+                  {reg.priceType === 'monthly' ? 'Mo' : 'Wk'}
+                </div>
+
                 {/* Check-in button */}
                 <button
-                  onClick={() => toggleCheckin(reg.id, reg.checkedIn)}
+                  onClick={() => toggleCheckin(reg.id, reg.checkedIn, reg.priceType)}
                   disabled={updating === reg.id}
                   style={{
-                    width: '48px',
-                    height: '48px',
-                    borderRadius: '50%',
-                    border: reg.checkedIn ? '2px solid #22c55e' : '2px solid rgba(26,26,26,0.2)',
+                    padding: '6px 12px',
                     background: reg.checkedIn ? '#22c55e' : 'transparent',
+                    border: reg.checkedIn ? '1px solid #22c55e' : '1px solid rgba(26,26,26,0.3)',
+                    color: reg.checkedIn ? 'white' : colors.dark,
+                    fontSize: '11px',
+                    fontWeight: 600,
                     cursor: 'pointer',
+                    opacity: updating === reg.id ? 0.5 : 1,
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center',
-                    transition: 'all 0.2s',
-                    opacity: updating === reg.id ? 0.5 : 1,
+                    gap: '4px',
+                    borderRadius: '2px',
                   }}
                 >
-                  {reg.checkedIn && <Icons.Check style={{ width: '24px', height: '24px', color: 'white' }} />}
+                  {reg.checkedIn ? (
+                    <>
+                      <Icons.Check style={{ width: '12px', height: '12px' }} />
+                      IN
+                    </>
+                  ) : (
+                    'CHECK IN'
+                  )}
                 </button>
-
-                {/* Info */}
-                <div style={{ flex: 1 }}>
-                  <p style={{ fontSize: '16px', fontWeight: 500, color: colors.dark, margin: '0 0 4px 0' }}>{reg.name}</p>
-                  <p style={{ fontSize: '13px', color: 'rgba(26,26,26,0.5)', margin: 0 }}>{reg.email}</p>
-                </div>
-
-                {/* LTD ID */}
-                <div style={{ textAlign: 'right', minWidth: '100px' }}>
-                  <p style={{ fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.4)', margin: '0 0 2px 0' }}>LTD ID</p>
-                  <p style={{ fontSize: '14px', color: colors.dark, margin: 0 }}>{reg.ltdId || '—'}</p>
-                </div>
-
-                {/* Price Type */}
-                <div style={{
-                  padding: '6px 12px',
-                  background: reg.priceType === 'monthly' ? 'rgba(184, 149, 107, 0.15)' : 'rgba(26,26,26,0.05)',
-                  fontSize: '12px',
-                  fontWeight: 500,
-                  color: reg.priceType === 'monthly' ? colors.gold : 'rgba(26,26,26,0.6)',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em',
-                }}>
-                  {reg.priceType === 'monthly' ? 'Monthly' : 'Single'}
-                </div>
-
-                {/* Amount */}
-                <div style={{ minWidth: '60px', textAlign: 'right' }}>
-                  <p style={{ fontSize: '16px', fontWeight: 500, color: colors.dark, margin: 0 }}>${reg.amount}</p>
-                </div>
               </div>
             ))}
           </div>
         )}
+
+        {/* Footer note */}
+        <p style={{ marginTop: '20px', fontSize: '11px', color: 'rgba(26,26,26,0.4)', textAlign: 'center' }}>
+          Single tickets reset weekly · Monthly tickets reset at month end
+        </p>
       </main>
     </div>
   );
