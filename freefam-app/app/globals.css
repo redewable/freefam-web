@@ -1,0 +1,28 @@
+@import "tailwindcss";
+
+/* In Tailwind v4, this @theme block is how we add custom fonts.
+  We map the CSS variable from layout.tsx (--font-cinzel) to the utility class.
+*/
+@theme {
+  --font-cinzel: var(--font-cinzel);
+  --color-gold: #D4AF37;
+  --color-silver: #C0C0C0;
+  --color-slate-950: #0f172a;
+}
+
+/* Base Styles */
+body {
+  background-color: var(--color-slate-950); 
+  color: #e2e8f0;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Custom Utilities */
+@layer utilities {
+  .text-gold {
+    color: var(--color-gold);
+  }
+  .border-gold {
+    border-color: var(--color-gold);
+  }
+}
