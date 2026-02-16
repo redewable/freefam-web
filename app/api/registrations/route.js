@@ -4,24 +4,32 @@ import { NextResponse } from 'next/server';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
-const getWeekKey = () => {
+const getWeekStart = () => {
   const now = new Date();
   const day = now.getDay();
   const diff = now.getDate() - day + (day === 0 ? -6 : 1);
-  const monday = new Date(now.getFullYear(), now.getMonth(), diff);
-  return monday.toISOString().split('T')[0];
+  return new Date(now.getFullYear(), now.getMonth(), diff, 0, 0, 0);
 };
 
-const getMonthKey = () => {
+const getMonthStart = () => {
   const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  return new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
+};
+
+const getWeekKey = () => {
+  const monday = getWeekStart();
+  return monday.toISOString().split('T')[0];
 };
 
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
     const filter = searchParams.get('filter') || 'all';
-    
+
+    const weekStart = getWeekStart();
+    const monthStart = getMonthStart();
+    const weekKey = getWeekKey();
+
     // 1. Fetch paid registrations from Stripe
     let paidRegs = [];
     try {
@@ -29,48 +37,59 @@ export async function GET(request) {
         limit: 100,
         status: 'complete',
       });
-      
-      paidRegs = sessions.data.map(session => ({
-        id: session.id,
-        name: session.metadata?.customerName || session.customer_details?.name || 'Unknown',
-        email: session.customer_details?.email || 'Unknown',
-        ltdId: session.metadata?.ltdId || '',
-        uplinePlatinum: session.metadata?.uplinePlatinum || '',
-        priceType: session.metadata?.priceType || 'single',
-        type: 'ibo',
-        source: session.metadata?.source || 'main',
-        amount: session.amount_total / 100,
-        date: new Date(session.created * 1000).toLocaleDateString(),
-        createdAt: new Date(session.created * 1000).toISOString(),
-        checkedIn: false,
-        visitNumber: '',
-      }));
+
+      paidRegs = sessions.data
+        .map(session => ({
+          id: session.id,
+          name: session.metadata?.customerName || session.customer_details?.name || 'Unknown',
+          email: session.customer_details?.email || 'Unknown',
+          ltdId: session.metadata?.ltdId || '',
+          uplinePlatinum: session.metadata?.uplinePlatinum || '',
+          priceType: session.metadata?.priceType || 'single',
+          type: 'ibo',
+          source: session.metadata?.source || 'main',
+          amount: session.amount_total / 100,
+          date: new Date(session.created * 1000).toLocaleDateString(),
+          createdAt: new Date(session.created * 1000).toISOString(),
+          checkedIn: false,
+          visitNumber: '',
+        }))
+        .filter(reg => {
+          const created = new Date(reg.createdAt);
+          // Single tickets: only show if purchased this week
+          if (reg.priceType === 'single') return created >= weekStart;
+          // Monthly tickets: show if purchased this month
+          if (reg.priceType === 'monthly') return created >= monthStart;
+          return created >= weekStart;
+        });
     } catch (stripeError) {
       console.error('Stripe error:', stripeError.message);
     }
 
-    // 2. Fetch free registrations from KV
+    // 2. Fetch free registrations from KV (guests & apprentices)
     let freeRegs = [];
     try {
-      // Get all keys that match registration:free_*
       const keys = await kv.keys('registration:free_*');
-      console.log('Found registration keys:', keys);
-      
+
       if (keys && keys.length > 0) {
-        // Fetch all registrations in parallel
         const registrations = await Promise.all(
           keys.map(key => kv.get(key))
         );
-        
+
         freeRegs = registrations
           .filter(reg => reg !== null)
+          .filter(reg => {
+            // Only show guests/apprentices registered this week
+            const created = new Date(reg.createdAt);
+            return created >= weekStart;
+          })
           .map(reg => ({
             id: reg.id,
             name: reg.name,
             email: reg.email,
             ltdId: reg.ltdId || '',
             uplinePlatinum: reg.uplinePlatinum || '',
-            priceType: reg.type, // guest or apprentice
+            priceType: reg.type,
             type: reg.type,
             invitedBy: reg.invitedBy || '',
             visitNumber: reg.visitNumber || '',
@@ -81,27 +100,17 @@ export async function GET(request) {
             checkedIn: false,
           }));
       }
-      
-      console.log('Free registrations found:', freeRegs.length);
     } catch (kvError) {
       console.error('KV error:', kvError.message);
     }
 
-    // 3. Get check-in statuses
-    const weekKey = getWeekKey();
-    const monthKey = getMonthKey();
-    
-    // Update check-in status for all registrations
+    // 3. Get check-in statuses (all use weekly keys now)
     const allRegs = [...paidRegs, ...freeRegs];
-    
+
     for (const reg of allRegs) {
       try {
-        const isMonthly = reg.priceType === 'monthly';
-        const periodKey = isMonthly ? monthKey : weekKey;
-        const keyPrefix = isMonthly ? 'month' : 'week';
-        const key = `checkin:${keyPrefix}:${periodKey}:${reg.id}`;
-        
-        const status = await kv.get(key);
+        const checkinKey = `checkin:week:${weekKey}:${reg.id}`;
+        const status = await kv.get(checkinKey);
         if (status?.checkedIn) {
           reg.checkedIn = true;
           reg.checkedInAt = status.timestamp;
@@ -122,12 +131,14 @@ export async function GET(request) {
     // Sort by date (newest first)
     filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       registrations: filtered,
       debug: {
         paidCount: paidRegs.length,
         freeCount: freeRegs.length,
         totalCount: filtered.length,
+        weekStart: weekStart.toISOString(),
+        weekKey,
       }
     });
   } catch (error) {

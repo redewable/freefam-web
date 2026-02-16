@@ -9,11 +9,6 @@ const getWeekKey = () => {
   return monday.toISOString().split('T')[0];
 };
 
-const getMonthKey = () => {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-};
-
 const getTodayKey = () => new Date().toISOString().split('T')[0];
 
 const getSecondsUntilEndOfWeek = () => {
@@ -23,43 +18,30 @@ const getSecondsUntilEndOfWeek = () => {
   return Math.max(1, Math.floor((endOfWeek - now) / 1000));
 };
 
-const getSecondsUntilEndOfMonth = () => {
-  const now = new Date();
-  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
-  return Math.max(1, Math.floor((endOfMonth - now) / 1000));
-};
-
 export async function POST(request) {
   try {
     const body = await request.json();
     const { sessionId, action, priceType, registrationData } = body;
-    
-    console.log('=== CHECK-IN REQUEST ===');
-    console.log('Body:', JSON.stringify(body));
-    
+
     if (!sessionId) {
       return NextResponse.json({ error: 'Session ID required' }, { status: 400 });
     }
 
-    const isMonthly = priceType === 'monthly';
-    const periodKey = isMonthly ? getMonthKey() : getWeekKey();
-    const keyPrefix = isMonthly ? 'month' : 'week';
-    const checkinKey = `checkin:${keyPrefix}:${periodKey}:${sessionId}`;
+    // All check-ins use weekly keys so they reset every Monday
+    const weekKey = getWeekKey();
+    const checkinKey = `checkin:week:${weekKey}:${sessionId}`;
     const todayKey = getTodayKey();
     const historyKey = `history:${todayKey}`;
-    
-    console.log('Keys:', { checkinKey, historyKey, todayKey });
-    
+
     if (action === 'checkin') {
       const timestamp = new Date().toISOString();
-      
-      // 1. Save check-in status
+
+      // 1. Save check-in status with weekly TTL
       await kv.set(checkinKey, { checkedIn: true, timestamp, priceType });
-      const ttl = isMonthly ? getSecondsUntilEndOfMonth() : getSecondsUntilEndOfWeek();
+      const ttl = getSecondsUntilEndOfWeek();
       await kv.expire(checkinKey, ttl);
-      console.log('Saved checkin status');
-      
-      // 2. Save to history
+
+      // 2. Save to history for this date
       const historyEntry = {
         id: sessionId,
         name: registrationData?.name || 'Unknown',
@@ -68,43 +50,33 @@ export async function POST(request) {
         visitNumber: registrationData?.visitNumber || '',
         timestamp,
       };
-      
+
       const historyString = JSON.stringify(historyEntry);
-      console.log('Saving to history:', historyKey, historyString);
-      
-      const addResult = await kv.sadd(historyKey, historyString);
-      console.log('sadd result:', addResult);
-      
+      await kv.sadd(historyKey, historyString);
       await kv.expire(historyKey, 365 * 24 * 60 * 60);
-      
-      // 3. Verify it was saved
-      const verify = await kv.smembers(historyKey);
-      console.log('History after save:', verify?.length, 'items');
-      
-      return NextResponse.json({ 
-        success: true, 
-        checkedIn: true, 
+
+      // 3. Track this date in our dates index for reliable history lookup
+      await kv.sadd('history:dates', todayKey);
+      await kv.expire('history:dates', 365 * 24 * 60 * 60);
+
+      return NextResponse.json({
+        success: true,
+        checkedIn: true,
         timestamp,
-        debug: {
-          historyKey,
-          entrySaved: addResult,
-          totalInHistory: verify?.length || 0,
-        }
       });
-      
+
     } else if (action === 'checkout') {
       // Remove check-in status
       await kv.del(checkinKey);
-      
-      // Remove from history
+
+      // Remove from today's history
       try {
         const historyItems = await kv.smembers(historyKey) || [];
         for (const item of historyItems) {
           try {
-            const parsed = JSON.parse(item);
+            const parsed = typeof item === 'string' ? JSON.parse(item) : item;
             if (parsed.id === sessionId) {
               await kv.srem(historyKey, item);
-              console.log('Removed from history:', sessionId);
               break;
             }
           } catch (e) {}
@@ -112,10 +84,10 @@ export async function POST(request) {
       } catch (e) {
         console.log('Error removing from history:', e);
       }
-      
+
       return NextResponse.json({ success: true, checkedIn: false });
     }
-    
+
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
   } catch (error) {
     console.error('Check-in error:', error);
@@ -123,17 +95,17 @@ export async function POST(request) {
   }
 }
 
-// GET endpoint to check today's history directly
+// GET endpoint to check today's history
 export async function GET() {
   try {
     const todayKey = getTodayKey();
     const historyKey = `history:${todayKey}`;
-    
+
     const items = await kv.smembers(historyKey) || [];
     const parsed = items.map(item => {
-      try { return JSON.parse(item); } catch { return item; }
+      try { return typeof item === 'string' ? JSON.parse(item) : item; } catch { return item; }
     });
-    
+
     return NextResponse.json({
       today: todayKey,
       historyKey,

@@ -5,17 +5,21 @@ export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
     const date = searchParams.get('date');
-    
+
     // If specific date requested, return that date's check-ins
     if (date) {
       const historyKey = `history:${date}`;
       const items = await kv.smembers(historyKey) || [];
-      
+
       const checkins = items.map(item => {
-        try { return typeof item === 'string' ? JSON.parse(item) : item; } 
+        try { return typeof item === 'string' ? JSON.parse(item) : item; }
         catch (e) { return null; }
       }).filter(Boolean);
-      
+
+      // Sort by type: guests first, then apprentices, then IBOs
+      const typeOrder = { guest: 0, apprentice: 1, ibo: 2 };
+      checkins.sort((a, b) => (typeOrder[a.type] || 2) - (typeOrder[b.type] || 2));
+
       const stats = {
         total: checkins.length,
         ibos: checkins.filter(c => c.type === 'ibo').length,
@@ -27,46 +31,57 @@ export async function GET(request) {
           third: checkins.filter(c => c.type === 'guest' && c.visitNumber === '3rd').length,
         },
       };
-      
+
       return NextResponse.json({ date, checkins, stats });
     }
-    
-    // Get all history keys - this is the exact same method that works in debug
-    let keys = [];
+
+    // Get all history dates from both the index and key scan for reliability
+    let dates = new Set();
+
+    // Method 1: Check the dates index
     try {
-      keys = await kv.keys('history:*') || [];
+      const indexDates = await kv.smembers('history:dates') || [];
+      indexDates.forEach(d => dates.add(d));
     } catch (e) {
-      console.error('Error getting keys:', e);
-      return NextResponse.json({ history: [], error: 'Failed to get keys: ' + e.message });
+      console.error('Error reading dates index:', e);
     }
-    
-    if (!keys || keys.length === 0) {
-      return NextResponse.json({ history: [], message: 'No history keys found' });
+
+    // Method 2: Scan for history:* keys as fallback
+    try {
+      const keys = await kv.keys('history:*') || [];
+      keys.forEach(k => {
+        const d = k.replace('history:', '');
+        // Only add valid date strings (YYYY-MM-DD), not 'dates'
+        if (/^\d{4}-\d{2}-\d{2}$/.test(d)) dates.add(d);
+      });
+    } catch (e) {
+      console.error('Error scanning keys:', e);
     }
-    
+
+    if (dates.size === 0) {
+      return NextResponse.json({ history: [], message: 'No history found' });
+    }
+
     // Sort dates newest first
-    const dates = keys
-      .map(k => k.replace('history:', ''))
-      .sort((a, b) => new Date(b) - new Date(a));
-    
+    const sortedDates = Array.from(dates).sort((a, b) => new Date(b) - new Date(a));
+
     const history = [];
-    
-    for (const d of dates.slice(0, 52)) {
+
+    for (const d of sortedDates.slice(0, 52)) {
       const historyKey = `history:${d}`;
-      
+
       let items = [];
       try {
         items = await kv.smembers(historyKey) || [];
       } catch (e) {
-        console.error(`Error getting ${historyKey}:`, e);
         continue;
       }
-      
+
       const checkins = items.map(item => {
-        try { return typeof item === 'string' ? JSON.parse(item) : item; } 
+        try { return typeof item === 'string' ? JSON.parse(item) : item; }
         catch (e) { return null; }
       }).filter(Boolean);
-      
+
       if (checkins.length > 0) {
         history.push({
           date: d,
@@ -82,21 +97,13 @@ export async function GET(request) {
         });
       }
     }
-    
-    return NextResponse.json({ 
-      history,
-      debug: {
-        keysFound: keys,
-        datesCount: dates.length,
-        historyCount: history.length,
-      }
-    });
+
+    return NextResponse.json({ history });
   } catch (error) {
     console.error('History error:', error);
-    return NextResponse.json({ 
-      error: error.message, 
+    return NextResponse.json({
+      error: error.message,
       history: [],
-      stack: error.stack 
     }, { status: 500 });
   }
 }
