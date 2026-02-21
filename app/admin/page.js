@@ -34,6 +34,11 @@ const Icons = {
       <path d="M5 12h14M12 5l7 7-7 7" />
     </svg>
   ),
+  Shield: ({ style }) => (
+    <svg style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+    </svg>
+  ),
 };
 
 export default function AdminPage() {
@@ -49,6 +54,37 @@ export default function AdminPage() {
 
       <main style={{ maxWidth: '800px', margin: '0 auto', padding: '48px 32px' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {/* Leadership Portal */}
+          <Link href="/admin/leadership" style={{ textDecoration: 'none' }}>
+            <div style={{
+              padding: '24px',
+              background: 'white',
+              border: '1px solid rgba(184, 149, 107, 0.3)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '20px',
+              cursor: 'pointer',
+              transition: 'border-color 0.2s',
+            }}>
+              <div style={{
+                width: '56px',
+                height: '56px',
+                background: 'rgba(184, 149, 107, 0.15)',
+                borderRadius: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}>
+                <Icons.Shield style={{ width: '28px', height: '28px', color: colors.gold }} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <h2 style={{ fontSize: '18px', color: colors.dark, margin: '0 0 4px 0', fontWeight: 500 }}>Leadership Portal</h2>
+                <p style={{ fontSize: '14px', color: 'rgba(26,26,26,0.5)', margin: 0 }}>Lineups, finances, history & full admin</p>
+              </div>
+              <Icons.ArrowRight style={{ width: '20px', height: '20px', color: 'rgba(26,26,26,0.3)' }} />
+            </div>
+          </Link>
+
           {/* Check-In */}
           <Link href="/admin/checkin" style={{ textDecoration: 'none' }}>
             <div style={{

@@ -332,10 +332,10 @@ export default function FreedomFamily() {
         <div style={{ maxWidth: '550px', margin: '0 auto' }}>
           <p style={{ color: colors.gold, fontSize: '10px', letterSpacing: '0.25em', textTransform: 'uppercase', marginBottom: '12px' }}>This Monday</p>
           <h2 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 'clamp(30px, 6vw, 44px)', color: colors.dark, marginBottom: '8px', fontWeight: 400, lineHeight: 1.1 }}>Showing The Plan</h2>
-          <p style={{ fontSize: '17px', color: 'rgba(26,26,26,0.5)', marginBottom: '28px' }}>Jeff &amp; Libby Byington</p>
-          
+          <p style={{ fontSize: '17px', color: 'rgba(26,26,26,0.5)', marginBottom: '28px' }}>Paul &amp; Liz Hinton</p>
+
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '28px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}><Icons.Calendar style={{ width: '18px', height: '18px', color: colors.gold }} /><span style={{ fontSize: '15px', color: colors.dark }}>Monday, February 16, 2026 · 7:30 PM</span></div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}><Icons.Calendar style={{ width: '18px', height: '18px', color: colors.gold }} /><span style={{ fontSize: '15px', color: colors.dark }}>Monday, February 23, 2026 · 7:30 PM</span></div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}><Icons.MapPin style={{ width: '18px', height: '18px', color: colors.gold }} /><span style={{ fontSize: '15px', color: colors.dark }}>Embassy Suites · 201 University Dr E, College Station</span></div>
           </div>
           
@@ -357,11 +357,22 @@ export default function FreedomFamily() {
 
       <section style={{ padding: '60px 20px' }}>
         <div style={{ maxWidth: '550px', margin: '0 auto', textAlign: 'center' }}>
-          <p style={{ color: colors.gold, fontSize: '10px', letterSpacing: '0.25em', textTransform: 'uppercase', marginBottom: '12px' }}>Coming Soon</p>
-          <h2 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 'clamp(26px, 5vw, 36px)', color: colors.dark, marginBottom: '8px', fontWeight: 400 }}>Winter&#39;s Spring Leadership</h2>
-          <p style={{ fontSize: '15px', color: 'rgba(26,26,26,0.5)', marginBottom: '8px' }}>April 17–19, 2026</p>
-          <p style={{ fontSize: '14px', color: 'rgba(26,26,26,0.4)', marginBottom: '24px' }}>Virtual Event · Save the Date!</p>
-          <p style={{ fontSize: '13px', color: 'rgba(26,26,26,0.35)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Details Coming Soon</p>
+          <p style={{ color: colors.gold, fontSize: '10px', letterSpacing: '0.25em', textTransform: 'uppercase', marginBottom: '12px' }}>Upcoming Events</p>
+
+          <div style={{ marginBottom: '40px' }}>
+            <h2 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 'clamp(26px, 5vw, 36px)', color: colors.dark, marginBottom: '8px', fontWeight: 400 }}>Trevino Team Meeting</h2>
+            <p style={{ fontSize: '15px', color: 'rgba(26,26,26,0.5)', marginBottom: '8px' }}>Saturday, March 21, 2026 · 1:00 PM</p>
+            <p style={{ fontSize: '14px', color: 'rgba(26,26,26,0.4)', marginBottom: '16px' }}><a href="https://app.waiverelectronic.com/render/splash/666104722c4d2f5b80675ddc" target="_blank" rel="noopener noreferrer" style={{ color: colors.gold, textDecoration: 'none' }}>Holiday Inn – Galleria, Houston, TX</a></p>
+          </div>
+
+          <div style={{ height: '1px', background: 'linear-gradient(to right, transparent, rgba(26,26,26,0.08), transparent)', marginBottom: '40px' }} />
+
+          <div>
+            <h2 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 'clamp(26px, 5vw, 36px)', color: colors.dark, marginBottom: '8px', fontWeight: 400 }}>Winter&#39;s Spring Leadership</h2>
+            <p style={{ fontSize: '15px', color: 'rgba(26,26,26,0.5)', marginBottom: '8px' }}>April 17–19, 2026</p>
+            <p style={{ fontSize: '14px', color: 'rgba(26,26,26,0.4)', marginBottom: '24px' }}>Virtual Event · Save the Date!</p>
+            <p style={{ fontSize: '13px', color: 'rgba(26,26,26,0.35)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Details Coming Soon</p>
+          </div>
         </div>
       </section>
 
