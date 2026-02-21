@@ -303,10 +303,11 @@ export default function FreedomFamily() {
 
   const schedule = [
     { time: '7:00 PM', label: 'IBOs Arrive' },
-    { time: '7:15 PM', label: 'Guests Arrive' },
-    { time: '7:30 PM', label: 'The Plan' },
-    { time: '8:45 PM', label: 'Training' },
-    { time: '10:00 PM', label: 'Close' },
+    { time: '7:15 PM', label: 'Doors Open / Guests Arrive' },
+    { time: '7:30 PM', label: 'Info Session (The Plan)' },
+    { time: '8:30 PM', label: 'Break' },
+    { time: '8:45 PM', label: 'Training (IBOs Only)' },
+    { time: '10:00 PM', label: 'Dismissed' },
   ];
 
   return (

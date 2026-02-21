@@ -28,18 +28,39 @@ const formatDate = (d) => new Date(d + 'T12:00:00').toLocaleDateString('en-US', 
 const formatDateShort = (d) => new Date(d + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
 const DEFAULT_SEGMENTS = [
-  { key: 'host', label: 'Host / MC', speaker: '', topic: '' },
-  { key: 'plan', label: 'The Plan', speaker: '', topic: '' },
-  { key: 'recognition', label: 'Recognition', speaker: '', topic: '' },
-  { key: 'calendar', label: 'Calendar / Upcoming Events', speaker: '', topic: '' },
-  { key: 'product', label: 'Product Demo', speaker: '', topic: '' },
-  { key: 'bsm', label: 'BSM / Book of the Month', speaker: '', topic: '' },
-  { key: 'training', label: 'Training', speaker: '', topic: '' },
+  // Info Session (7:30 - 8:30)
+  { key: 'host', label: 'Welcome / Host', speaker: '', topic: '', time: '7:30 PM', duration: '2 min', section: 'info' },
+  { key: 'plan', label: 'The Plan', speaker: '', topic: '', time: '7:32 PM', duration: '53 min', section: 'info' },
+  { key: 'nextsteps', label: 'Next Steps', speaker: '', topic: '', time: '8:25 PM', duration: '5 min', section: 'info' },
+  // Training (8:45 - 10:00)
+  { key: 'recognition', label: 'Recognition', speaker: '', topic: '', time: '8:45 PM', duration: '20 min', section: 'training' },
+  { key: 'calendar', label: 'Calendar / Upcoming Events', speaker: '', topic: '', time: '9:05 PM', duration: '4 min', section: 'training' },
+  { key: 'product', label: 'Product Demo', speaker: '', topic: '', time: '9:09 PM', duration: '7 min', section: 'training' },
+  { key: 'bsm', label: 'BSM / Book of the Month', speaker: '', topic: '', time: '9:16 PM', duration: '7 min', section: 'training' },
+  { key: 'training', label: 'Training Topic', speaker: '', topic: '', time: '9:23 PM', duration: '25-30 min', section: 'training' },
+];
+
+const MEETING_FLOW = [
+  { time: '6:30 PM', label: 'Round Table Arrives', desc: 'Room setup begins. Doors remain closed.', section: 'prep' },
+  { time: '7:00 PM', label: 'IBOs Arrive / Lineup Huddle', desc: 'Doors closed. IBOs greet guests in lobby. Quick alignment, announcements, prayer.', section: 'prep' },
+  { time: '7:15 PM', label: 'Doors Open', desc: 'Guests arrive. IBOs position for warm greetings.', section: 'prep' },
+  { time: '7:30 PM', label: 'Welcome', desc: 'Ice breaker, set expectations.', section: 'info' },
+  { time: '7:32 PM', label: 'The Plan', desc: 'LTD-approved plan presentation.', section: 'info' },
+  { time: '8:25 PM', label: 'Next Steps', desc: 'Follow-up info, how to get started.', section: 'info' },
+  { time: '8:30 PM', label: 'Info Session Concludes', desc: '15-min break for guest follow-up and transition.', section: 'break' },
+  { time: '8:45 PM', label: 'Recognition (20 min)', desc: 'Celebrate wins: new pins, PV milestones, personal victories, first-timers.', section: 'training' },
+  { time: '9:05 PM', label: 'Calendar (4 min)', desc: 'Upcoming events: regional functions, webinars, local meetings, deadlines.', section: 'training' },
+  { time: '9:09 PM', label: 'Product Demo (7 min)', desc: 'Highlight 1-2 products. Focus on personal story + results.', section: 'training' },
+  { time: '9:16 PM', label: 'BSM (7 min)', desc: 'Business Support Materials: books, audios, functions, LTD Messaging (MAPP).', section: 'training' },
+  { time: '9:23 PM', label: 'Training (25-30 min)', desc: 'Weekly topic: contacting, inviting, STP, follow-up, building depth, etc.', section: 'training' },
+  { time: '10:00 PM', label: 'Dismissed', desc: 'Remind everyone of the next meeting date.', section: 'close' },
+  { time: '10:00-11:00 PM', label: 'Night Owl (Optional)', desc: 'Extended fellowship and discussion.', section: 'close' },
 ];
 
 const segmentColors = {
   host: { bg: 'rgba(184,149,107,0.12)', border: 'rgba(184,149,107,0.3)', color: '#b8956b' },
   plan: { bg: 'rgba(59,130,246,0.08)', border: 'rgba(59,130,246,0.25)', color: '#3b82f6' },
+  nextsteps: { bg: 'rgba(20,184,166,0.08)', border: 'rgba(20,184,166,0.25)', color: '#14b8a6' },
   recognition: { bg: 'rgba(168,85,247,0.08)', border: 'rgba(168,85,247,0.25)', color: '#a855f7' },
   calendar: { bg: 'rgba(34,197,94,0.08)', border: 'rgba(34,197,94,0.25)', color: '#22c55e' },
   product: { bg: 'rgba(249,115,22,0.08)', border: 'rgba(249,115,22,0.25)', color: '#f97316' },
@@ -639,20 +660,70 @@ export default function LeadershipPage() {
                   <input type="date" value={lineupDate} onChange={e => setLineupDate(e.target.value)} style={{ padding: '10px', border: '1px solid rgba(26,26,26,0.2)', fontSize: '14px', boxSizing: 'border-box' }} />
                 </div>
 
-                <p style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.4)', marginBottom: '12px' }}>Segments</p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px' }}>
-                  {lineupSegments.map((seg, i) => {
-                    const sc = segmentColors[seg.key] || segmentColors.training;
-                    return (
-                      <div key={i} style={{ padding: '12px', background: sc.bg, border: `1px solid ${sc.border}` }}>
-                        <p style={{ fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', color: sc.color, marginBottom: '8px', fontWeight: 600 }}>{seg.label}</p>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                          <input value={seg.speaker} onChange={e => { const ns = [...lineupSegments]; ns[i] = { ...ns[i], speaker: e.target.value }; setLineupSegments(ns); }} placeholder="Speaker name" style={{ padding: '8px', border: '1px solid rgba(26,26,26,0.15)', fontSize: '13px', boxSizing: 'border-box', background: 'white' }} />
-                          <input value={seg.topic} onChange={e => { const ns = [...lineupSegments]; ns[i] = { ...ns[i], topic: e.target.value }; setLineupSegments(ns); }} placeholder="Topic (optional)" style={{ padding: '8px', border: '1px solid rgba(26,26,26,0.15)', fontSize: '13px', boxSizing: 'border-box', background: 'white' }} />
+                {/* Info Session Section */}
+                <div style={{ marginBottom: '20px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                    <p style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: colors.gold, margin: 0, fontWeight: 600 }}>Info Session</p>
+                    <div style={{ flex: 1, height: '1px', background: 'rgba(184,149,107,0.3)' }} />
+                    <p style={{ fontSize: '10px', color: 'rgba(26,26,26,0.4)', margin: 0 }}>7:30 – 8:30 PM</p>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {lineupSegments.filter(s => s.section === 'info').map((seg) => {
+                      const i = lineupSegments.indexOf(seg);
+                      const sc = segmentColors[seg.key] || segmentColors.training;
+                      return (
+                        <div key={i} style={{ padding: '12px', background: sc.bg, border: `1px solid ${sc.border}` }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                            <p style={{ fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', color: sc.color, margin: 0, fontWeight: 600 }}>{seg.label}</p>
+                            <p style={{ fontSize: '10px', color: 'rgba(26,26,26,0.35)', margin: 0 }}>{seg.time} · {seg.duration}</p>
+                          </div>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                            <input value={seg.speaker} onChange={e => { const ns = [...lineupSegments]; ns[i] = { ...ns[i], speaker: e.target.value }; setLineupSegments(ns); }} placeholder="Speaker name" style={{ padding: '8px', border: '1px solid rgba(26,26,26,0.15)', fontSize: '13px', boxSizing: 'border-box', background: 'white' }} />
+                            <input value={seg.topic} onChange={e => { const ns = [...lineupSegments]; ns[i] = { ...ns[i], topic: e.target.value }; setLineupSegments(ns); }} placeholder="Topic (optional)" style={{ padding: '8px', border: '1px solid rgba(26,26,26,0.15)', fontSize: '13px', boxSizing: 'border-box', background: 'white' }} />
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Break */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px', padding: '10px 12px', background: 'rgba(26,26,26,0.03)', border: '1px dashed rgba(26,26,26,0.15)' }}>
+                  <Icons.Clock style={{ width: '14px', height: '14px', color: 'rgba(26,26,26,0.3)' }} />
+                  <p style={{ fontSize: '11px', color: 'rgba(26,26,26,0.4)', margin: 0 }}>8:30 PM — Info Session concludes. 15-min break for guest follow-up.</p>
+                </div>
+
+                {/* Training Section */}
+                <div style={{ marginBottom: '20px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                    <p style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: colors.dark, margin: 0, fontWeight: 600 }}>Training</p>
+                    <div style={{ flex: 1, height: '1px', background: 'rgba(26,26,26,0.15)' }} />
+                    <p style={{ fontSize: '10px', color: 'rgba(26,26,26,0.4)', margin: 0 }}>8:45 – 10:00 PM</p>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {lineupSegments.filter(s => s.section === 'training').map((seg) => {
+                      const i = lineupSegments.indexOf(seg);
+                      const sc = segmentColors[seg.key] || segmentColors.training;
+                      return (
+                        <div key={i} style={{ padding: '12px', background: sc.bg, border: `1px solid ${sc.border}` }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                            <p style={{ fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', color: sc.color, margin: 0, fontWeight: 600 }}>{seg.label}</p>
+                            <p style={{ fontSize: '10px', color: 'rgba(26,26,26,0.35)', margin: 0 }}>{seg.time} · {seg.duration}</p>
+                          </div>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                            <input value={seg.speaker} onChange={e => { const ns = [...lineupSegments]; ns[i] = { ...ns[i], speaker: e.target.value }; setLineupSegments(ns); }} placeholder="Speaker name" style={{ padding: '8px', border: '1px solid rgba(26,26,26,0.15)', fontSize: '13px', boxSizing: 'border-box', background: 'white' }} />
+                            <input value={seg.topic} onChange={e => { const ns = [...lineupSegments]; ns[i] = { ...ns[i], topic: e.target.value }; setLineupSegments(ns); }} placeholder="Topic (optional)" style={{ padding: '8px', border: '1px solid rgba(26,26,26,0.15)', fontSize: '13px', boxSizing: 'border-box', background: 'white' }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Dismissal */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px', padding: '10px 12px', background: 'rgba(26,26,26,0.03)', border: '1px dashed rgba(26,26,26,0.15)' }}>
+                  <Icons.Check style={{ width: '14px', height: '14px', color: '#22c55e' }} />
+                  <p style={{ fontSize: '11px', color: 'rgba(26,26,26,0.4)', margin: 0 }}>10:00 PM — Formal dismissal. 10:00–11:00 PM Night Owl (optional).</p>
                 </div>
 
                 <div style={{ marginBottom: '16px' }}>
@@ -698,14 +769,26 @@ export default function LeadershipPage() {
                             <button onClick={() => deleteLineup(lineup.date)} style={{ padding: '6px 10px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: '#ef4444', fontSize: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}><Icons.Trash style={{ width: '12px', height: '12px' }} /> Delete</button>
                           </div>
                         </div>
-                        <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                          {(lineup.segments || []).map((seg, i) => {
+                        <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                          {(lineup.segments || []).map((seg, i, arr) => {
                             const sc = segmentColors[seg.key] || segmentColors.training;
+                            const prevSection = i > 0 ? arr[i - 1].section : null;
+                            const showSectionHeader = seg.section && seg.section !== prevSection;
                             return (
-                              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', padding: '4px 0' }}>
-                                <span style={{ color: sc.color, fontWeight: 500, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{seg.label}</span>
-                                <span style={{ color: colors.dark }}>{seg.speaker || <span style={{ color: 'rgba(26,26,26,0.3)' }}>TBD</span>}{seg.topic ? ` — ${seg.topic}` : ''}</span>
-                              </div>
+                              <React.Fragment key={i}>
+                                {showSectionHeader && (
+                                  <p style={{ fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', color: seg.section === 'info' ? colors.gold : 'rgba(26,26,26,0.35)', margin: i === 0 ? '0 0 2px' : '6px 0 2px', fontWeight: 600 }}>
+                                    {seg.section === 'info' ? 'Info Session (7:30–8:30)' : 'Training (8:45–10:00)'}
+                                  </p>
+                                )}
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', padding: '3px 0' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    {seg.time && <span style={{ fontSize: '10px', color: 'rgba(26,26,26,0.3)', fontVariantNumeric: 'tabular-nums', minWidth: '52px' }}>{seg.time}</span>}
+                                    <span style={{ color: sc.color, fontWeight: 500, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{seg.label}</span>
+                                  </div>
+                                  <span style={{ color: colors.dark }}>{seg.speaker || <span style={{ color: 'rgba(26,26,26,0.3)' }}>TBD</span>}{seg.topic ? ` — ${seg.topic}` : ''}</span>
+                                </div>
+                              </React.Fragment>
                             );
                           })}
                         </div>
