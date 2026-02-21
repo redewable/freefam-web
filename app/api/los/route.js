@@ -84,43 +84,59 @@ export async function GET() {
       safety++;
     }
 
-    // Get direct downline for both user AND partner (merged, deduplicated)
+    // Get FULL recursive downline for both user AND partner
+    // First, get all profiles that could be in our tree (for efficiency)
+    const { data: allProfiles } = await supabase
+      .from('los_tree')
+      .select('*')
+      .order('full_name', { ascending: true });
+
+    const profileMap = new Map();
+    for (const p of (allProfiles || [])) {
+      profileMap.set(p.id, p);
+    }
+
+    // Build children map (sponsor_id → list of children)
+    const childrenMap = new Map();
+    for (const p of (allProfiles || [])) {
+      if (p.sponsor_id) {
+        if (!childrenMap.has(p.sponsor_id)) childrenMap.set(p.sponsor_id, []);
+        childrenMap.get(p.sponsor_id).push(p);
+      }
+    }
+
+    // Recursive function to build tree
+    const buildTree = (personId, depth = 0, maxDepth = 10) => {
+      if (depth >= maxDepth) return [];
+      const children = childrenMap.get(personId) || [];
+      return children
+        .filter(c => c.id !== partnerId && c.id !== user.id) // Skip partner and self
+        .map(c => ({
+          ...c,
+          children: buildTree(c.id, depth + 1, maxDepth),
+        }))
+        .sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''));
+    };
+
+    // Get downline for user + partner combined
+    const userChildren = buildTree(user.id);
+    const partnerChildren = partnerId ? buildTree(partnerId) : [];
+
+    // Merge and deduplicate (in case of overlap)
     const downlineIds = new Set();
     const downlineList = [];
 
-    // User's downline
-    const { data: userDownline } = await supabase
-      .from('los_tree')
-      .select('*')
-      .eq('sponsor_id', user.id)
-      .order('full_name', { ascending: true });
-
-    for (const d of (userDownline || [])) {
-      // Skip partner from downline (they're shown separately)
-      if (partnerId && d.id === partnerId) continue;
-      if (!downlineIds.has(d.id)) {
-        downlineIds.add(d.id);
-        downlineList.push(d);
-      }
-    }
-
-    // Partner's downline
-    if (partnerId) {
-      const { data: partnerDownline } = await supabase
-        .from('los_tree')
-        .select('*')
-        .eq('sponsor_id', partnerId)
-        .order('full_name', { ascending: true });
-
-      for (const d of (partnerDownline || [])) {
-        // Skip current user from partner's downline
-        if (d.id === user.id) continue;
-        if (!downlineIds.has(d.id)) {
-          downlineIds.add(d.id);
-          downlineList.push(d);
+    const addToList = (items) => {
+      for (const item of items) {
+        if (!downlineIds.has(item.id)) {
+          downlineIds.add(item.id);
+          downlineList.push(item);
         }
       }
-    }
+    };
+
+    addToList(userChildren);
+    addToList(partnerChildren);
 
     // Sort combined downline by name
     downlineList.sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''));

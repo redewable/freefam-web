@@ -64,6 +64,23 @@ const InviteModal = ({ isOpen, onClose }) => {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Freedom Family - Join Our Team',
+          text: 'You\'re invited to join Freedom Family! Create your account here:',
+          url: inviteLink,
+        });
+      } catch (err) {
+        // User cancelled or share failed — fall back to copy
+        if (err.name !== 'AbortError') handleCopy();
+      }
+    } else {
+      handleCopy();
+    }
+  };
+
   const handleClose = () => {
     setLtdId('');
     setRole('sponsor');
@@ -112,10 +129,13 @@ const InviteModal = ({ isOpen, onClose }) => {
               {inviteLink}
             </div>
             <div style={{ display: 'flex', gap: '10px' }}>
-              <button onClick={handleClose} style={{ flex: 1, padding: '14px', background: 'transparent', border: '1px solid rgba(26,26,26,0.12)', color: 'rgba(26,26,26,0.5)', fontSize: '12px', letterSpacing: '0.05em', cursor: 'pointer' }}>Done</button>
-              <button onClick={handleCopy} style={{ flex: 1, padding: '14px', background: colors.dark, color: colors.bg, border: 'none', fontSize: '12px', letterSpacing: '0.05em', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+              <button onClick={handleCopy} style={{ flex: 1, padding: '14px', background: 'transparent', border: '1px solid rgba(26,26,26,0.12)', color: 'rgba(26,26,26,0.5)', fontSize: '12px', letterSpacing: '0.05em', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                 <Icons.Copy style={{ width: '14px', height: '14px' }} />
-                {copied ? 'Copied!' : 'Copy Link'}
+                {copied ? 'Copied!' : 'Copy'}
+              </button>
+              <button onClick={handleShare} style={{ flex: 1, padding: '14px', background: colors.dark, color: colors.bg, border: 'none', fontSize: '12px', letterSpacing: '0.05em', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                <svg style={{ width: '14px', height: '14px' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13" /></svg>
+                Share
               </button>
             </div>
             <p style={{ fontSize: '11px', color: 'rgba(26,26,26,0.35)', margin: '12px 0 0', textAlign: 'center' }}>Link expires in 30 days</p>
@@ -205,6 +225,71 @@ const LOSTree = ({ userId, profile }) => {
     );
   };
 
+  const DownlineTree = ({ people, showAttendance, attendance, depth }) => {
+    const [expanded, setExpanded] = useState({});
+    const toggle = (id) => setExpanded(prev => ({ ...prev, [id]: !prev[id] }));
+
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        {people.map(person => {
+          const hasChildren = person.children && person.children.length > 0;
+          const isExpanded = expanded[person.id];
+          const personAttendance = attendance?.records?.filter(r => r.ltd_id === person.ltd_id) || [];
+          const roleBadge = {
+            admin: { bg: 'rgba(184,149,107,0.15)', color: colors.gold, label: 'Admin' },
+            sponsor: { bg: 'rgba(59,130,246,0.1)', color: '#3b82f6', label: 'Sponsor' },
+            member: { bg: 'rgba(26,26,26,0.06)', color: 'rgba(26,26,26,0.5)', label: 'Member' },
+          };
+          const badge = roleBadge[person.role] || roleBadge.member;
+
+          return (
+            <div key={person.id}>
+              <div style={{
+                padding: '14px 16px',
+                paddingLeft: `${16 + depth * 20}px`,
+                background: 'white',
+                border: '1px solid rgba(26,26,26,0.08)',
+                display: 'flex', alignItems: 'center', gap: '10px',
+              }}>
+                {hasChildren && (
+                  <button onClick={() => toggle(person.id)} style={{
+                    width: '22px', height: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: 'rgba(26,26,26,0.04)', border: '1px solid rgba(26,26,26,0.1)',
+                    borderRadius: '4px', cursor: 'pointer', flexShrink: 0, padding: 0,
+                    transform: isExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s',
+                  }}>
+                    <Icons.ChevronDown style={{ width: '12px', height: '12px', color: 'rgba(26,26,26,0.4)' }} />
+                  </button>
+                )}
+                {!hasChildren && depth > 0 && (
+                  <div style={{ width: '22px', flexShrink: 0 }} />
+                )}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
+                    <p style={{ fontSize: '14px', fontWeight: 500, color: colors.dark, margin: 0 }}>{person.full_name || 'Unnamed'}</p>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '10px', padding: '1px 6px', background: badge.bg, color: badge.color, borderRadius: '2px' }}>{badge.label}</span>
+                    {person.ltd_id && <span style={{ fontSize: '10px', color: 'rgba(26,26,26,0.3)' }}>#{person.ltd_id}</span>}
+                    {hasChildren && <span style={{ fontSize: '10px', color: 'rgba(26,26,26,0.3)' }}>{person.children.length} downline</span>}
+                  </div>
+                </div>
+                {showAttendance && personAttendance.length > 0 && (
+                  <span style={{ fontSize: '10px', padding: '2px 6px', background: 'rgba(34,197,94,0.1)', color: '#22c55e', borderRadius: '2px', flexShrink: 0 }}>
+                    {personAttendance.length}
+                  </span>
+                )}
+              </div>
+              {hasChildren && isExpanded && (
+                <DownlineTree people={person.children} showAttendance={showAttendance} attendance={attendance} depth={depth + 1} />
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
   return (
     <div>
       {/* Attendance toggle */}
@@ -283,11 +368,7 @@ const LOSTree = ({ userId, profile }) => {
             <div style={{ width: '1px', height: '16px', background: 'rgba(184,149,107,0.3)' }} />
           </div>
           <p style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.35)', marginBottom: '8px' }}>Your Team ({tree.downline.length})</p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            {tree.downline.map(person => (
-              <PersonCard key={person.id} person={person} />
-            ))}
-          </div>
+          <DownlineTree people={tree.downline} showAttendance={showAttendance} attendance={attendance} depth={0} />
         </div>
       )}
     </div>
@@ -324,7 +405,7 @@ export default function ResourcesDashboard() {
       });
 
       // Fetch resources
-      fetch('/api/resources').then(r => r.json()).then(data => setResources(data.resources || []));
+      fetch('/api/resources').then(r => r.json()).then(data => setResources(data.resources || [])).catch(() => setResources([]));
 
       // Fetch activity
       const { data: logs } = await supabase
@@ -393,20 +474,21 @@ export default function ResourcesDashboard() {
 
       {/* Header */}
       <nav style={{ position: 'sticky', top: 0, zIndex: 40, background: 'rgba(250,250,248,0.95)', backdropFilter: 'blur(12px)', borderBottom: '1px solid rgba(26,26,26,0.05)' }}>
-        <div style={{ maxWidth: '900px', margin: '0 auto', padding: '10px 16px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+        <div style={{ maxWidth: '900px', margin: '0 auto', padding: '12px 16px 10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
             <a href="/" style={{ fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase', color: colors.dark, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <Icons.Home style={{ width: '12px', height: '12px' }} />
               Freedom Family
             </a>
-            <button onClick={handleLogout} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(26,26,26,0.4)', fontSize: '11px' }}>
+            <button onClick={handleLogout} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(26,26,26,0.4)', fontSize: '11px', padding: '4px' }}>
               <Icons.Logout style={{ width: '14px', height: '14px' }} />
+              <span>Logout</span>
             </button>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', color: colors.gold }}>Resources</span>
+            <span style={{ fontSize: '11px', letterSpacing: '0.12em', textTransform: 'uppercase', color: colors.gold, fontWeight: 500 }}>Resources</span>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '11px', color: 'rgba(26,26,26,0.5)' }}>{profile?.full_name || 'Member'}</span>
+              <span style={{ fontSize: '12px', color: 'rgba(26,26,26,0.5)' }}>{profile?.full_name || 'Member'}</span>
               {profile?.ltd_id && <span style={{ fontSize: '10px', color: 'rgba(26,26,26,0.3)' }}>#{profile.ltd_id}</span>}
             </div>
           </div>
@@ -463,22 +545,24 @@ export default function ResourcesDashboard() {
               </div>
             </div>
 
-            {/* Quick Links */}
-            <div style={{ marginBottom: '32px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                <p style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: colors.gold, margin: 0, fontWeight: 600 }}>Shared Documents</p>
-                <div style={{ flex: 1, height: '1px', background: 'rgba(184,149,107,0.2)' }} />
+            {/* Shared Documents - only show under Docs filter */}
+            {(filterType === 'document') && (
+              <div style={{ marginBottom: '32px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                  <p style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: colors.gold, margin: 0, fontWeight: 600 }}>Shared Documents</p>
+                  <div style={{ flex: 1, height: '1px', background: 'rgba(184,149,107,0.2)' }} />
+                </div>
+                <a href="/resources/books" style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px 20px', background: 'white', border: '1px solid rgba(26,26,26,0.08)', textDecoration: 'none', cursor: 'pointer' }}>
+                  <div style={{ width: '40px', height: '40px', background: 'rgba(184,149,107,0.1)', border: '1px solid rgba(184,149,107,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Icons.Book style={{ width: '18px', height: '18px', color: colors.gold }} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <p style={{ fontSize: '15px', fontWeight: 500, color: colors.dark, margin: '0 0 3px' }}>First Year Book List</p>
+                    <p style={{ fontSize: '13px', color: 'rgba(26,26,26,0.45)', margin: 0 }}>13 essential reads for your journey</p>
+                  </div>
+                </a>
               </div>
-              <a href="/resources/books" style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px 20px', background: 'white', border: '1px solid rgba(26,26,26,0.08)', textDecoration: 'none', cursor: 'pointer' }}>
-                <div style={{ width: '40px', height: '40px', background: 'rgba(184,149,107,0.1)', border: '1px solid rgba(184,149,107,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <Icons.Book style={{ width: '18px', height: '18px', color: colors.gold }} />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <p style={{ fontSize: '15px', fontWeight: 500, color: colors.dark, margin: '0 0 3px' }}>First Year Book List</p>
-                  <p style={{ fontSize: '13px', color: 'rgba(26,26,26,0.45)', margin: 0 }}>13 essential reads for your journey</p>
-                </div>
-              </a>
-            </div>
+            )}
 
             {filteredResources.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '40px 20px' }}>

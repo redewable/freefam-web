@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from 'react';
+import { createClient } from '@/app/lib/supabase/client';
 
 const colors = { bg: '#fafaf8', dark: '#1a1a1a', gold: '#b8956b' };
 
@@ -85,6 +86,22 @@ const SignatureModal = ({ isOpen, onClose, onSave }) => {
 const ShareModal = ({ isOpen, onClose, onCopy }) => {
   const guestLink = typeof window !== 'undefined' ? `${window.location.origin}/guest` : '';
   const copy = () => { navigator.clipboard.writeText(guestLink); onCopy(); onClose(); };
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Freedom Family - You\'re Invited!',
+          text: 'You\'re invited to our Info Session! Register here:',
+          url: guestLink,
+        });
+        onClose();
+      } catch (err) {
+        if (err.name !== 'AbortError') copy();
+      }
+    } else {
+      copy();
+    }
+  };
   if (!isOpen) return null;
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
@@ -100,10 +117,15 @@ const ShareModal = ({ isOpen, onClose, onCopy }) => {
             <p style={{ fontSize: '11px', color: 'rgba(26,26,26,0.4)', marginBottom: '6px' }}>Guest Link</p>
             <p style={{ fontSize: '13px', color: colors.dark, wordBreak: 'break-all', fontFamily: 'monospace', margin: 0 }}>{guestLink}</p>
           </div>
-          <button onClick={copy} style={{ width: '100%', padding: '14px', background: colors.dark, color: colors.bg, fontSize: '13px', letterSpacing: '0.1em', textTransform: 'uppercase', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
-            <Icons.Link style={{ width: '14px', height: '14px' }} />Copy Link
-          </button>
-          <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: '1px solid rgba(26,26,26,0.1)' }}>
+          <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+            <button onClick={copy} style={{ flex: 1, padding: '14px', background: 'transparent', border: '1px solid rgba(26,26,26,0.15)', color: colors.dark, fontSize: '13px', letterSpacing: '0.1em', textTransform: 'uppercase', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+              <Icons.Link style={{ width: '14px', height: '14px' }} />Copy
+            </button>
+            <button onClick={handleShare} style={{ flex: 1, padding: '14px', background: colors.dark, color: colors.bg, fontSize: '13px', letterSpacing: '0.1em', textTransform: 'uppercase', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+              <Icons.Share style={{ width: '14px', height: '14px' }} />Share
+            </button>
+          </div>
+          <div style={{ paddingTop: '20px', borderTop: '1px solid rgba(26,26,26,0.1)' }}>
             <p style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.4)', marginBottom: '12px' }}>Or share via</p>
             <div style={{ display: 'flex', gap: '10px' }}>
               <a href={`sms:?body=${encodeURIComponent(`You're invited! Register here: ${guestLink}`)}`} style={{ flex: 1, padding: '10px', textAlign: 'center', fontSize: '13px', color: 'rgba(26,26,26,0.6)', border: '1px solid rgba(26,26,26,0.1)', textDecoration: 'none' }}>Text</a>
@@ -290,6 +312,7 @@ export default function FreedomFamily() {
   const [shareOpen, setShareOpen] = useState(false);
   const [ticketType, setTicketType] = useState('');
   const [toast, setToast] = useState({ visible: false, message: '' });
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -298,6 +321,12 @@ export default function FreedomFamily() {
       if (params.get('canceled') === 'true') { setToast({ visible: true, message: 'Payment canceled' }); window.history.replaceState({}, '', window.location.pathname); }
       const reg = params.get('register');
       if (reg && ['guest', 'apprentice', 'ibo'].includes(reg)) { setTicketType(reg); setModalOpen(true); window.history.replaceState({}, '', window.location.pathname); }
+
+      // Check if user is logged in
+      const supabase = createClient();
+      supabase.auth.getUser().then(({ data: { user } }) => {
+        if (user) setIsLoggedIn(true);
+      }).catch(() => {});
     }
   }, []);
 
@@ -317,7 +346,10 @@ export default function FreedomFamily() {
       <nav style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 40, background: 'rgba(250,250,248,0.9)', backdropFilter: 'blur(12px)', borderBottom: '1px solid rgba(26,26,26,0.05)' }}>
         <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <p style={{ fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase', color: colors.dark, margin: 0 }}>Freedom Family</p>
-          <button onClick={() => setModalOpen(true)} style={{ fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', color: colors.gold, background: 'none', border: 'none', cursor: 'pointer' }}>Register</button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <button onClick={() => setModalOpen(true)} style={{ fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', color: colors.gold, background: 'none', border: 'none', cursor: 'pointer' }}>Register</button>
+            <a href={isLoggedIn ? '/resources' : '/resources/login'} style={{ fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.45)', textDecoration: 'none' }}>{isLoggedIn ? 'Dashboard' : 'Login'}</a>
+          </div>
         </div>
       </nav>
 

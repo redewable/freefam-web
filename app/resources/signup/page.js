@@ -156,12 +156,14 @@ function SignupContent() {
               <label style={labelStyle}>LTD ID <span style={{ color: '#ef4444' }}>*</span></label>
               <input
                 type="text"
+                name="username"
                 value={ltdId}
                 onChange={(e) => setLtdId(e.target.value.replace(/\D/g, ''))}
                 placeholder="e.g. 6076043"
                 style={inputStyle}
                 required
                 inputMode="numeric"
+                autoComplete="username"
                 autoFocus
                 readOnly={!!invite?.invitee_ltd_id}
               />
