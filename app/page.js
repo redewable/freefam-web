@@ -369,10 +369,13 @@ export default function FreedomFamily() {
 
           <div style={{ height: '1px', background: 'linear-gradient(to right, transparent, rgba(26,26,26,0.08), transparent)', marginBottom: '40px' }} />
 
-          <div style={{ marginBottom: '40px' }}>
+          <div style={{ marginBottom: '40px', padding: '24px', background: 'white', border: `2px solid ${colors.gold}`, position: 'relative' }}>
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '3px', background: `linear-gradient(to right, ${colors.gold}, transparent)` }} />
+            <p style={{ color: colors.gold, fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '6px' }}>Don&#39;t Miss This</p>
             <h2 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 'clamp(26px, 5vw, 36px)', color: colors.dark, marginBottom: '8px', fontWeight: 400 }}>Trevino Team Meeting</h2>
-            <p style={{ fontSize: '15px', color: 'rgba(26,26,26,0.5)', marginBottom: '8px' }}>Saturday, March 21, 2026 · 1:00 PM</p>
-            <p style={{ fontSize: '14px', color: 'rgba(26,26,26,0.4)', marginBottom: '16px' }}><a href="https://app.waiverelectronic.com/render/splash/666104722c4d2f5b80675ddc" target="_blank" rel="noopener noreferrer" style={{ color: colors.gold, textDecoration: 'none' }}>Holiday Inn – Galleria, Houston, TX</a></p>
+            <p style={{ fontSize: '15px', color: 'rgba(26,26,26,0.5)', marginBottom: '4px' }}>Saturday, March 21, 2026 · 1:00 PM</p>
+            <p style={{ fontSize: '14px', color: 'rgba(26,26,26,0.4)', marginBottom: '16px' }}>Holiday Inn – Galleria, Houston, TX</p>
+            <a href="https://app.waiverelectronic.com/render/splash/666104722c4d2f5b80675ddc" target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '12px 24px', background: colors.dark, color: colors.bg, fontSize: '12px', letterSpacing: '0.1em', textTransform: 'uppercase', textDecoration: 'none' }}>Register Now<Icons.ArrowRight style={{ width: '14px', height: '14px' }} /></a>
           </div>
 
           <div style={{ height: '1px', background: 'linear-gradient(to right, transparent, rgba(26,26,26,0.08), transparent)', marginBottom: '40px' }} />
@@ -380,8 +383,8 @@ export default function FreedomFamily() {
           <div>
             <h2 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 'clamp(26px, 5vw, 36px)', color: colors.dark, marginBottom: '8px', fontWeight: 400 }}>Winter&#39;s Spring Leadership</h2>
             <p style={{ fontSize: '15px', color: 'rgba(26,26,26,0.5)', marginBottom: '8px' }}>April 17–19, 2026</p>
-            <p style={{ fontSize: '14px', color: 'rgba(26,26,26,0.4)', marginBottom: '24px' }}>Virtual Event · Save the Date!</p>
-            <p style={{ fontSize: '13px', color: 'rgba(26,26,26,0.35)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Details Coming Soon</p>
+            <p style={{ fontSize: '14px', color: 'rgba(26,26,26,0.4)', marginBottom: '16px' }}>Virtual Event · Save the Date!</p>
+            <a href="https://www.ltdteam.com" target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 20px', background: 'transparent', color: colors.dark, fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase', textDecoration: 'none', border: '1px solid rgba(26,26,26,0.2)' }}>More Info<Icons.ArrowRight style={{ width: '12px', height: '12px' }} /></a>
           </div>
         </div>
       </section>

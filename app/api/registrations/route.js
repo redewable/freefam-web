@@ -4,21 +4,27 @@ import { NextResponse } from 'next/server';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
-const getWeekStart = () => {
+// Use CST (America/Chicago) for all date calculations
+const getCSTDate = () => {
   const now = new Date();
+  return new Date(now.toLocaleString('en-US', { timeZone: 'America/Chicago' }));
+};
+
+const getWeekStart = () => {
+  const now = getCSTDate();
   const day = now.getDay();
   const diff = now.getDate() - day + (day === 0 ? -6 : 1);
   return new Date(now.getFullYear(), now.getMonth(), diff, 0, 0, 0);
 };
 
 const getMonthStart = () => {
-  const now = new Date();
+  const now = getCSTDate();
   return new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
 };
 
 const getWeekKey = () => {
   const monday = getWeekStart();
-  return monday.toISOString().split('T')[0];
+  return `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, '0')}-${String(monday.getDate()).padStart(2, '0')}`;
 };
 
 export async function GET(request) {

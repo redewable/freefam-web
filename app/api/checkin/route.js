@@ -1,15 +1,25 @@
 import { kv } from '@vercel/kv';
 import { NextResponse } from 'next/server';
 
-const getWeekKey = () => {
+// Use CST (America/Chicago) for all date keys
+const getCSTDate = () => {
   const now = new Date();
+  const cst = new Date(now.toLocaleString('en-US', { timeZone: 'America/Chicago' }));
+  return cst;
+};
+
+const getWeekKey = () => {
+  const now = getCSTDate();
   const day = now.getDay();
   const diff = now.getDate() - day + (day === 0 ? -6 : 1);
   const monday = new Date(now.getFullYear(), now.getMonth(), diff);
-  return monday.toISOString().split('T')[0];
+  return `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, '0')}-${String(monday.getDate()).padStart(2, '0')}`;
 };
 
-const getTodayKey = () => new Date().toISOString().split('T')[0];
+const getTodayKey = () => {
+  const now = getCSTDate();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+};
 
 const getSecondsUntilEndOfWeek = () => {
   const now = new Date();

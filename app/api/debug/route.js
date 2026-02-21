@@ -1,7 +1,11 @@
 import { kv } from '@vercel/kv';
 import { NextResponse } from 'next/server';
 
-const getTodayKey = () => new Date().toISOString().split('T')[0];
+const getTodayKey = () => {
+  const now = new Date();
+  const cst = new Date(now.toLocaleString('en-US', { timeZone: 'America/Chicago' }));
+  return `${cst.getFullYear()}-${String(cst.getMonth() + 1).padStart(2, '0')}-${String(cst.getDate()).padStart(2, '0')}`;
+};
 
 export async function GET() {
   try {

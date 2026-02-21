@@ -24,8 +24,8 @@ const Icons = {
   Clock: ({ style }) => <svg style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></svg>,
 };
 
-const formatDate = (d) => new Date(d + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
-const formatDateShort = (d) => new Date(d + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+const formatDate = (d) => new Date(d + 'T12:00:00-06:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', timeZone: 'America/Chicago' });
+const formatDateShort = (d) => new Date(d + 'T12:00:00-06:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'America/Chicago' });
 
 const DEFAULT_SEGMENTS = [
   // Info Session (7:30 - 8:30)
@@ -989,6 +989,7 @@ export default function LeadershipPage() {
                     const guestTotal = (meeting.guests?.first || 0) + (meeting.guests?.second || 0) + (meeting.guests?.third || 0);
                     const trend = history[i + 1] ? meeting.total - history[i + 1].total : null;
                     const lineup = lineups.find(l => l.date === meeting.date);
+                    const speakerSummary = lineup?.segments?.filter(s => s.speaker).map(s => ({ label: s.label, speaker: s.speaker, topic: s.topic })) || [];
 
                     return (
                       <div key={meeting.date} onClick={() => setSelectedDate(meeting.date)} style={{ background: 'white', border: '1px solid rgba(26,26,26,0.1)', cursor: 'pointer', marginBottom: '12px' }}>
@@ -1010,12 +1011,29 @@ export default function LeadershipPage() {
                             </div>
                           </div>
                         </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', borderBottom: '1px solid rgba(26,26,26,0.06)' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', borderBottom: speakerSummary.length > 0 ? '1px solid rgba(26,26,26,0.06)' : 'none' }}>
                           <div style={{ padding: '8px', textAlign: 'center', borderRight: '1px solid rgba(26,26,26,0.06)' }}><p style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(26,26,26,0.4)', margin: '0 0 2px' }}>IBOs</p><p style={{ fontSize: '16px', fontWeight: 600, color: colors.dark, margin: 0 }}>{meeting.ibos}</p></div>
                           <div style={{ padding: '8px', textAlign: 'center', borderRight: '1px solid rgba(26,26,26,0.06)' }}><p style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#a855f7', margin: '0 0 2px' }}>Appr.</p><p style={{ fontSize: '16px', fontWeight: 600, color: '#a855f7', margin: 0 }}>{meeting.apprentices}</p></div>
                           <div style={{ padding: '8px', textAlign: 'center', borderRight: '1px solid rgba(26,26,26,0.06)' }}><p style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#3b82f6', margin: '0 0 2px' }}>Guests</p><p style={{ fontSize: '16px', fontWeight: 600, color: '#3b82f6', margin: 0 }}>{guestTotal}</p></div>
                           <div style={{ padding: '8px', textAlign: 'center' }}><p style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(26,26,26,0.4)', margin: '0 0 2px' }}>Total</p><p style={{ fontSize: '16px', fontWeight: 600, color: colors.dark, margin: 0 }}>{meeting.total}</p></div>
                         </div>
+                        {speakerSummary.length > 0 && (
+                          <div style={{ padding: '10px 16px' }}>
+                            <p style={{ fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.35)', margin: '0 0 6px' }}>Speakers</p>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 12px' }}>
+                              {speakerSummary.map((s, si) => {
+                                const sc = segmentColors[lineup.segments.find(seg => seg.label === s.label)?.key] || segmentColors.training;
+                                return (
+                                  <div key={si} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px' }}>
+                                    <span style={{ color: sc.color, fontWeight: 600, fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{s.label.split('/')[0].trim().split(' ').slice(0,2).join(' ')}</span>
+                                    <span style={{ color: colors.dark }}>{s.speaker}</span>
+                                    {s.topic && <span style={{ color: 'rgba(26,26,26,0.35)', fontSize: '10px' }}>({s.topic})</span>}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     );
                   })

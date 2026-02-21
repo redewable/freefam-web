@@ -6,7 +6,7 @@ import { Suspense } from 'react';
 
 const colors = { bg: '#fafaf8', dark: '#1a1a1a', gold: '#b8956b' };
 
-const formatDate = (d) => new Date(d + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+const formatDate = (d) => new Date(d + 'T12:00:00-06:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', timeZone: 'America/Chicago' });
 
 const segmentColors = {
   host: { bg: 'rgba(184,149,107,0.12)', border: 'rgba(184,149,107,0.3)', color: '#b8956b' },
@@ -126,13 +126,13 @@ function LineupContent() {
                 return (
                   <div key={i} style={{ padding: '12px 16px', background: sc.bg, border: `1px solid ${sc.border}` }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                           <p style={{ fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', color: sc.color, margin: 0, fontWeight: 600 }}>{seg.label}</p>
                           <span style={{ fontSize: '10px', color: 'rgba(26,26,26,0.3)' }}>{seg.time} · {seg.duration}</span>
                         </div>
                         <p style={{ fontSize: '15px', color: colors.dark, margin: 0, fontWeight: 500 }}>{seg.speaker || 'TBD'}</p>
-                        {seg.topic && <p style={{ fontSize: '12px', color: 'rgba(26,26,26,0.5)', margin: '4px 0 0' }}>{seg.topic}</p>}
+                        {seg.topic && <p style={{ fontSize: '13px', color: 'rgba(26,26,26,0.55)', margin: '3px 0 0', fontStyle: 'italic' }}>{seg.topic}</p>}
                       </div>
                     </div>
                   </div>
@@ -154,13 +154,13 @@ function LineupContent() {
                 return (
                   <div key={i} style={{ padding: '12px 16px', background: sc.bg, border: `1px solid ${sc.border}` }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                           <p style={{ fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', color: sc.color, margin: 0, fontWeight: 600 }}>{seg.label}</p>
                           <span style={{ fontSize: '10px', color: 'rgba(26,26,26,0.3)' }}>{seg.time} · {seg.duration}</span>
                         </div>
                         <p style={{ fontSize: '15px', color: colors.dark, margin: 0, fontWeight: 500 }}>{seg.speaker || 'TBD'}</p>
-                        {seg.topic && <p style={{ fontSize: '12px', color: 'rgba(26,26,26,0.5)', margin: '4px 0 0' }}>{seg.topic}</p>}
+                        {seg.topic && <p style={{ fontSize: '13px', color: 'rgba(26,26,26,0.55)', margin: '3px 0 0', fontStyle: 'italic' }}>{seg.topic}</p>}
                       </div>
                     </div>
                   </div>
