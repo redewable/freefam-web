@@ -413,7 +413,10 @@ export default function FreedomFamily() {
       <footer style={{ padding: '40px 20px', borderTop: '1px solid rgba(26,26,26,0.05)' }}>
         <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <p style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.25)', margin: 0 }}>LTD</p>
-          <a href="/admin/checkin" style={{ fontSize: '10px', color: 'rgba(26,26,26,0.2)', textDecoration: 'none' }}>Admin</a>
+          <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+            <a href="/admin/leadership" style={{ fontSize: '10px', color: 'rgba(26,26,26,0.2)', textDecoration: 'none' }}>Leadership</a>
+            <a href="/admin/checkin" style={{ fontSize: '10px', color: 'rgba(26,26,26,0.2)', textDecoration: 'none' }}>Admin</a>
+          </div>
         </div>
       </footer>
 
