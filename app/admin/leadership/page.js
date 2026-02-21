@@ -352,7 +352,13 @@ export default function LeadershipPage() {
   const openLineupEditor = (lineup = null) => {
     if (lineup) {
       setLineupDate(lineup.date);
-      setLineupSegments(lineup.segments || [...DEFAULT_SEGMENTS]);
+      // Ensure every segment has speaker/topic as strings (KV may strip empty strings)
+      const segs = (lineup.segments || [...DEFAULT_SEGMENTS]).map(s => ({
+        ...s,
+        speaker: s.speaker || '',
+        topic: s.topic || '',
+      }));
+      setLineupSegments(segs);
       setLineupTopics(lineup.topics || '');
       setLineupNotes(lineup.notes || '');
     } else {
@@ -519,14 +525,14 @@ export default function LeadershipPage() {
         </div>
       </div>
 
-      <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '16px' }}>
+      <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px 16px 40px' }}>
         {loading ? <p style={{ padding: '40px', textAlign: 'center', color: 'rgba(26,26,26,0.5)' }}>Loading...</p> : (
 
           // ═══════════════ OVERVIEW TAB ═══════════════
           tab === 'overview' ? (
             <>
               {/* Financial Summary */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginBottom: '20px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '10px', marginBottom: '24px' }}>
                 {[
                   { l: 'This Week', v: stats.total, c: colors.dark, sub: 'registrations' },
                   { l: 'Revenue', v: `$${totalRevenue.toFixed(2)}`, c: '#22c55e', sub: 'this period' },
@@ -681,25 +687,31 @@ export default function LeadershipPage() {
                 </div>
 
                 {/* Info Session Section */}
-                <div style={{ marginBottom: '20px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                <div style={{ marginBottom: '24px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                     <p style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: colors.gold, margin: 0, fontWeight: 600 }}>Info Session</p>
                     <div style={{ flex: 1, height: '1px', background: 'rgba(184,149,107,0.3)' }} />
                     <p style={{ fontSize: '10px', color: 'rgba(26,26,26,0.4)', margin: 0 }}>7:30 – 8:30 PM</p>
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     {lineupSegments.filter(s => s.section === 'info').map((seg) => {
                       const i = lineupSegments.indexOf(seg);
                       const sc = segmentColors[seg.key] || segmentColors.training;
                       return (
-                        <div key={i} style={{ padding: '12px', background: sc.bg, border: `1px solid ${sc.border}` }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                        <div key={seg.key} style={{ padding: '14px', background: sc.bg, border: `1px solid ${sc.border}` }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                             <p style={{ fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', color: sc.color, margin: 0, fontWeight: 600 }}>{seg.label}</p>
                             <p style={{ fontSize: '10px', color: 'rgba(26,26,26,0.35)', margin: 0 }}>{seg.time} · {seg.duration}</p>
                           </div>
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                            <input value={seg.speaker} onChange={e => { const ns = [...lineupSegments]; ns[i] = { ...ns[i], speaker: e.target.value }; setLineupSegments(ns); }} placeholder="Speaker name" style={{ padding: '8px', border: '1px solid rgba(26,26,26,0.15)', fontSize: '13px', boxSizing: 'border-box', background: 'white' }} />
-                            <input value={seg.topic} onChange={e => { const ns = [...lineupSegments]; ns[i] = { ...ns[i], topic: e.target.value }; setLineupSegments(ns); }} placeholder="Topic (optional)" style={{ padding: '8px', border: '1px solid rgba(26,26,26,0.15)', fontSize: '13px', boxSizing: 'border-box', background: 'white' }} />
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <div>
+                              <label style={{ display: 'block', fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.4)', marginBottom: '3px' }}>Speaker</label>
+                              <input value={seg.speaker || ''} onChange={e => { const ns = [...lineupSegments]; ns[i] = { ...ns[i], speaker: e.target.value }; setLineupSegments(ns); }} placeholder="Speaker name" style={{ width: '100%', padding: '10px', border: '1px solid rgba(26,26,26,0.15)', fontSize: '14px', boxSizing: 'border-box', background: 'white' }} />
+                            </div>
+                            <div>
+                              <label style={{ display: 'block', fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.4)', marginBottom: '3px' }}>Topic</label>
+                              <input value={seg.topic || ''} onChange={e => { const ns = [...lineupSegments]; ns[i] = { ...ns[i], topic: e.target.value }; setLineupSegments(ns); }} placeholder="Topic (optional)" style={{ width: '100%', padding: '10px', border: '1px solid rgba(26,26,26,0.15)', fontSize: '14px', boxSizing: 'border-box', background: 'white' }} />
+                            </div>
                           </div>
                         </div>
                       );
@@ -708,31 +720,37 @@ export default function LeadershipPage() {
                 </div>
 
                 {/* Break */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px', padding: '10px 12px', background: 'rgba(26,26,26,0.03)', border: '1px dashed rgba(26,26,26,0.15)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '24px', padding: '12px 14px', background: 'rgba(26,26,26,0.03)', border: '1px dashed rgba(26,26,26,0.15)' }}>
                   <Icons.Clock style={{ width: '14px', height: '14px', color: 'rgba(26,26,26,0.3)' }} />
                   <p style={{ fontSize: '11px', color: 'rgba(26,26,26,0.4)', margin: 0 }}>8:30 PM — Info Session concludes. 15-min break for guest follow-up.</p>
                 </div>
 
                 {/* Training Section */}
-                <div style={{ marginBottom: '20px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                <div style={{ marginBottom: '24px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                     <p style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: colors.dark, margin: 0, fontWeight: 600 }}>Training</p>
                     <div style={{ flex: 1, height: '1px', background: 'rgba(26,26,26,0.15)' }} />
                     <p style={{ fontSize: '10px', color: 'rgba(26,26,26,0.4)', margin: 0 }}>8:45 – 10:00 PM</p>
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     {lineupSegments.filter(s => s.section === 'training').map((seg) => {
                       const i = lineupSegments.indexOf(seg);
                       const sc = segmentColors[seg.key] || segmentColors.training;
                       return (
-                        <div key={i} style={{ padding: '12px', background: sc.bg, border: `1px solid ${sc.border}` }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                        <div key={seg.key} style={{ padding: '14px', background: sc.bg, border: `1px solid ${sc.border}` }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                             <p style={{ fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', color: sc.color, margin: 0, fontWeight: 600 }}>{seg.label}</p>
                             <p style={{ fontSize: '10px', color: 'rgba(26,26,26,0.35)', margin: 0 }}>{seg.time} · {seg.duration}</p>
                           </div>
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                            <input value={seg.speaker} onChange={e => { const ns = [...lineupSegments]; ns[i] = { ...ns[i], speaker: e.target.value }; setLineupSegments(ns); }} placeholder="Speaker name" style={{ padding: '8px', border: '1px solid rgba(26,26,26,0.15)', fontSize: '13px', boxSizing: 'border-box', background: 'white' }} />
-                            <input value={seg.topic} onChange={e => { const ns = [...lineupSegments]; ns[i] = { ...ns[i], topic: e.target.value }; setLineupSegments(ns); }} placeholder="Topic (optional)" style={{ padding: '8px', border: '1px solid rgba(26,26,26,0.15)', fontSize: '13px', boxSizing: 'border-box', background: 'white' }} />
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <div>
+                              <label style={{ display: 'block', fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.4)', marginBottom: '3px' }}>Speaker</label>
+                              <input value={seg.speaker || ''} onChange={e => { const ns = [...lineupSegments]; ns[i] = { ...ns[i], speaker: e.target.value }; setLineupSegments(ns); }} placeholder="Speaker name" style={{ width: '100%', padding: '10px', border: '1px solid rgba(26,26,26,0.15)', fontSize: '14px', boxSizing: 'border-box', background: 'white' }} />
+                            </div>
+                            <div>
+                              <label style={{ display: 'block', fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.4)', marginBottom: '3px' }}>Topic</label>
+                              <input value={seg.topic || ''} onChange={e => { const ns = [...lineupSegments]; ns[i] = { ...ns[i], topic: e.target.value }; setLineupSegments(ns); }} placeholder="Topic (optional)" style={{ width: '100%', padding: '10px', border: '1px solid rgba(26,26,26,0.15)', fontSize: '14px', boxSizing: 'border-box', background: 'white' }} />
+                            </div>
                           </div>
                         </div>
                       );
@@ -990,7 +1008,7 @@ export default function LeadershipPage() {
                       <p style={{ fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.4)', margin: 0 }}>Overview</p>
                       <p style={{ fontSize: '11px', color: 'rgba(26,26,26,0.4)', margin: 0 }}>{history.length} meeting{history.length !== 1 ? 's' : ''}</p>
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(80px, 1fr))', gap: '12px' }}>
                       <div><p style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(26,26,26,0.4)', margin: '0 0 2px' }}>Avg</p><p style={{ fontSize: '20px', fontWeight: 600, color: colors.dark, margin: 0 }}>{Math.round(history.reduce((s, h) => s + h.total, 0) / history.length)}</p></div>
                       <div><p style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(26,26,26,0.4)', margin: '0 0 2px' }}>Best</p><p style={{ fontSize: '20px', fontWeight: 600, color: '#22c55e', margin: 0 }}>{Math.max(...history.map(h => h.total))}</p></div>
                       <div><p style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#3b82f6', margin: '0 0 2px' }}>Guests</p><p style={{ fontSize: '20px', fontWeight: 600, color: '#3b82f6', margin: 0 }}>{history.reduce((s, h) => s + (h.guests?.total || 0), 0)}</p></div>
@@ -1032,10 +1050,10 @@ export default function LeadershipPage() {
                           </div>
                         </div>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', borderBottom: speakerSummary.length > 0 ? '1px solid rgba(26,26,26,0.06)' : 'none' }}>
-                          <div style={{ padding: '8px', textAlign: 'center', borderRight: '1px solid rgba(26,26,26,0.06)' }}><p style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(26,26,26,0.4)', margin: '0 0 2px' }}>IBOs</p><p style={{ fontSize: '16px', fontWeight: 600, color: colors.dark, margin: 0 }}>{meeting.ibos}</p></div>
-                          <div style={{ padding: '8px', textAlign: 'center', borderRight: '1px solid rgba(26,26,26,0.06)' }}><p style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#a855f7', margin: '0 0 2px' }}>Appr.</p><p style={{ fontSize: '16px', fontWeight: 600, color: '#a855f7', margin: 0 }}>{meeting.apprentices}</p></div>
-                          <div style={{ padding: '8px', textAlign: 'center', borderRight: '1px solid rgba(26,26,26,0.06)' }}><p style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#3b82f6', margin: '0 0 2px' }}>Guests</p><p style={{ fontSize: '16px', fontWeight: 600, color: '#3b82f6', margin: 0 }}>{guestTotal}</p></div>
-                          <div style={{ padding: '8px', textAlign: 'center' }}><p style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(26,26,26,0.4)', margin: '0 0 2px' }}>Total</p><p style={{ fontSize: '16px', fontWeight: 600, color: colors.dark, margin: 0 }}>{meeting.total}</p></div>
+                          <div style={{ padding: '10px 8px', textAlign: 'center', borderRight: '1px solid rgba(26,26,26,0.06)' }}><p style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(26,26,26,0.4)', margin: '0 0 2px' }}>IBOs</p><p style={{ fontSize: '16px', fontWeight: 600, color: colors.dark, margin: 0 }}>{meeting.ibos}</p></div>
+                          <div style={{ padding: '10px 8px', textAlign: 'center', borderRight: '1px solid rgba(26,26,26,0.06)' }}><p style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#a855f7', margin: '0 0 2px' }}>Appr.</p><p style={{ fontSize: '16px', fontWeight: 600, color: '#a855f7', margin: 0 }}>{meeting.apprentices}</p></div>
+                          <div style={{ padding: '10px 8px', textAlign: 'center', borderRight: '1px solid rgba(26,26,26,0.06)' }}><p style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#3b82f6', margin: '0 0 2px' }}>Guests</p><p style={{ fontSize: '16px', fontWeight: 600, color: '#3b82f6', margin: 0 }}>{guestTotal}</p></div>
+                          <div style={{ padding: '10px 8px', textAlign: 'center' }}><p style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(26,26,26,0.4)', margin: '0 0 2px' }}>Total</p><p style={{ fontSize: '16px', fontWeight: 600, color: colors.dark, margin: 0 }}>{meeting.total}</p></div>
                         </div>
                         {speakerSummary.length > 0 && (
                           <div style={{ padding: '10px 16px' }}>

@@ -1,5 +1,10 @@
 import "./globals.css";
 
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+};
+
 export const metadata = {
   title: "Freedom Family | The Round Table",
   description: "Info Session & Training · Every Monday · 7:30 PM · Embassy Suites, College Station TX · Dress: Business Professional",
