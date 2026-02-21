@@ -562,7 +562,7 @@ export default function LeadershipPage() {
         </div>
       </div>
 
-      <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '24px', width: '100%', boxSizing: 'border-box' }}>
+      <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '16px', width: '100%', boxSizing: 'border-box' }}>
         {loading ? <p style={{ padding: '40px', textAlign: 'center', color: 'rgba(26,26,26,0.5)' }}>Loading...</p> : (
 
           // ═══════════════ OVERVIEW TAB ═══════════════
@@ -655,29 +655,29 @@ export default function LeadershipPage() {
           // ═══════════════ CHECK-IN TAB ═══════════════
           ) : tab === 'checkin' ? (
             <>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '14px', marginBottom: '20px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginBottom: '20px' }}>
                 {[{ l: 'Total', v: stats.total, c: colors.dark }, { l: 'Arrived', v: stats.arrived, c: '#22c55e' }, { l: 'Pending', v: stats.pending, c: colors.gold }, { l: 'No Show', v: stats.noShow, c: '#ef4444' }].map((s, i) => (
-                  <div key={i} style={{ padding: '18px', background: 'white', border: '1px solid rgba(26,26,26,0.1)', textAlign: 'center' }}>
-                    <p style={{ fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.5)', marginBottom: '6px' }}>{s.l}</p>
-                    <p style={{ fontSize: '28px', fontWeight: 600, color: s.c, margin: 0 }}>{s.v}</p>
+                  <div key={i} style={{ padding: '12px 6px', background: 'white', border: '1px solid rgba(26,26,26,0.1)', textAlign: 'center' }}>
+                    <p style={{ fontSize: '9px', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.5)', marginBottom: '4px' }}>{s.l}</p>
+                    <p style={{ fontSize: '22px', fontWeight: 600, color: s.c, margin: 0 }}>{s.v}</p>
                   </div>
                 ))}
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' }}>
                 <div style={{ position: 'relative' }}>
                   <Icons.Search style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', width: '16px', height: '16px', color: 'rgba(26,26,26,0.3)' }} />
                   <input type="text" placeholder="Search name, email, or LTD ID..." value={search} onChange={e => setSearch(e.target.value)}
                     style={{ width: '100%', padding: '10px 10px 10px 40px', border: '1px solid rgba(26,26,26,0.2)', background: 'white', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
                 </div>
-                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
                   {['all', 'ibo', 'apprentice', 'guest'].map(f => (
-                    <button key={f} onClick={() => setFilter(f)} style={{ padding: '8px 12px', border: filter === f ? `1px solid ${colors.dark}` : '1px solid rgba(26,26,26,0.2)', background: filter === f ? colors.dark : 'white', color: filter === f ? colors.bg : colors.dark, fontSize: '11px', cursor: 'pointer', textTransform: 'capitalize' }}>{f}</button>
+                    <button key={f} onClick={() => setFilter(f)} style={{ padding: '7px 10px', border: filter === f ? `1px solid ${colors.dark}` : '1px solid rgba(26,26,26,0.2)', background: filter === f ? colors.dark : 'white', color: filter === f ? colors.bg : colors.dark, fontSize: '11px', cursor: 'pointer', textTransform: 'capitalize' }}>{f}</button>
                   ))}
-                  <div style={{ marginLeft: 'auto', display: 'flex', gap: '6px' }}>
-                    {[{ id: 'pending', l: 'Pending First' }, { id: 'arrived', l: 'Arrived First' }, { id: 'alpha', l: 'A-Z' }].map(s => (
-                      <button key={s.id} onClick={() => setSortBy(s.id)} style={{ padding: '8px 10px', border: sortBy === s.id ? `1px solid ${colors.dark}` : '1px solid rgba(26,26,26,0.2)', background: sortBy === s.id ? colors.dark : 'white', color: sortBy === s.id ? colors.bg : colors.dark, fontSize: '10px', cursor: 'pointer' }}>{s.l}</button>
-                    ))}
-                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                  {[{ id: 'pending', l: 'Pending' }, { id: 'arrived', l: 'Arrived' }, { id: 'alpha', l: 'A-Z' }].map(s => (
+                    <button key={s.id} onClick={() => setSortBy(s.id)} style={{ padding: '7px 10px', border: sortBy === s.id ? `1px solid ${colors.dark}` : '1px solid rgba(26,26,26,0.2)', background: sortBy === s.id ? colors.dark : 'white', color: sortBy === s.id ? colors.bg : colors.dark, fontSize: '10px', cursor: 'pointer' }}>{s.l}</button>
+                  ))}
                 </div>
               </div>
               {filtered.length === 0 ? (
@@ -686,41 +686,43 @@ export default function LeadershipPage() {
                   <p style={{ color: 'rgba(26,26,26,0.5)', marginBottom: '4px' }}>No registrations this week</p>
                 </div>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   {filtered.map(reg => {
                     const badge = getBadge(reg);
                     const rowBg = reg.checkedIn ? 'rgba(34,197,94,0.06)' : reg.noShow ? 'rgba(239,68,68,0.06)' : 'white';
                     const rowBorder = reg.checkedIn ? '1px solid rgba(34,197,94,0.2)' : reg.noShow ? '1px solid rgba(239,68,68,0.2)' : '1px solid rgba(26,26,26,0.1)';
                     const isUpdating = updating === reg.id;
                     return (
-                      <div key={reg.id} style={{ display: 'flex', alignItems: 'center', padding: '12px 16px', background: rowBg, border: rowBorder, gap: '14px' }}>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <p style={{ fontSize: '14px', fontWeight: 500, color: colors.dark, margin: '0 0 2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{reg.name}</p>
-                          <p style={{ fontSize: '11px', color: 'rgba(26,26,26,0.5)', margin: 0 }}>{reg.ltdId || reg.email?.split('@')[0]}</p>
-                        </div>
-                        <div style={{ padding: '3px 8px', background: badge.bg, fontSize: '9px', fontWeight: 600, color: badge.color, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{badge.label}</div>
-                        {reg.checkedIn ? (
-                          <button onClick={() => updateStatus(reg, 'checkout')} disabled={isUpdating}
-                            style={{ padding: '6px 14px', background: '#22c55e', border: '1px solid #22c55e', color: 'white', fontSize: '10px', fontWeight: 600, cursor: 'pointer', opacity: isUpdating ? 0.5 : 1, display: 'flex', alignItems: 'center', gap: '4px', textTransform: 'uppercase' }}>
-                            <Icons.Check style={{ width: '12px', height: '12px' }} />Arrived
-                          </button>
-                        ) : reg.noShow ? (
-                          <button onClick={() => updateStatus(reg, 'clear_noshow')} disabled={isUpdating}
-                            style={{ padding: '6px 14px', background: '#ef4444', border: '1px solid #ef4444', color: 'white', fontSize: '10px', fontWeight: 600, cursor: 'pointer', opacity: isUpdating ? 0.5 : 1, textTransform: 'uppercase' }}>
-                            No Show
-                          </button>
-                        ) : (
-                          <div style={{ display: 'flex', gap: '4px' }}>
-                            <button onClick={() => updateStatus(reg, 'checkin')} disabled={isUpdating}
-                              style={{ padding: '6px 12px', background: 'transparent', border: '1px solid rgba(26,26,26,0.3)', color: colors.dark, fontSize: '10px', fontWeight: 600, cursor: 'pointer', opacity: isUpdating ? 0.5 : 1, textTransform: 'uppercase' }}>
-                              Check In
+                      <div key={reg.id} style={{ padding: '10px 12px', background: rowBg, border: rowBorder }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <p style={{ fontSize: '14px', fontWeight: 500, color: colors.dark, margin: '0 0 1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{reg.name}</p>
+                            <p style={{ fontSize: '11px', color: 'rgba(26,26,26,0.5)', margin: 0 }}>{reg.ltdId || reg.email?.split('@')[0]}</p>
+                          </div>
+                          <div style={{ padding: '3px 8px', background: badge.bg, fontSize: '9px', fontWeight: 600, color: badge.color, textTransform: 'uppercase', whiteSpace: 'nowrap', flexShrink: 0 }}>{badge.label}</div>
+                          {reg.checkedIn ? (
+                            <button onClick={() => updateStatus(reg, 'checkout')} disabled={isUpdating}
+                              style={{ padding: '6px 12px', background: '#22c55e', border: '1px solid #22c55e', color: 'white', fontSize: '10px', fontWeight: 600, cursor: 'pointer', opacity: isUpdating ? 0.5 : 1, display: 'flex', alignItems: 'center', gap: '4px', textTransform: 'uppercase', flexShrink: 0 }}>
+                              <Icons.Check style={{ width: '12px', height: '12px' }} />Arrived
                             </button>
-                            <button onClick={() => updateStatus(reg, 'noshow')} disabled={isUpdating}
-                              style={{ padding: '6px 10px', background: 'transparent', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444', fontSize: '10px', fontWeight: 600, cursor: 'pointer', opacity: isUpdating ? 0.5 : 1, textTransform: 'uppercase' }}>
+                          ) : reg.noShow ? (
+                            <button onClick={() => updateStatus(reg, 'clear_noshow')} disabled={isUpdating}
+                              style={{ padding: '6px 12px', background: '#ef4444', border: '1px solid #ef4444', color: 'white', fontSize: '10px', fontWeight: 600, cursor: 'pointer', opacity: isUpdating ? 0.5 : 1, textTransform: 'uppercase', flexShrink: 0 }}>
                               No Show
                             </button>
-                          </div>
-                        )}
+                          ) : (
+                            <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
+                              <button onClick={() => updateStatus(reg, 'checkin')} disabled={isUpdating}
+                                style={{ padding: '6px 10px', background: 'transparent', border: '1px solid rgba(26,26,26,0.3)', color: colors.dark, fontSize: '10px', fontWeight: 600, cursor: 'pointer', opacity: isUpdating ? 0.5 : 1, textTransform: 'uppercase' }}>
+                                In
+                              </button>
+                              <button onClick={() => updateStatus(reg, 'noshow')} disabled={isUpdating}
+                                style={{ padding: '6px 8px', background: 'transparent', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444', fontSize: '10px', fontWeight: 600, cursor: 'pointer', opacity: isUpdating ? 0.5 : 1, textTransform: 'uppercase' }}>
+                                NS
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     );
                   })}

@@ -292,7 +292,7 @@ export default function BCSFreedomTeam() {
         </div>
       </section>
 
-      <footer style={{ padding: '32px 20px', borderTop: '1px solid rgba(26,26,26,0.05)' }}>
+      <footer style={{ padding: '24px 16px', borderTop: '1px solid rgba(26,26,26,0.05)' }}>
         <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <a href="/" style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.25)', textDecoration: 'none' }}>Freedom Family</a>
           <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>

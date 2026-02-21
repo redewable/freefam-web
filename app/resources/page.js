@@ -393,43 +393,44 @@ export default function ResourcesDashboard() {
 
       {/* Header */}
       <nav style={{ position: 'sticky', top: 0, zIndex: 40, background: 'rgba(250,250,248,0.95)', backdropFilter: 'blur(12px)', borderBottom: '1px solid rgba(26,26,26,0.05)' }}>
-        <div style={{ maxWidth: '900px', margin: '0 auto', padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div style={{ maxWidth: '900px', margin: '0 auto', padding: '10px 16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
             <a href="/" style={{ fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase', color: colors.dark, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <Icons.Home style={{ width: '12px', height: '12px' }} />
               Freedom Family
             </a>
-            <span style={{ fontSize: '10px', color: 'rgba(26,26,26,0.2)' }}>/</span>
-            <span style={{ fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', color: colors.gold }}>Resources</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <span style={{ fontSize: '12px', color: 'rgba(26,26,26,0.5)' }}>{profile?.full_name || 'Member'}</span>
-            {profile?.ltd_id && <span style={{ fontSize: '10px', color: 'rgba(26,26,26,0.3)' }}>#{profile.ltd_id}</span>}
             <button onClick={handleLogout} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(26,26,26,0.4)', fontSize: '11px' }}>
               <Icons.Logout style={{ width: '14px', height: '14px' }} />
             </button>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', color: colors.gold }}>Resources</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '11px', color: 'rgba(26,26,26,0.5)' }}>{profile?.full_name || 'Member'}</span>
+              {profile?.ltd_id && <span style={{ fontSize: '10px', color: 'rgba(26,26,26,0.3)' }}>#{profile.ltd_id}</span>}
+            </div>
           </div>
         </div>
       </nav>
 
       {/* Tabs */}
       <div style={{ borderBottom: '1px solid rgba(26,26,26,0.05)' }}>
-        <div style={{ maxWidth: '900px', margin: '0 auto', padding: '0 20px', display: 'flex', gap: '0' }}>
+        <div style={{ maxWidth: '900px', margin: '0 auto', padding: '0 16px', display: 'flex', gap: '0' }}>
           {tabs.map(t => (
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
               style={{
-                display: 'flex', alignItems: 'center', gap: '8px',
-                padding: '14px 20px',
+                display: 'flex', alignItems: 'center', gap: '6px',
+                padding: '12px 14px',
                 background: 'none', border: 'none', cursor: 'pointer',
-                fontSize: '12px', letterSpacing: '0.05em',
+                fontSize: '11px', letterSpacing: '0.05em',
                 color: tab === t.id ? colors.dark : 'rgba(26,26,26,0.4)',
                 borderBottom: tab === t.id ? `2px solid ${colors.gold}` : '2px solid transparent',
                 marginBottom: '-1px',
               }}
             >
-              <t.icon style={{ width: '14px', height: '14px' }} />
+              <t.icon style={{ width: '13px', height: '13px' }} />
               {t.label}
             </button>
           ))}
@@ -437,7 +438,7 @@ export default function ResourcesDashboard() {
       </div>
 
       {/* Content */}
-      <main style={{ maxWidth: '900px', margin: '0 auto', padding: '32px 20px' }}>
+      <main style={{ maxWidth: '900px', margin: '0 auto', padding: '20px 16px' }}>
         {/* LIBRARY TAB */}
         {tab === 'library' && (
           <div>
