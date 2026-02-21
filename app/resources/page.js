@@ -462,10 +462,26 @@ export default function ResourcesDashboard() {
               </div>
             </div>
 
+            {/* Quick Links */}
+            <div style={{ marginBottom: '32px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                <p style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: colors.gold, margin: 0, fontWeight: 600 }}>Shared Documents</p>
+                <div style={{ flex: 1, height: '1px', background: 'rgba(184,149,107,0.2)' }} />
+              </div>
+              <a href="/resources/books" style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px 20px', background: 'white', border: '1px solid rgba(26,26,26,0.08)', textDecoration: 'none', cursor: 'pointer' }}>
+                <div style={{ width: '40px', height: '40px', background: 'rgba(184,149,107,0.1)', border: '1px solid rgba(184,149,107,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Icons.Book style={{ width: '18px', height: '18px', color: colors.gold }} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontSize: '15px', fontWeight: 500, color: colors.dark, margin: '0 0 3px' }}>First Year Book List</p>
+                  <p style={{ fontSize: '13px', color: 'rgba(26,26,26,0.45)', margin: 0 }}>13 essential reads for your journey</p>
+                </div>
+              </a>
+            </div>
+
             {filteredResources.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '60px 20px' }}>
-                <Icons.Book style={{ width: '32px', height: '32px', color: 'rgba(26,26,26,0.15)', margin: '0 auto 16px' }} />
-                <p style={{ color: 'rgba(26,26,26,0.4)', fontSize: '14px' }}>No resources yet. Check back soon!</p>
+              <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+                <p style={{ color: 'rgba(26,26,26,0.3)', fontSize: '13px' }}>More resources coming soon</p>
               </div>
             ) : (
               Object.entries(grouped).map(([category, items]) => (
