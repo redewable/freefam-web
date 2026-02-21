@@ -296,7 +296,7 @@ export default function BCSFreedomTeam() {
         <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <a href="/" style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.25)', textDecoration: 'none' }}>Freedom Family</a>
           <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-            <span style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.25)' }}>LTD</span>
+            <a href="https://www.ltdteam.com" target="_blank" rel="noopener noreferrer" style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.25)', textDecoration: 'none' }}>LTD</a>
             <a href="/admin/checkin" style={{ fontSize: '10px', color: 'rgba(26,26,26,0.2)', textDecoration: 'none' }}>Admin</a>
           </div>
         </div>

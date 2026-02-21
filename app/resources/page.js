@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createClient } from '@/app/lib/supabase/client';
 
 const colors = { bg: '#fafaf8', dark: '#1a1a1a', gold: '#b8956b' };
@@ -16,6 +16,11 @@ const Icons = {
   Clock: ({ style }) => <svg style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></svg>,
   ExternalLink: ({ style }) => <svg style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3" /></svg>,
   ChevronDown: ({ style }) => <svg style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M6 9l6 6 6-6" /></svg>,
+  Plus: ({ style }) => <svg style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M12 5v14M5 12h14" /></svg>,
+  Copy: ({ style }) => <svg style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" /></svg>,
+  Calendar: ({ style }) => <svg style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>,
+  Check: ({ style }) => <svg style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 6L9 17l-5-5" /></svg>,
+  Home: ({ style }) => <svg style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" /><path d="M9 22V12h6v10" /></svg>,
 };
 
 const typeIcons = { document: Icons.File, media: Icons.Music, video: Icons.Video, tool: Icons.Tool };
@@ -26,16 +31,129 @@ const typeColors = {
   tool: { bg: 'rgba(34,197,94,0.08)', border: 'rgba(34,197,94,0.2)', color: '#22c55e' },
 };
 
+// ═══════════════ INVITE MODAL ═══════════════
+const InviteModal = ({ isOpen, onClose }) => {
+  const [ltdId, setLtdId] = useState('');
+  const [role, setRole] = useState('member');
+  const [loading, setLoading] = useState(false);
+  const [inviteLink, setInviteLink] = useState('');
+  const [copied, setCopied] = useState(false);
+
+  const handleCreate = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/admin/invites', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ltdId: ltdId.trim() || null, role }),
+      });
+      const data = await res.json();
+      if (data.invite) {
+        const link = `${window.location.origin}/resources/signup?token=${data.invite.token}`;
+        setInviteLink(link);
+      }
+    } catch (err) {
+      console.error('Invite error:', err);
+    }
+    setLoading(false);
+  };
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(inviteLink);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleClose = () => {
+    setLtdId('');
+    setRole('member');
+    setInviteLink('');
+    setCopied(false);
+    onClose();
+  };
+
+  if (!isOpen) return null;
+
+  const inputStyle = {
+    width: '100%', padding: '12px', background: 'white',
+    border: '1px solid rgba(26,26,26,0.15)', outline: 'none',
+    color: colors.dark, fontSize: '14px', boxSizing: 'border-box',
+  };
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }} onClick={handleClose}>
+      <div style={{ position: 'absolute', inset: 0, background: 'rgba(26,26,26,0.4)', backdropFilter: 'blur(4px)' }} />
+      <div style={{ position: 'relative', background: colors.bg, maxWidth: '420px', width: '100%', padding: '32px', boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }} onClick={e => e.stopPropagation()}>
+        <h2 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: '24px', color: colors.dark, fontWeight: 400, margin: '0 0 6px' }}>Invite a Team Member</h2>
+        <p style={{ fontSize: '13px', color: 'rgba(26,26,26,0.45)', margin: '0 0 24px' }}>Generate a signup link to share</p>
+
+        {!inviteLink ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div>
+              <label style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.4)', display: 'block', marginBottom: '6px' }}>Their LTD ID <span style={{ fontSize: '9px', color: 'rgba(26,26,26,0.3)', textTransform: 'none', letterSpacing: 'normal' }}>(optional)</span></label>
+              <input type="text" value={ltdId} onChange={e => setLtdId(e.target.value.replace(/\D/g, ''))} placeholder="e.g. 2118394" style={inputStyle} inputMode="numeric" />
+            </div>
+            <div>
+              <label style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.4)', display: 'block', marginBottom: '6px' }}>Role</label>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                {['member', 'sponsor'].map(r => (
+                  <button key={r} onClick={() => setRole(r)} style={{
+                    flex: 1, padding: '10px', fontSize: '12px', letterSpacing: '0.05em', textTransform: 'capitalize',
+                    background: role === r ? colors.dark : 'transparent', color: role === r ? colors.bg : 'rgba(26,26,26,0.5)',
+                    border: role === r ? 'none' : '1px solid rgba(26,26,26,0.12)', cursor: 'pointer',
+                  }}>{r}</button>
+                ))}
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
+              <button onClick={handleClose} style={{ flex: 1, padding: '14px', background: 'transparent', border: '1px solid rgba(26,26,26,0.12)', color: 'rgba(26,26,26,0.5)', fontSize: '12px', letterSpacing: '0.05em', cursor: 'pointer' }}>Cancel</button>
+              <button onClick={handleCreate} disabled={loading} style={{ flex: 1, padding: '14px', background: colors.dark, color: colors.bg, border: 'none', fontSize: '12px', letterSpacing: '0.05em', cursor: 'pointer' }}>
+                {loading ? 'Creating...' : 'Generate Link'}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+              <div style={{ width: '32px', height: '32px', borderRadius: '50%', border: `1px solid ${colors.gold}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Icons.Check style={{ width: '16px', height: '16px', color: colors.gold }} />
+              </div>
+              <p style={{ fontSize: '14px', color: colors.dark, margin: 0, fontWeight: 500 }}>Invite link created!</p>
+            </div>
+            <div style={{ padding: '12px', background: 'rgba(26,26,26,0.03)', border: '1px solid rgba(26,26,26,0.08)', fontSize: '12px', color: 'rgba(26,26,26,0.6)', wordBreak: 'break-all', marginBottom: '16px', lineHeight: 1.5 }}>
+              {inviteLink}
+            </div>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button onClick={handleClose} style={{ flex: 1, padding: '14px', background: 'transparent', border: '1px solid rgba(26,26,26,0.12)', color: 'rgba(26,26,26,0.5)', fontSize: '12px', letterSpacing: '0.05em', cursor: 'pointer' }}>Done</button>
+              <button onClick={handleCopy} style={{ flex: 1, padding: '14px', background: colors.dark, color: colors.bg, border: 'none', fontSize: '12px', letterSpacing: '0.05em', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                <Icons.Copy style={{ width: '14px', height: '14px' }} />
+                {copied ? 'Copied!' : 'Copy Link'}
+              </button>
+            </div>
+            <p style={{ fontSize: '11px', color: 'rgba(26,26,26,0.35)', margin: '12px 0 0', textAlign: 'center' }}>Link expires in 30 days</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 // ═══════════════ LOS TREE COMPONENT ═══════════════
-const LOSTree = ({ userId }) => {
+const LOSTree = ({ userId, profile }) => {
   const [tree, setTree] = useState(null);
+  const [attendance, setAttendance] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showAttendance, setShowAttendance] = useState(false);
 
   useEffect(() => {
-    fetch('/api/los')
-      .then(r => r.json())
-      .then(data => { setTree(data); setLoading(false); })
-      .catch(() => setLoading(false));
+    Promise.all([
+      fetch('/api/los').then(r => r.json()),
+      fetch('/api/los/attendance').then(r => r.json()).catch(() => ({ records: [] })),
+    ]).then(([treeData, attendanceData]) => {
+      setTree(treeData);
+      setAttendance(attendanceData);
+      setLoading(false);
+    }).catch(() => setLoading(false));
   }, [userId]);
 
   if (loading) return <p style={{ color: 'rgba(26,26,26,0.4)', fontSize: '14px' }}>Loading LOS...</p>;
@@ -49,26 +167,51 @@ const LOSTree = ({ userId }) => {
     };
     const badge = roleBadge[person.role] || roleBadge.member;
 
+    // Find attendance for this person
+    const personAttendance = attendance?.records?.filter(r => r.ltd_id === person.ltd_id) || [];
+
     return (
       <div style={{
         padding: '16px 20px',
         background: isCurrentUser ? 'rgba(184,149,107,0.06)' : 'white',
         border: isCurrentUser ? `1px solid rgba(184,149,107,0.3)` : '1px solid rgba(26,26,26,0.1)',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px',
       }}>
-        <div style={{ minWidth: 0, flex: 1 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-            <p style={{ fontSize: '15px', fontWeight: 500, color: colors.dark, margin: 0 }}>{person.full_name || 'Unnamed'}</p>
-            {isCurrentUser && <span style={{ fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', color: colors.gold, fontWeight: 600 }}>You</span>}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+              <p style={{ fontSize: '15px', fontWeight: 500, color: colors.dark, margin: 0 }}>{person.full_name || 'Unnamed'}</p>
+              {isCurrentUser && <span style={{ fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', color: colors.gold, fontWeight: 600 }}>You</span>}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '11px', padding: '2px 8px', background: badge.bg, color: badge.color, borderRadius: '2px' }}>{badge.label}</span>
+              {person.ltd_id && <span style={{ fontSize: '11px', color: 'rgba(26,26,26,0.35)' }}>LTD #{person.ltd_id}</span>}
+              {isSponsor && <span style={{ fontSize: '11px', color: 'rgba(26,26,26,0.35)' }}>Your Sponsor</span>}
+            </div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '11px', padding: '2px 8px', background: badge.bg, color: badge.color, borderRadius: '2px' }}>{badge.label}</span>
-            {person.ltd_id && <span style={{ fontSize: '11px', color: 'rgba(26,26,26,0.35)' }}>LTD #{person.ltd_id}</span>}
-            {isSponsor && <span style={{ fontSize: '11px', color: 'rgba(26,26,26,0.35)' }}>Your Sponsor</span>}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {person.direct_downline_count > 0 && (
+              <span style={{ fontSize: '12px', color: 'rgba(26,26,26,0.4)' }}>{person.direct_downline_count} downline</span>
+            )}
+            {showAttendance && personAttendance.length > 0 && (
+              <span style={{ fontSize: '11px', padding: '2px 8px', background: 'rgba(34,197,94,0.1)', color: '#22c55e', borderRadius: '2px' }}>
+                {personAttendance.length} event{personAttendance.length !== 1 ? 's' : ''}
+              </span>
+            )}
           </div>
         </div>
-        {person.direct_downline_count > 0 && (
-          <span style={{ fontSize: '12px', color: 'rgba(26,26,26,0.4)' }}>{person.direct_downline_count} downline</span>
+        {/* Attendance detail */}
+        {showAttendance && personAttendance.length > 0 && (
+          <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid rgba(26,26,26,0.06)' }}>
+            {personAttendance.map((rec, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 0' }}>
+                <span style={{ fontSize: '11px', color: 'rgba(26,26,26,0.5)' }}>{rec.event_source === 'bcs' ? 'BCS' : 'Info Session'}</span>
+                <span style={{ fontSize: '11px', color: 'rgba(26,26,26,0.35)' }}>{new Date(rec.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                <span style={{ fontSize: '10px', padding: '1px 6px', background: rec.checked_in ? 'rgba(34,197,94,0.1)' : 'rgba(26,26,26,0.04)', color: rec.checked_in ? '#22c55e' : 'rgba(26,26,26,0.35)', borderRadius: '2px' }}>
+                  {rec.checked_in ? 'Attended' : 'Registered'}
+                </span>
+              </div>
+            ))}
+          </div>
         )}
       </div>
     );
@@ -76,6 +219,21 @@ const LOSTree = ({ userId }) => {
 
   return (
     <div>
+      {/* Attendance toggle */}
+      {attendance?.records?.length > 0 && (
+        <div style={{ marginBottom: '20px' }}>
+          <button onClick={() => setShowAttendance(!showAttendance)} style={{
+            display: 'flex', alignItems: 'center', gap: '8px',
+            padding: '10px 16px', background: showAttendance ? 'rgba(184,149,107,0.08)' : 'white',
+            border: showAttendance ? `1px solid rgba(184,149,107,0.25)` : '1px solid rgba(26,26,26,0.1)',
+            cursor: 'pointer', fontSize: '12px', color: showAttendance ? colors.gold : 'rgba(26,26,26,0.5)',
+          }}>
+            <Icons.Calendar style={{ width: '14px', height: '14px' }} />
+            {showAttendance ? 'Hide Attendance' : 'Show Team Attendance'}
+          </button>
+        </div>
+      )}
+
       {/* Upline Chain */}
       {tree.upline && tree.upline.length > 0 && (
         <div style={{ marginBottom: '16px' }}>
@@ -125,6 +283,7 @@ export default function ResourcesDashboard() {
   const [activity, setActivity] = useState([]);
   const [filterType, setFilterType] = useState('all');
   const [loading, setLoading] = useState(true);
+  const [inviteOpen, setInviteOpen] = useState(false);
 
   useEffect(() => {
     const init = async () => {
@@ -182,6 +341,8 @@ export default function ResourcesDashboard() {
     </div>
   );
 
+  const isAdminOrSponsor = profile?.role === 'admin' || profile?.role === 'sponsor';
+
   const tabs = [
     { id: 'library', label: 'Library', icon: Icons.Book },
     { id: 'los', label: 'My LOS', icon: Icons.Users },
@@ -214,7 +375,10 @@ export default function ResourcesDashboard() {
       <nav style={{ position: 'sticky', top: 0, zIndex: 40, background: 'rgba(250,250,248,0.95)', backdropFilter: 'blur(12px)', borderBottom: '1px solid rgba(26,26,26,0.05)' }}>
         <div style={{ maxWidth: '900px', margin: '0 auto', padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <a href="/" style={{ fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase', color: colors.dark, textDecoration: 'none' }}>Freedom Family</a>
+            <a href="/" style={{ fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase', color: colors.dark, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Icons.Home style={{ width: '12px', height: '12px' }} />
+              Freedom Family
+            </a>
             <span style={{ fontSize: '10px', color: 'rgba(26,26,26,0.2)' }}>/</span>
             <span style={{ fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', color: colors.gold }}>Resources</span>
           </div>
@@ -329,8 +493,21 @@ export default function ResourcesDashboard() {
         {/* LOS TAB */}
         {tab === 'los' && (
           <div>
-            <h1 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: '28px', color: colors.dark, fontWeight: 400, margin: '0 0 24px' }}>Line of Sponsorship</h1>
-            <LOSTree userId={user?.id} />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
+              <h1 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: '28px', color: colors.dark, fontWeight: 400, margin: 0 }}>Line of Sponsorship</h1>
+              {isAdminOrSponsor && (
+                <button onClick={() => setInviteOpen(true)} style={{
+                  display: 'flex', alignItems: 'center', gap: '8px',
+                  padding: '10px 18px', background: colors.dark, color: colors.bg,
+                  border: 'none', fontSize: '11px', letterSpacing: '0.08em',
+                  textTransform: 'uppercase', cursor: 'pointer',
+                }}>
+                  <Icons.Plus style={{ width: '14px', height: '14px' }} />
+                  Invite Member
+                </button>
+              )}
+            </div>
+            <LOSTree userId={user?.id} profile={profile} />
           </div>
         )}
 
@@ -367,10 +544,15 @@ export default function ResourcesDashboard() {
 
       <footer style={{ padding: '32px 20px', borderTop: '1px solid rgba(26,26,26,0.05)', marginTop: '40px' }}>
         <div style={{ maxWidth: '900px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <a href="/" style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.25)', textDecoration: 'none' }}>Freedom Family</a>
-          <span style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.25)' }}>LTD</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <a href="/" style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.25)', textDecoration: 'none' }}>Home</a>
+            <a href="/bcs" style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.25)', textDecoration: 'none' }}>BCS</a>
+          </div>
+          <a href="https://www.ltdteam.com" target="_blank" rel="noopener noreferrer" style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.25)', textDecoration: 'none' }}>LTD</a>
         </div>
       </footer>
+
+      <InviteModal isOpen={inviteOpen} onClose={() => setInviteOpen(false)} />
     </div>
   );
 }

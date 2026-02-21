@@ -415,7 +415,7 @@ export default function FreedomFamily() {
 
       <footer style={{ padding: '48px 20px', borderTop: '1px solid rgba(26,26,26,0.05)' }}>
         <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <p style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.25)', margin: 0 }}>LTD</p>
+          <a href="https://www.ltdteam.com" target="_blank" rel="noopener noreferrer" style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.25)', textDecoration: 'none', margin: 0 }}>LTD</a>
           <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
             <a href="/resources" style={{ fontSize: '10px', color: 'rgba(26,26,26,0.2)', textDecoration: 'none' }}>Resources</a>
             <a href="/admin/leadership" style={{ fontSize: '10px', color: 'rgba(26,26,26,0.2)', textDecoration: 'none' }}>Leadership</a>
