@@ -227,7 +227,7 @@ export default function CheckinPage() {
   useEffect(() => { if (auth) { fetchRegs(); fetchHistory(); } }, [auth]);
   useEffect(() => { if (selectedDate) fetchDateDetail(selectedDate); }, [selectedDate]);
 
-  const toggleCheckin = async (reg) => {
+  const updateStatus = async (reg, action) => {
     setUpdating(reg.id);
     try {
       const res = await fetch('/api/checkin', {
@@ -235,7 +235,7 @@ export default function CheckinPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           sessionId: reg.id,
-          action: reg.checkedIn ? 'checkout' : 'checkin',
+          action,
           priceType: reg.priceType,
           registrationData: {
             name: reg.name,
@@ -245,7 +245,16 @@ export default function CheckinPage() {
         }),
       });
       const data = await res.json();
-      if (data.success) setRegs(prev => prev.map(r => r.id === reg.id ? { ...r, checkedIn: data.checkedIn } : r));
+      if (data.success) {
+        setRegs(prev => prev.map(r => {
+          if (r.id !== reg.id) return r;
+          if (action === 'checkin') return { ...r, checkedIn: true, noShow: false };
+          if (action === 'checkout') return { ...r, checkedIn: false, noShow: false };
+          if (action === 'noshow') return { ...r, checkedIn: false, noShow: true };
+          if (action === 'clear_noshow') return { ...r, checkedIn: false, noShow: false };
+          return r;
+        }));
+      }
     } catch (e) {
       console.error('Check-in error:', e);
     }
@@ -260,12 +269,13 @@ export default function CheckinPage() {
   });
   if (filter !== 'all') filtered = filtered.filter(r => r.type === filter);
   filtered.sort((a, b) => {
-    if (sortBy === 'pending') { if (a.checkedIn !== b.checkedIn) return a.checkedIn ? 1 : -1; return a.name.localeCompare(b.name); }
-    if (sortBy === 'arrived') { if (a.checkedIn !== b.checkedIn) return a.checkedIn ? -1 : 1; return a.name.localeCompare(b.name); }
+    const getOrder = (r) => r.checkedIn ? 1 : r.noShow ? 2 : 0; // pending=0, arrived=1, noshow=2
+    if (sortBy === 'pending') { const diff = getOrder(a) - getOrder(b); if (diff !== 0) return diff; return a.name.localeCompare(b.name); }
+    if (sortBy === 'arrived') { const diff = getOrder(b) - getOrder(a); if (diff !== 0) return diff; return a.name.localeCompare(b.name); }
     return a.name.localeCompare(b.name);
   });
 
-  const stats = { total: filtered.length, arrived: filtered.filter(r => r.checkedIn).length, pending: filtered.filter(r => !r.checkedIn).length };
+  const stats = { total: filtered.length, arrived: filtered.filter(r => r.checkedIn).length, pending: filtered.filter(r => !r.checkedIn && !r.noShow).length, noShow: filtered.filter(r => r.noShow).length };
 
   return (
     <div style={{ minHeight: '100vh', background: colors.bg, fontFamily: 'Inter, system-ui, sans-serif', display: 'flex', flexDirection: 'column' }}>
@@ -300,8 +310,8 @@ export default function CheckinPage() {
       <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '24px', width: '100%', boxSizing: 'border-box' }}>
         {tab === 'checkin' ? (
           <>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px', marginBottom: '20px' }}>
-              {[{ l: 'Total', v: stats.total, c: colors.dark }, { l: 'Arrived', v: stats.arrived, c: '#22c55e' }, { l: 'Pending', v: stats.pending, c: colors.gold }].map((s, i) => (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '14px', marginBottom: '20px' }}>
+              {[{ l: 'Total', v: stats.total, c: colors.dark }, { l: 'Arrived', v: stats.arrived, c: '#22c55e' }, { l: 'Pending', v: stats.pending, c: colors.gold }, { l: 'No Show', v: stats.noShow, c: '#ef4444' }].map((s, i) => (
                 <div key={i} style={{ padding: '18px', background: 'white', border: '1px solid rgba(26,26,26,0.1)', textAlign: 'center' }}>
                   <p style={{ fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.5)', marginBottom: '4px' }}>{s.l}</p>
                   <p style={{ fontSize: '24px', fontWeight: 600, color: s.c, margin: 0 }}>{s.v}</p>
@@ -337,17 +347,39 @@ export default function CheckinPage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 {filtered.map(reg => {
                   const badge = getBadge(reg);
+                  const rowBg = reg.checkedIn ? 'rgba(34,197,94,0.06)' : reg.noShow ? 'rgba(239,68,68,0.06)' : 'white';
+                  const rowBorder = reg.checkedIn ? '1px solid rgba(34,197,94,0.2)' : reg.noShow ? '1px solid rgba(239,68,68,0.2)' : '1px solid rgba(26,26,26,0.1)';
+                  const isUpdating = updating === reg.id;
                   return (
-                    <div key={reg.id} style={{ display: 'flex', alignItems: 'center', padding: '10px 12px', background: reg.checkedIn ? 'rgba(34,197,94,0.06)' : 'white', border: reg.checkedIn ? '1px solid rgba(34,197,94,0.2)' : '1px solid rgba(26,26,26,0.1)', gap: '10px' }}>
+                    <div key={reg.id} style={{ display: 'flex', alignItems: 'center', padding: '10px 12px', background: rowBg, border: rowBorder, gap: '10px' }}>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <p style={{ fontSize: '14px', fontWeight: 500, color: colors.dark, margin: '0 0 2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{reg.name}</p>
                         <p style={{ fontSize: '11px', color: 'rgba(26,26,26,0.5)', margin: 0 }}>{reg.ltdId || reg.email?.split('@')[0]}</p>
                       </div>
                       <div style={{ padding: '3px 8px', background: badge.bg, fontSize: '9px', fontWeight: 600, color: badge.color, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{badge.label}</div>
-                      <button onClick={() => toggleCheckin(reg)} disabled={updating === reg.id}
-                        style={{ padding: '6px 14px', background: reg.checkedIn ? '#22c55e' : 'transparent', border: reg.checkedIn ? '1px solid #22c55e' : '1px solid rgba(26,26,26,0.3)', color: reg.checkedIn ? 'white' : colors.dark, fontSize: '10px', fontWeight: 600, cursor: 'pointer', opacity: updating === reg.id ? 0.5 : 1, display: 'flex', alignItems: 'center', gap: '4px', textTransform: 'uppercase' }}>
-                        {reg.checkedIn ? <><Icons.Check style={{ width: '12px', height: '12px' }} />Arrived</> : 'Check In'}
-                      </button>
+                      {/* Three-state buttons */}
+                      {reg.checkedIn ? (
+                        <button onClick={() => updateStatus(reg, 'checkout')} disabled={isUpdating}
+                          style={{ padding: '6px 14px', background: '#22c55e', border: '1px solid #22c55e', color: 'white', fontSize: '10px', fontWeight: 600, cursor: 'pointer', opacity: isUpdating ? 0.5 : 1, display: 'flex', alignItems: 'center', gap: '4px', textTransform: 'uppercase' }}>
+                          <Icons.Check style={{ width: '12px', height: '12px' }} />Arrived
+                        </button>
+                      ) : reg.noShow ? (
+                        <button onClick={() => updateStatus(reg, 'clear_noshow')} disabled={isUpdating}
+                          style={{ padding: '6px 14px', background: '#ef4444', border: '1px solid #ef4444', color: 'white', fontSize: '10px', fontWeight: 600, cursor: 'pointer', opacity: isUpdating ? 0.5 : 1, textTransform: 'uppercase' }}>
+                          No Show
+                        </button>
+                      ) : (
+                        <div style={{ display: 'flex', gap: '4px' }}>
+                          <button onClick={() => updateStatus(reg, 'checkin')} disabled={isUpdating}
+                            style={{ padding: '6px 12px', background: 'transparent', border: '1px solid rgba(26,26,26,0.3)', color: colors.dark, fontSize: '10px', fontWeight: 600, cursor: 'pointer', opacity: isUpdating ? 0.5 : 1, textTransform: 'uppercase' }}>
+                            Check In
+                          </button>
+                          <button onClick={() => updateStatus(reg, 'noshow')} disabled={isUpdating}
+                            style={{ padding: '6px 10px', background: 'transparent', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444', fontSize: '10px', fontWeight: 600, cursor: 'pointer', opacity: isUpdating ? 0.5 : 1, textTransform: 'uppercase' }}>
+                            No Show
+                          </button>
+                        </div>
+                      )}
                     </div>
                   );
                 })}

@@ -125,10 +125,20 @@ export async function GET() {
     // Sort combined downline by name
     downlineList.sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''));
 
+    // Visibility rules:
+    // - Upline members: downline can only see name and LTD ID
+    // - Downline members: upline sees all data
+    const stripUpline = (person) => ({
+      id: person.id,
+      full_name: person.full_name,
+      ltd_id: person.ltd_id,
+      // Strip everything else: role, status, sponsor_id, sponsor_ltd_id, sponsor_name, etc.
+    });
+
     return NextResponse.json({
       user: currentUser,
       partner: partner,
-      upline: upline || [],
+      upline: (upline || []).map(stripUpline),
       downline: downlineList,
     });
   } catch (error) {

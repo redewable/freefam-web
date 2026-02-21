@@ -8,17 +8,13 @@ const getCSTDate = () => {
   return cst;
 };
 
+// Always returns the Monday of the current week (the meeting date)
 const getWeekKey = () => {
   const now = getCSTDate();
   const day = now.getDay();
   const diff = now.getDate() - day + (day === 0 ? -6 : 1);
   const monday = new Date(now.getFullYear(), now.getMonth(), diff);
   return `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, '0')}-${String(monday.getDate()).padStart(2, '0')}`;
-};
-
-const getTodayKey = () => {
-  const now = getCSTDate();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 };
 
 const getSecondsUntilEndOfWeek = () => {
@@ -37,11 +33,11 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Session ID required' }, { status: 400 });
     }
 
-    // All check-ins use weekly keys so they reset every Monday
+    // All check-ins use the Monday date as the meeting key
     const weekKey = getWeekKey();
     const checkinKey = `checkin:week:${weekKey}:${sessionId}`;
-    const todayKey = getTodayKey();
-    const historyKey = `history:${todayKey}`;
+    const meetingKey = weekKey; // Monday = the meeting date
+    const historyKey = `history:${meetingKey}`;
 
     if (action === 'checkin') {
       const timestamp = new Date().toISOString();
@@ -51,7 +47,7 @@ export async function POST(request) {
       const ttl = getSecondsUntilEndOfWeek();
       await kv.expire(checkinKey, ttl);
 
-      // 2. Save to history for this date
+      // 2. Save to history under the MONDAY date (not today)
       const historyEntry = {
         id: sessionId,
         name: registrationData?.name || 'Unknown',
@@ -65,8 +61,8 @@ export async function POST(request) {
       await kv.sadd(historyKey, historyString);
       await kv.expire(historyKey, 365 * 24 * 60 * 60);
 
-      // 3. Track this date in our dates index for reliable history lookup
-      await kv.sadd('history:dates', todayKey);
+      // 3. Track the MONDAY date in our dates index
+      await kv.sadd('history:dates', meetingKey);
       await kv.expire('history:dates', 365 * 24 * 60 * 60);
 
       return NextResponse.json({
@@ -79,7 +75,7 @@ export async function POST(request) {
       // Remove check-in status
       await kv.del(checkinKey);
 
-      // Remove from today's history
+      // Remove from the Monday meeting's history
       try {
         const historyItems = await kv.smembers(historyKey) || [];
         for (const item of historyItems) {
@@ -96,6 +92,26 @@ export async function POST(request) {
       }
 
       return NextResponse.json({ success: true, checkedIn: false });
+
+    } else if (action === 'noshow') {
+      const timestamp = new Date().toISOString();
+
+      // Mark as no-show (registered but did not attend)
+      await kv.set(checkinKey, { checkedIn: false, noShow: true, timestamp, priceType });
+      const ttl = getSecondsUntilEndOfWeek();
+      await kv.expire(checkinKey, ttl);
+
+      return NextResponse.json({
+        success: true,
+        checkedIn: false,
+        noShow: true,
+        timestamp,
+      });
+
+    } else if (action === 'clear_noshow') {
+      // Clear no-show — back to pending
+      await kv.del(checkinKey);
+      return NextResponse.json({ success: true, checkedIn: false, noShow: false });
     }
 
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
@@ -105,11 +121,11 @@ export async function POST(request) {
   }
 }
 
-// GET endpoint to check today's history
+// GET endpoint to check the current week's meeting history
 export async function GET() {
   try {
-    const todayKey = getTodayKey();
-    const historyKey = `history:${todayKey}`;
+    const weekKey = getWeekKey();
+    const historyKey = `history:${weekKey}`;
 
     const items = await kv.smembers(historyKey) || [];
     const parsed = items.map(item => {
@@ -117,7 +133,7 @@ export async function GET() {
     });
 
     return NextResponse.json({
-      today: todayKey,
+      meetingDate: weekKey,
       historyKey,
       count: items.length,
       items: parsed,

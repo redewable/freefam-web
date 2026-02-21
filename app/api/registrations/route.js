@@ -120,6 +120,8 @@ export async function GET(request) {
         if (status?.checkedIn) {
           reg.checkedIn = true;
           reg.checkedInAt = status.timestamp;
+        } else if (status?.noShow) {
+          reg.noShow = true;
         }
       } catch (e) {
         // Ignore check-in fetch errors
