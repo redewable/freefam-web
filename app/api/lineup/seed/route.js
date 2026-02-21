@@ -81,6 +81,16 @@ export async function POST() {
       },
     ];
 
+    // Clean up old 2025 data that had wrong dates
+    let cleaned = 0;
+    try {
+      const oldKeys = await kv.keys('lineup:2025*') || [];
+      for (const key of oldKeys) {
+        await kv.del(key);
+        cleaned++;
+      }
+    } catch (e) { console.error('Cleanup error:', e); }
+
     let seeded = 0;
     for (const lineup of lineups) {
       await kv.set(`lineup:${lineup.date}`, lineup);
@@ -90,7 +100,7 @@ export async function POST() {
     }
     await kv.expire('lineup:dates', 365 * 24 * 60 * 60);
 
-    return NextResponse.json({ success: true, seeded, message: `Seeded ${seeded} lineups from PDF agenda` });
+    return NextResponse.json({ success: true, seeded, cleaned, message: `Seeded ${seeded} lineups, cleaned ${cleaned} old entries` });
   } catch (error) {
     console.error('Seed error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });

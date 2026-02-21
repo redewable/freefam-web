@@ -8,6 +8,9 @@ const colors = { bg: '#fafaf8', dark: '#1a1a1a', gold: '#b8956b' };
 
 const formatDate = (d) => new Date(d + 'T12:00:00-06:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', timeZone: 'America/Chicago' });
 
+const INFO_KEYS = ['host', 'plan', 'nextsteps'];
+const getSection = (seg) => seg.section || (INFO_KEYS.includes(seg.key) ? 'info' : 'training');
+
 const segmentColors = {
   host: { bg: 'rgba(184,149,107,0.12)', border: 'rgba(184,149,107,0.3)', color: '#b8956b' },
   plan: { bg: 'rgba(59,130,246,0.08)', border: 'rgba(59,130,246,0.25)', color: '#3b82f6' },
@@ -59,8 +62,8 @@ function LineupContent() {
   );
 
   const segments = lineup.segments || [];
-  const infoSegments = segments.filter(s => s.section === 'info');
-  const trainingSegments = segments.filter(s => s.section === 'training');
+  const infoSegments = segments.filter(s => getSection(s) === 'info');
+  const trainingSegments = segments.filter(s => getSection(s) === 'training');
 
   return (
     <div style={{ minHeight: '100vh', background: colors.bg, fontFamily: 'Inter, system-ui, sans-serif', display: 'flex', flexDirection: 'column' }}>

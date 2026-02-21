@@ -68,6 +68,10 @@ const segmentColors = {
   training: { bg: 'rgba(26,26,26,0.06)', border: 'rgba(26,26,26,0.15)', color: '#1a1a1a' },
 };
 
+const INFO_KEYS = ['host', 'plan', 'nextsteps'];
+const TRAINING_KEYS = ['recognition', 'calendar', 'product', 'bsm', 'training'];
+const getSection = (seg) => seg.section || (INFO_KEYS.includes(seg.key) ? 'info' : 'training');
+
 const EXPENSE_CATEGORIES = ['Conference Room', 'Supplies', 'Food & Beverage', 'Audio/Visual', 'Printing', 'Other'];
 
 // ═══════════════ PASSWORD GATE ═══════════════
@@ -352,11 +356,13 @@ export default function LeadershipPage() {
   const openLineupEditor = (lineup = null) => {
     if (lineup) {
       setLineupDate(lineup.date);
-      // Ensure every segment has speaker/topic as strings (KV may strip empty strings)
-      const segs = (lineup.segments || [...DEFAULT_SEGMENTS]).map(s => ({
+      // Ensure every segment has speaker/topic as strings AND section field
+      // (older KV data may be missing section)
+      const segs = (lineup.segments && lineup.segments.length > 0 ? lineup.segments : [...DEFAULT_SEGMENTS]).map(s => ({
         ...s,
         speaker: s.speaker || '',
         topic: s.topic || '',
+        section: getSection(s),
       }));
       setLineupSegments(segs);
       setLineupTopics(lineup.topics || '');
@@ -694,7 +700,7 @@ export default function LeadershipPage() {
                     <p style={{ fontSize: '10px', color: 'rgba(26,26,26,0.4)', margin: 0 }}>7:30 – 8:30 PM</p>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    {lineupSegments.filter(s => s.section === 'info').map((seg) => {
+                    {lineupSegments.filter(s => getSection(s) === 'info').map((seg) => {
                       const i = lineupSegments.indexOf(seg);
                       const sc = segmentColors[seg.key] || segmentColors.training;
                       return (
@@ -733,7 +739,7 @@ export default function LeadershipPage() {
                     <p style={{ fontSize: '10px', color: 'rgba(26,26,26,0.4)', margin: 0 }}>8:45 – 10:00 PM</p>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    {lineupSegments.filter(s => s.section === 'training').map((seg) => {
+                    {lineupSegments.filter(s => getSection(s) === 'training').map((seg) => {
                       const i = lineupSegments.indexOf(seg);
                       const sc = segmentColors[seg.key] || segmentColors.training;
                       return (
@@ -810,13 +816,14 @@ export default function LeadershipPage() {
                         <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
                           {(lineup.segments || []).map((seg, i, arr) => {
                             const sc = segmentColors[seg.key] || segmentColors.training;
-                            const prevSection = i > 0 ? arr[i - 1].section : null;
-                            const showSectionHeader = seg.section && seg.section !== prevSection;
+                            const segSec = getSection(seg);
+                            const prevSection = i > 0 ? getSection(arr[i - 1]) : null;
+                            const showSectionHeader = segSec !== prevSection;
                             return (
                               <React.Fragment key={i}>
                                 {showSectionHeader && (
-                                  <p style={{ fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', color: seg.section === 'info' ? colors.gold : 'rgba(26,26,26,0.35)', margin: i === 0 ? '0 0 2px' : '6px 0 2px', fontWeight: 600 }}>
-                                    {seg.section === 'info' ? 'Info Session (7:30–8:30)' : 'Training (8:45–10:00)'}
+                                  <p style={{ fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', color: segSec === 'info' ? colors.gold : 'rgba(26,26,26,0.35)', margin: i === 0 ? '0 0 2px' : '6px 0 2px', fontWeight: 600 }}>
+                                    {segSec === 'info' ? 'Info Session (7:30–8:30)' : 'Training (8:45–10:00)'}
                                   </p>
                                 )}
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', padding: '3px 0' }}>
