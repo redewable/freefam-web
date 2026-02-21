@@ -43,14 +43,14 @@ const Icons = {
 
 export default function AdminPage() {
   return (
-    <div style={{ minHeight: '100vh', background: colors.bg, fontFamily: 'Inter, system-ui, sans-serif' }}>
+    <div style={{ minHeight: '100vh', background: colors.bg, fontFamily: 'Inter, system-ui, sans-serif', display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
-      <header style={{ borderBottom: '1px solid rgba(26,26,26,0.1)', padding: '20px 32px' }}>
-        <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-          <p style={{ fontSize: '11px', letterSpacing: '0.25em', textTransform: 'uppercase', color: colors.gold, marginBottom: '4px' }}>Freedom Family</p>
-          <h1 style={{ fontSize: '24px', color: colors.dark, margin: 0, fontWeight: 500 }}>Admin Dashboard</h1>
+      <nav style={{ borderBottom: '1px solid rgba(26,26,26,0.05)', padding: '14px 20px' }}>
+        <div style={{ maxWidth: '800px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <a href="/" style={{ fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase', color: colors.dark, textDecoration: 'none' }}>Freedom Family</a>
+          <span style={{ fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', color: colors.gold }}>Admin</span>
         </div>
-      </header>
+      </nav>
 
       <main style={{ maxWidth: '800px', margin: '0 auto', padding: '48px 32px' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -177,6 +177,12 @@ export default function AdminPage() {
           </Link>
         </div>
       </main>
+      <footer style={{ padding: '24px 20px', borderTop: '1px solid rgba(26,26,26,0.05)', marginTop: 'auto' }}>
+        <div style={{ maxWidth: '800px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <a href="/" style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.25)', textDecoration: 'none' }}>Freedom Family</a>
+          <span style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.25)' }}>LTD</span>
+        </div>
+      </footer>
     </div>
   );
 }

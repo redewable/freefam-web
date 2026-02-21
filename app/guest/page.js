@@ -85,9 +85,15 @@ export default function GuestPage() {
   const input = { width: '100%', padding: '12px', background: 'white', border: '1px solid rgba(26,26,26,0.15)', outline: 'none', color: colors.dark, fontSize: '16px', boxSizing: 'border-box' };
 
   return (
-    <div style={{ minHeight: '100vh', background: colors.bg, fontFamily: 'Inter, system-ui, sans-serif' }}>
+    <div style={{ minHeight: '100vh', background: colors.bg, fontFamily: 'Inter, system-ui, sans-serif', display: 'flex', flexDirection: 'column' }}>
       <style jsx global>{`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;1,400&display=swap');`}</style>
-      <div style={{ maxWidth: '480px', margin: '0 auto', padding: '40px 20px' }}>
+      <nav style={{ borderBottom: '1px solid rgba(26,26,26,0.05)', padding: '14px 20px' }}>
+        <div style={{ maxWidth: '480px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <a href="/" style={{ fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase', color: colors.dark, textDecoration: 'none' }}>Freedom Family</a>
+          <span style={{ fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', color: colors.gold }}>Guest</span>
+        </div>
+      </nav>
+      <div style={{ flex: 1, maxWidth: '480px', margin: '0 auto', padding: '40px 20px', width: '100%', boxSizing: 'border-box' }}>
         {complete ? (
           <div style={{ textAlign: 'center', padding: '40px 0' }}>
             <div style={{ width: '56px', height: '56px', margin: '0 auto 20px', borderRadius: '50%', border: `1px solid ${colors.gold}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -161,6 +167,12 @@ export default function GuestPage() {
           </>
         )}
       </div>
+      <footer style={{ padding: '24px 20px', borderTop: '1px solid rgba(26,26,26,0.05)', marginTop: 'auto' }}>
+        <div style={{ maxWidth: '480px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <a href="/" style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.25)', textDecoration: 'none' }}>Freedom Family</a>
+          <span style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.25)' }}>LTD</span>
+        </div>
+      </footer>
       <SignatureModal isOpen={sigModal} onClose={() => setSigModal(false)} onSave={(sig) => setForm({ ...form, signature: sig })} />
     </div>
   );

@@ -63,9 +63,14 @@ function LineupContent() {
   const trainingSegments = segments.filter(s => s.section === 'training');
 
   return (
-    <div style={{ minHeight: '100vh', background: colors.bg, fontFamily: 'Inter, system-ui, sans-serif' }}>
+    <div style={{ minHeight: '100vh', background: colors.bg, fontFamily: 'Inter, system-ui, sans-serif', display: 'flex', flexDirection: 'column' }}>
+      <nav style={{ borderBottom: '1px solid rgba(26,26,26,0.05)', padding: '14px 16px' }}>
+        <div style={{ maxWidth: '600px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase', color: colors.dark }}>Freedom Family</span>
+          <span style={{ fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', color: colors.gold }}>Lineup</span>
+        </div>
+      </nav>
       <header style={{ borderBottom: '1px solid rgba(26,26,26,0.1)', padding: '20px 16px', textAlign: 'center' }}>
-        <p style={{ fontSize: '10px', letterSpacing: '0.25em', textTransform: 'uppercase', color: colors.gold, marginBottom: '4px' }}>Freedom Family</p>
         <h1 style={{ fontSize: '20px', color: colors.dark, margin: '0 0 4px', fontWeight: 500 }}>Meeting Lineup</h1>
         <p style={{ fontSize: '14px', color: 'rgba(26,26,26,0.5)', margin: 0 }}>{formatDate(date)}</p>
       </header>
@@ -204,12 +209,18 @@ function LineupContent() {
           </div>
         </div>
 
-        {/* Footer */}
+        {/* Venue Info */}
         <div style={{ marginTop: '32px', textAlign: 'center' }}>
           <p style={{ fontSize: '11px', color: 'rgba(26,26,26,0.3)' }}>Embassy Suites, College Station TX</p>
           <p style={{ fontSize: '11px', color: 'rgba(26,26,26,0.3)' }}>Dress: Business Professional</p>
         </div>
       </main>
+      <footer style={{ padding: '24px 16px', borderTop: '1px solid rgba(26,26,26,0.05)', marginTop: 'auto' }}>
+        <div style={{ maxWidth: '600px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.25)' }}>Freedom Family</span>
+          <span style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.25)' }}>LTD</span>
+        </div>
+      </footer>
     </div>
   );
 }
