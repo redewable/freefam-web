@@ -6,7 +6,7 @@ import { createClient } from '@/app/lib/supabase/client';
 const colors = { bg: '#fafaf8', dark: '#1a1a1a', gold: '#b8956b' };
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
+  const [ltdId, setLtdId] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -18,10 +18,12 @@ export default function LoginPage() {
 
     try {
       const supabase = createClient();
+      // Construct internal email from LTD ID
+      const email = `${ltdId.trim()}@freedomfamily.app`;
       const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password });
 
       if (authError) {
-        setError(authError.message === 'Invalid login credentials' ? 'Invalid email or password.' : authError.message);
+        setError('Invalid LTD ID or password.');
         setLoading(false);
         return;
       }
@@ -74,15 +76,17 @@ export default function LoginPage() {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div>
-              <label style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.4)', display: 'block', marginBottom: '6px' }}>Email</label>
+              <label style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.4)', display: 'block', marginBottom: '6px' }}>LTD ID</label>
               <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                type="text"
+                value={ltdId}
+                onChange={(e) => setLtdId(e.target.value.replace(/\D/g, ''))}
+                placeholder="e.g. 6076043"
                 style={inputStyle}
                 required
-                autoComplete="email"
+                autoComplete="username"
                 autoFocus
+                inputMode="numeric"
               />
             </div>
             <div>

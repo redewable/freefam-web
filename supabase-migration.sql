@@ -6,9 +6,12 @@
 -- 1. PROFILES (extends auth.users)
 CREATE TABLE profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  email TEXT UNIQUE NOT NULL,
+  ltd_id TEXT UNIQUE NOT NULL DEFAULT '',
+  first_name TEXT NOT NULL DEFAULT '',
+  last_name TEXT NOT NULL DEFAULT '',
   full_name TEXT NOT NULL DEFAULT '',
-  ltd_id TEXT DEFAULT '',
+  recovery_email TEXT DEFAULT '',
+  phone TEXT DEFAULT '',
   role TEXT NOT NULL DEFAULT 'member' CHECK (role IN ('member', 'sponsor', 'admin')),
   sponsor_id UUID REFERENCES profiles(id) ON DELETE SET NULL,
   status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'pending')),
@@ -16,6 +19,7 @@ CREATE TABLE profiles (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+CREATE INDEX idx_profiles_ltd_id ON profiles(ltd_id);
 CREATE INDEX idx_profiles_sponsor ON profiles(sponsor_id);
 CREATE INDEX idx_profiles_role ON profiles(role);
 CREATE INDEX idx_profiles_status ON profiles(status);
@@ -26,7 +30,7 @@ CREATE TABLE invites (
   token TEXT UNIQUE NOT NULL DEFAULT encode(gen_random_bytes(32), 'hex'),
   created_by UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   role TEXT NOT NULL DEFAULT 'member' CHECK (role IN ('member', 'sponsor')),
-  invitee_email TEXT,
+  invitee_ltd_id TEXT,
   used_at TIMESTAMPTZ,
   used_by UUID REFERENCES profiles(id) ON DELETE SET NULL,
   expires_at TIMESTAMPTZ DEFAULT (NOW() + INTERVAL '30 days'),
@@ -85,10 +89,12 @@ CREATE INDEX idx_login_logs_created ON login_logs(created_at);
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO public.profiles (id, email, full_name, role, status)
+  INSERT INTO public.profiles (id, ltd_id, first_name, last_name, full_name, role, status)
   VALUES (
     NEW.id,
-    NEW.email,
+    COALESCE(NEW.raw_user_meta_data->>'ltd_id', ''),
+    COALESCE(NEW.raw_user_meta_data->>'first_name', ''),
+    COALESCE(NEW.raw_user_meta_data->>'last_name', ''),
     COALESCE(NEW.raw_user_meta_data->>'full_name', ''),
     COALESCE(NEW.raw_user_meta_data->>'role', 'member'),
     'active'
@@ -229,13 +235,17 @@ CREATE POLICY "Authenticated users can insert login logs"
 CREATE OR REPLACE VIEW los_tree AS
 SELECT
   p.id,
-  p.full_name,
-  p.email,
   p.ltd_id,
+  p.first_name,
+  p.last_name,
+  p.full_name,
+  p.recovery_email,
+  p.phone,
   p.role,
   p.status,
   p.sponsor_id,
   s.full_name AS sponsor_name,
+  s.ltd_id AS sponsor_ltd_id,
   (SELECT COUNT(*) FROM profiles d WHERE d.sponsor_id = p.id) AS direct_downline_count,
   p.created_at
 FROM profiles p

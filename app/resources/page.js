@@ -219,7 +219,8 @@ export default function ResourcesDashboard() {
             <span style={{ fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', color: colors.gold }}>Resources</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <span style={{ fontSize: '12px', color: 'rgba(26,26,26,0.5)' }}>{profile?.full_name || user?.email}</span>
+            <span style={{ fontSize: '12px', color: 'rgba(26,26,26,0.5)' }}>{profile?.full_name || 'Member'}</span>
+            {profile?.ltd_id && <span style={{ fontSize: '10px', color: 'rgba(26,26,26,0.3)' }}>#{profile.ltd_id}</span>}
             <button onClick={handleLogout} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(26,26,26,0.4)', fontSize: '11px' }}>
               <Icons.Logout style={{ width: '14px', height: '14px' }} />
             </button>

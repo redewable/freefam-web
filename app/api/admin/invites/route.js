@@ -44,14 +44,14 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
-    const { email, role } = await request.json();
+    const { ltdId, role } = await request.json();
 
     const { data: invite, error } = await supabase
       .from('invites')
       .insert({
         created_by: user.id,
         role: role || 'member',
-        invitee_email: email || null,
+        invitee_ltd_id: ltdId || null,
       })
       .select()
       .single();

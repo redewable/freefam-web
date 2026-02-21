@@ -1,5 +1,4 @@
 import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 
 // Helper to get service-role client (bypasses RLS)
@@ -26,7 +25,7 @@ export async function GET(request) {
     const supabase = getServiceClient();
     const { data: invite, error } = await supabase
       .from('invites')
-      .select('id, token, role, invitee_email, expires_at, created_by')
+      .select('id, token, role, invitee_ltd_id, expires_at, created_by')
       .eq('token', token)
       .is('used_at', null)
       .gt('expires_at', new Date().toISOString())
@@ -34,7 +33,7 @@ export async function GET(request) {
 
     if (error || !invite) return NextResponse.json({ error: 'Invalid or expired invite' }, { status: 404 });
 
-    return NextResponse.json({ invite: { role: invite.role, invitee_email: invite.invitee_email } });
+    return NextResponse.json({ invite: { role: invite.role, invitee_ltd_id: invite.invitee_ltd_id } });
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
@@ -43,9 +42,9 @@ export async function GET(request) {
 // POST - Create account via invite
 export async function POST(request) {
   try {
-    const { token, email, password, fullName } = await request.json();
-    if (!token || !email || !password || !fullName) {
-      return NextResponse.json({ error: 'All fields are required.' }, { status: 400 });
+    const { token, ltdId, firstName, lastName, email, phone, password } = await request.json();
+    if (!token || !ltdId || !firstName || !lastName || !password) {
+      return NextResponse.json({ error: 'LTD ID, first name, last name, and password are required.' }, { status: 400 });
     }
 
     const supabase = getServiceClient();
@@ -63,34 +62,57 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Invalid or expired invite.' }, { status: 400 });
     }
 
-    // If invite has a specific email, enforce it
-    if (invite.invitee_email && invite.invitee_email.toLowerCase() !== email.toLowerCase()) {
-      return NextResponse.json({ error: 'This invite is for a different email address.' }, { status: 400 });
+    // If invite has a specific LTD ID, enforce it
+    if (invite.invitee_ltd_id && invite.invitee_ltd_id !== ltdId.trim()) {
+      return NextResponse.json({ error: 'This invite is for a different LTD ID.' }, { status: 400 });
     }
+
+    // Check if LTD ID already exists
+    const { data: existingProfile } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('ltd_id', ltdId.trim())
+      .single();
+
+    if (existingProfile) {
+      return NextResponse.json({ error: 'An account with this LTD ID already exists.' }, { status: 400 });
+    }
+
+    // Construct internal email from LTD ID
+    const internalEmail = `${ltdId.trim()}@freedomfamily.app`;
+    const fullName = `${firstName.trim()} ${lastName.trim()}`;
 
     // Create auth user via service role (auto-confirms)
     const { data: authData, error: authErr } = await supabase.auth.admin.createUser({
-      email,
+      email: internalEmail,
       password,
       email_confirm: true,
       user_metadata: {
         full_name: fullName,
+        first_name: firstName.trim(),
+        last_name: lastName.trim(),
+        ltd_id: ltdId.trim(),
         role: invite.role,
       },
     });
 
     if (authErr) {
       if (authErr.message.includes('already been registered')) {
-        return NextResponse.json({ error: 'An account with this email already exists.' }, { status: 400 });
+        return NextResponse.json({ error: 'An account with this LTD ID already exists.' }, { status: 400 });
       }
       return NextResponse.json({ error: authErr.message }, { status: 400 });
     }
 
-    // Update profile with sponsor info (invite creator = sponsor)
+    // Update profile with all fields (trigger already created the base profile)
     const { error: profileErr } = await supabase
       .from('profiles')
       .update({
         full_name: fullName,
+        first_name: firstName.trim(),
+        last_name: lastName.trim(),
+        ltd_id: ltdId.trim(),
+        recovery_email: email || null,
+        phone: phone || null,
         role: invite.role,
         sponsor_id: invite.created_by,
       })

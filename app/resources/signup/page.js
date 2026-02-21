@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
-import { createClient } from '@/app/lib/supabase/client';
 
 const colors = { bg: '#fafaf8', dark: '#1a1a1a', gold: '#b8956b' };
 
@@ -15,8 +14,11 @@ function SignupContent() {
   const [checking, setChecking] = useState(true);
   const [invalidToken, setInvalidToken] = useState(false);
 
-  const [fullName, setFullName] = useState('');
+  const [ltdId, setLtdId] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
@@ -29,7 +31,10 @@ function SignupContent() {
       .then(r => r.json())
       .then(data => {
         if (data.error) { setInvalidToken(true); }
-        else { setInvite(data.invite); if (data.invite.invitee_email) setEmail(data.invite.invitee_email); }
+        else {
+          setInvite(data.invite);
+          if (data.invite.invitee_ltd_id) setLtdId(data.invite.invitee_ltd_id);
+        }
         setChecking(false);
       })
       .catch(() => { setInvalidToken(true); setChecking(false); });
@@ -39,6 +44,8 @@ function SignupContent() {
     e.preventDefault();
     setError('');
 
+    if (!ltdId.trim()) { setError('LTD ID is required.'); return; }
+    if (!firstName.trim() || !lastName.trim()) { setError('First and last name are required.'); return; }
     if (password !== confirmPassword) { setError('Passwords do not match.'); return; }
     if (password.length < 6) { setError('Password must be at least 6 characters.'); return; }
 
@@ -47,7 +54,15 @@ function SignupContent() {
       const res = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, email, password, fullName }),
+        body: JSON.stringify({
+          token,
+          ltdId: ltdId.trim(),
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+          email: email.trim() || null,
+          phone: phone.trim() || null,
+          password,
+        }),
       });
       const data = await res.json();
       if (data.error) { setError(data.error); setLoading(false); return; }
@@ -110,7 +125,7 @@ function SignupContent() {
           </div>
           <p style={{ color: colors.gold, fontSize: '11px', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '10px' }}>Account Created</p>
           <h1 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: '28px', color: colors.dark, fontWeight: 400, marginBottom: '12px' }}>Welcome to the Team</h1>
-          <p style={{ color: 'rgba(26,26,26,0.5)', fontSize: '14px', marginBottom: '24px' }}>Sign in to access your resources.</p>
+          <p style={{ color: 'rgba(26,26,26,0.5)', fontSize: '14px', marginBottom: '24px' }}>Sign in with your LTD ID to access your resources.</p>
           <a href="/resources/login" style={{ display: 'inline-block', padding: '14px 28px', background: colors.dark, color: colors.bg, fontSize: '12px', letterSpacing: '0.1em', textTransform: 'uppercase', textDecoration: 'none' }}>Sign In</a>
         </div>
       </div>
@@ -129,7 +144,7 @@ function SignupContent() {
       </nav>
 
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 20px' }}>
-        <form onSubmit={handleSignup} style={{ width: '100%', maxWidth: '360px' }}>
+        <form onSubmit={handleSignup} style={{ width: '100%', maxWidth: '400px' }}>
           <div style={{ textAlign: 'center', marginBottom: '36px' }}>
             <p style={{ color: colors.gold, fontSize: '11px', letterSpacing: '0.25em', textTransform: 'uppercase', marginBottom: '10px' }}>You&#39;re Invited</p>
             <h1 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: '32px', color: colors.dark, fontWeight: 400, marginBottom: '8px' }}>Create Account</h1>
@@ -138,19 +153,43 @@ function SignupContent() {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div>
-              <label style={labelStyle}>Full Name</label>
-              <input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} style={inputStyle} required autoComplete="name" autoFocus />
+              <label style={labelStyle}>LTD ID <span style={{ color: '#ef4444' }}>*</span></label>
+              <input
+                type="text"
+                value={ltdId}
+                onChange={(e) => setLtdId(e.target.value.replace(/\D/g, ''))}
+                placeholder="e.g. 6076043"
+                style={inputStyle}
+                required
+                inputMode="numeric"
+                autoFocus
+                readOnly={!!invite?.invitee_ltd_id}
+              />
+            </div>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <div style={{ flex: 1 }}>
+                <label style={labelStyle}>First Name <span style={{ color: '#ef4444' }}>*</span></label>
+                <input type="text" value={firstName} onChange={(e) => setFirstName(e.target.value)} style={inputStyle} required autoComplete="given-name" />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={labelStyle}>Last Name <span style={{ color: '#ef4444' }}>*</span></label>
+                <input type="text" value={lastName} onChange={(e) => setLastName(e.target.value)} style={inputStyle} required autoComplete="family-name" />
+              </div>
             </div>
             <div>
-              <label style={labelStyle}>Email</label>
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} style={inputStyle} required autoComplete="email" readOnly={!!invite?.invitee_email} />
+              <label style={labelStyle}>Email <span style={{ fontSize: '9px', color: 'rgba(26,26,26,0.3)', textTransform: 'none', letterSpacing: 'normal' }}>(for password recovery)</span></label>
+              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} style={inputStyle} autoComplete="email" />
             </div>
             <div>
-              <label style={labelStyle}>Password</label>
+              <label style={labelStyle}>Phone <span style={{ fontSize: '9px', color: 'rgba(26,26,26,0.3)', textTransform: 'none', letterSpacing: 'normal' }}>(optional)</span></label>
+              <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} style={inputStyle} autoComplete="tel" />
+            </div>
+            <div>
+              <label style={labelStyle}>Password <span style={{ color: '#ef4444' }}>*</span></label>
               <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} style={inputStyle} required autoComplete="new-password" />
             </div>
             <div>
-              <label style={labelStyle}>Confirm Password</label>
+              <label style={labelStyle}>Confirm Password <span style={{ color: '#ef4444' }}>*</span></label>
               <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} style={inputStyle} required autoComplete="new-password" />
             </div>
 
