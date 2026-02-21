@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
 
 const colors = { bg: '#fafaf8', dark: '#1a1a1a', gold: '#b8956b' };
 
@@ -137,9 +136,14 @@ const Modal = ({ isOpen, onClose, title, children }) => {
 
 // ═══════════════ MAIN COMPONENT ═══════════════
 export default function LeadershipPage() {
-  const searchParams = useSearchParams();
   const [auth, setAuth] = useState(false);
-  const [tab, setTab] = useState(searchParams.get('tab') || 'overview');
+  const [tab, setTab] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('tab') || 'overview';
+    }
+    return 'overview';
+  });
   const [toast, setToast] = useState('');
 
   // Data states
