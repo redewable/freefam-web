@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 
 const colors = { bg: '#fafaf8', dark: '#1a1a1a', gold: '#b8956b' };
 
@@ -136,8 +137,9 @@ const Modal = ({ isOpen, onClose, title, children }) => {
 
 // ═══════════════ MAIN COMPONENT ═══════════════
 export default function LeadershipPage() {
+  const searchParams = useSearchParams();
   const [auth, setAuth] = useState(false);
-  const [tab, setTab] = useState('overview');
+  const [tab, setTab] = useState(searchParams.get('tab') || 'overview');
   const [toast, setToast] = useState('');
 
   // Data states
@@ -153,6 +155,7 @@ export default function LeadershipPage() {
   const [filter, setFilter] = useState('all');
   const [sortBy, setSortBy] = useState('pending');
   const [updating, setUpdating] = useState(null);
+  const [fixMsg, setFixMsg] = useState(null);
 
   // History detail
   const [selectedDate, setSelectedDate] = useState(null);
@@ -235,7 +238,7 @@ export default function LeadershipPage() {
   useEffect(() => { if (selectedDate) fetchDateDetail(selectedDate); }, [selectedDate]);
 
   // ═══════ ACTIONS ═══════
-  const toggleCheckin = async (reg) => {
+  const updateStatus = async (reg, action) => {
     setUpdating(reg.id);
     try {
       const res = await fetch('/api/checkin', {
@@ -243,15 +246,38 @@ export default function LeadershipPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           sessionId: reg.id,
-          action: reg.checkedIn ? 'checkout' : 'checkin',
+          action,
           priceType: reg.priceType,
           registrationData: { name: reg.name, type: reg.type, visitNumber: reg.visitNumber || '' },
         }),
       });
       const data = await res.json();
-      if (data.success) setRegs(prev => prev.map(r => r.id === reg.id ? { ...r, checkedIn: data.checkedIn } : r));
+      if (data.success) {
+        setRegs(prev => prev.map(r => {
+          if (r.id !== reg.id) return r;
+          if (action === 'checkin') return { ...r, checkedIn: true, noShow: false };
+          if (action === 'checkout') return { ...r, checkedIn: false, noShow: false };
+          if (action === 'noshow') return { ...r, checkedIn: false, noShow: true };
+          if (action === 'clear_noshow') return { ...r, checkedIn: false, noShow: false };
+          return r;
+        }));
+      }
     } catch (e) { console.error(e); }
     setUpdating(null);
+  };
+
+  const fixHistoryDates = async () => {
+    try {
+      setFixMsg('Fixing...');
+      const res = await fetch('/api/admin/fix-history', { method: 'POST' });
+      const data = await res.json();
+      setFixMsg(data.message);
+      fetchAll();
+      setTimeout(() => setFixMsg(null), 4000);
+    } catch (e) {
+      setFixMsg('Error fixing dates');
+      setTimeout(() => setFixMsg(null), 3000);
+    }
   };
 
   const saveLineup = async () => {
@@ -397,12 +423,13 @@ export default function LeadershipPage() {
   });
   if (filter !== 'all') filtered = filtered.filter(r => r.type === filter);
   filtered.sort((a, b) => {
-    if (sortBy === 'pending') { if (a.checkedIn !== b.checkedIn) return a.checkedIn ? 1 : -1; return a.name.localeCompare(b.name); }
-    if (sortBy === 'arrived') { if (a.checkedIn !== b.checkedIn) return a.checkedIn ? -1 : 1; return a.name.localeCompare(b.name); }
+    const getOrder = (r) => r.checkedIn ? 1 : r.noShow ? 2 : 0;
+    if (sortBy === 'pending') { const diff = getOrder(a) - getOrder(b); if (diff !== 0) return diff; return a.name.localeCompare(b.name); }
+    if (sortBy === 'arrived') { const diff = getOrder(b) - getOrder(a); if (diff !== 0) return diff; return a.name.localeCompare(b.name); }
     return a.name.localeCompare(b.name);
   });
 
-  const stats = { total: filtered.length, arrived: filtered.filter(r => r.checkedIn).length, pending: filtered.filter(r => !r.checkedIn).length };
+  const stats = { total: filtered.length, arrived: filtered.filter(r => r.checkedIn).length, pending: filtered.filter(r => !r.checkedIn && !r.noShow).length, noShow: filtered.filter(r => r.noShow).length };
 
   // Revenue from Stripe paid registrations
   const totalRevenue = regs.filter(r => r.type === 'ibo' && r.amount > 0).reduce((sum, r) => sum + r.amount, 0);
@@ -624,8 +651,8 @@ export default function LeadershipPage() {
           // ═══════════════ CHECK-IN TAB ═══════════════
           ) : tab === 'checkin' ? (
             <>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px', marginBottom: '20px' }}>
-                {[{ l: 'Total', v: stats.total, c: colors.dark }, { l: 'Arrived', v: stats.arrived, c: '#22c55e' }, { l: 'Pending', v: stats.pending, c: colors.gold }].map((s, i) => (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '14px', marginBottom: '20px' }}>
+                {[{ l: 'Total', v: stats.total, c: colors.dark }, { l: 'Arrived', v: stats.arrived, c: '#22c55e' }, { l: 'Pending', v: stats.pending, c: colors.gold }, { l: 'No Show', v: stats.noShow, c: '#ef4444' }].map((s, i) => (
                   <div key={i} style={{ padding: '18px', background: 'white', border: '1px solid rgba(26,26,26,0.1)', textAlign: 'center' }}>
                     <p style={{ fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.5)', marginBottom: '6px' }}>{s.l}</p>
                     <p style={{ fontSize: '28px', fontWeight: 600, color: s.c, margin: 0 }}>{s.v}</p>
@@ -658,17 +685,38 @@ export default function LeadershipPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {filtered.map(reg => {
                     const badge = getBadge(reg);
+                    const rowBg = reg.checkedIn ? 'rgba(34,197,94,0.06)' : reg.noShow ? 'rgba(239,68,68,0.06)' : 'white';
+                    const rowBorder = reg.checkedIn ? '1px solid rgba(34,197,94,0.2)' : reg.noShow ? '1px solid rgba(239,68,68,0.2)' : '1px solid rgba(26,26,26,0.1)';
+                    const isUpdating = updating === reg.id;
                     return (
-                      <div key={reg.id} style={{ display: 'flex', alignItems: 'center', padding: '12px 16px', background: reg.checkedIn ? 'rgba(34,197,94,0.06)' : 'white', border: reg.checkedIn ? '1px solid rgba(34,197,94,0.2)' : '1px solid rgba(26,26,26,0.1)', gap: '14px' }}>
+                      <div key={reg.id} style={{ display: 'flex', alignItems: 'center', padding: '12px 16px', background: rowBg, border: rowBorder, gap: '14px' }}>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <p style={{ fontSize: '14px', fontWeight: 500, color: colors.dark, margin: '0 0 2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{reg.name}</p>
                           <p style={{ fontSize: '11px', color: 'rgba(26,26,26,0.5)', margin: 0 }}>{reg.ltdId || reg.email?.split('@')[0]}</p>
                         </div>
                         <div style={{ padding: '3px 8px', background: badge.bg, fontSize: '9px', fontWeight: 600, color: badge.color, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{badge.label}</div>
-                        <button onClick={() => toggleCheckin(reg)} disabled={updating === reg.id}
-                          style={{ padding: '6px 14px', background: reg.checkedIn ? '#22c55e' : 'transparent', border: reg.checkedIn ? '1px solid #22c55e' : '1px solid rgba(26,26,26,0.3)', color: reg.checkedIn ? 'white' : colors.dark, fontSize: '10px', fontWeight: 600, cursor: 'pointer', opacity: updating === reg.id ? 0.5 : 1, display: 'flex', alignItems: 'center', gap: '4px', textTransform: 'uppercase' }}>
-                          {reg.checkedIn ? <><Icons.Check style={{ width: '12px', height: '12px' }} />Arrived</> : 'Check In'}
-                        </button>
+                        {reg.checkedIn ? (
+                          <button onClick={() => updateStatus(reg, 'checkout')} disabled={isUpdating}
+                            style={{ padding: '6px 14px', background: '#22c55e', border: '1px solid #22c55e', color: 'white', fontSize: '10px', fontWeight: 600, cursor: 'pointer', opacity: isUpdating ? 0.5 : 1, display: 'flex', alignItems: 'center', gap: '4px', textTransform: 'uppercase' }}>
+                            <Icons.Check style={{ width: '12px', height: '12px' }} />Arrived
+                          </button>
+                        ) : reg.noShow ? (
+                          <button onClick={() => updateStatus(reg, 'clear_noshow')} disabled={isUpdating}
+                            style={{ padding: '6px 14px', background: '#ef4444', border: '1px solid #ef4444', color: 'white', fontSize: '10px', fontWeight: 600, cursor: 'pointer', opacity: isUpdating ? 0.5 : 1, textTransform: 'uppercase' }}>
+                            No Show
+                          </button>
+                        ) : (
+                          <div style={{ display: 'flex', gap: '4px' }}>
+                            <button onClick={() => updateStatus(reg, 'checkin')} disabled={isUpdating}
+                              style={{ padding: '6px 12px', background: 'transparent', border: '1px solid rgba(26,26,26,0.3)', color: colors.dark, fontSize: '10px', fontWeight: 600, cursor: 'pointer', opacity: isUpdating ? 0.5 : 1, textTransform: 'uppercase' }}>
+                              Check In
+                            </button>
+                            <button onClick={() => updateStatus(reg, 'noshow')} disabled={isUpdating}
+                              style={{ padding: '6px 10px', background: 'transparent', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444', fontSize: '10px', fontWeight: 600, cursor: 'pointer', opacity: isUpdating ? 0.5 : 1, textTransform: 'uppercase' }}>
+                              No Show
+                            </button>
+                          </div>
+                        )}
                       </div>
                     );
                   })}
@@ -1009,6 +1057,12 @@ export default function LeadershipPage() {
             ) : (
               // History List
               <>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', alignItems: 'center', marginBottom: '16px' }}>
+                  {fixMsg && <span style={{ fontSize: '11px', color: '#22c55e' }}>{fixMsg}</span>}
+                  <button onClick={fixHistoryDates} style={{ padding: '8px 14px', background: 'transparent', color: colors.gold, border: `1px solid ${colors.gold}`, cursor: 'pointer', fontSize: '11px' }}>
+                    Fix Dates
+                  </button>
+                </div>
                 {history.length > 0 && (
                   <div style={{ background: 'white', border: '1px solid rgba(26,26,26,0.1)', padding: '20px', marginBottom: '24px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
