@@ -190,6 +190,7 @@ export default function CheckinPage() {
   const [filter, setFilter] = useState('all');
   const [sortBy, setSortBy] = useState('pending');
   const [updating, setUpdating] = useState(null);
+  const [fixMsg, setFixMsg] = useState(null);
 
   useEffect(() => { if (sessionStorage.getItem('admin_auth') === 'true') setAuth(true); }, []);
 
@@ -226,6 +227,20 @@ export default function CheckinPage() {
 
   useEffect(() => { if (auth) { fetchRegs(); fetchHistory(); } }, [auth]);
   useEffect(() => { if (selectedDate) fetchDateDetail(selectedDate); }, [selectedDate]);
+
+  const fixHistoryDates = async () => {
+    try {
+      setFixMsg('Fixing...');
+      const res = await fetch('/api/admin/fix-history', { method: 'POST' });
+      const data = await res.json();
+      setFixMsg(data.message);
+      fetchHistory();
+      setTimeout(() => setFixMsg(null), 4000);
+    } catch (e) {
+      setFixMsg('Error fixing dates');
+      setTimeout(() => setFixMsg(null), 3000);
+    }
+  };
 
   const updateStatus = async (reg, action) => {
     setUpdating(reg.id);
@@ -290,9 +305,15 @@ export default function CheckinPage() {
           <div>
             <h1 style={{ fontSize: '18px', color: colors.dark, margin: 0, fontWeight: 500 }}>Check-In</h1>
           </div>
-          <button onClick={() => { fetchRegs(); fetchHistory(); }} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 12px', background: colors.dark, color: colors.bg, border: 'none', cursor: 'pointer', fontSize: '11px' }}>
-            <Icons.Refresh style={{ width: '14px', height: '14px' }} />Refresh
-          </button>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            {fixMsg && <span style={{ fontSize: '11px', color: '#22c55e' }}>{fixMsg}</span>}
+            <button onClick={fixHistoryDates} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 12px', background: 'transparent', color: colors.gold, border: `1px solid ${colors.gold}`, cursor: 'pointer', fontSize: '11px' }}>
+              Fix Dates
+            </button>
+            <button onClick={() => { fetchRegs(); fetchHistory(); }} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 12px', background: colors.dark, color: colors.bg, border: 'none', cursor: 'pointer', fontSize: '11px' }}>
+              <Icons.Refresh style={{ width: '14px', height: '14px' }} />Refresh
+            </button>
+          </div>
         </div>
       </header>
 
