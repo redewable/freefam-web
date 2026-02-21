@@ -360,6 +360,15 @@ export default function FreedomFamily() {
           <p style={{ color: colors.gold, fontSize: '10px', letterSpacing: '0.25em', textTransform: 'uppercase', marginBottom: '12px' }}>Upcoming Events</p>
 
           <div style={{ marginBottom: '40px' }}>
+            <h2 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 'clamp(26px, 5vw, 36px)', color: colors.dark, marginBottom: '8px', fontWeight: 400 }}>HFT</h2>
+            <p style={{ fontSize: '15px', color: 'rgba(26,26,26,0.5)', marginBottom: '4px' }}>Joel Weinberg STP</p>
+            <p style={{ fontSize: '15px', color: 'rgba(26,26,26,0.5)', marginBottom: '8px' }}>Tuesday, March 3, 2026</p>
+            <a href="https://app.waiverelectronic.com/render/splash/HFT_Houston" target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 20px', background: colors.dark, color: colors.bg, fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase', textDecoration: 'none' }}>Details &amp; Registration<Icons.ArrowRight style={{ width: '12px', height: '12px' }} /></a>
+          </div>
+
+          <div style={{ height: '1px', background: 'linear-gradient(to right, transparent, rgba(26,26,26,0.08), transparent)', marginBottom: '40px' }} />
+
+          <div style={{ marginBottom: '40px' }}>
             <h2 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 'clamp(26px, 5vw, 36px)', color: colors.dark, marginBottom: '8px', fontWeight: 400 }}>Trevino Team Meeting</h2>
             <p style={{ fontSize: '15px', color: 'rgba(26,26,26,0.5)', marginBottom: '8px' }}>Saturday, March 21, 2026 · 1:00 PM</p>
             <p style={{ fontSize: '14px', color: 'rgba(26,26,26,0.4)', marginBottom: '16px' }}><a href="https://app.waiverelectronic.com/render/splash/666104722c4d2f5b80675ddc" target="_blank" rel="noopener noreferrer" style={{ color: colors.gold, textDecoration: 'none' }}>Holiday Inn – Galleria, Houston, TX</a></p>
@@ -372,6 +381,31 @@ export default function FreedomFamily() {
             <p style={{ fontSize: '15px', color: 'rgba(26,26,26,0.5)', marginBottom: '8px' }}>April 17–19, 2026</p>
             <p style={{ fontSize: '14px', color: 'rgba(26,26,26,0.4)', marginBottom: '24px' }}>Virtual Event · Save the Date!</p>
             <p style={{ fontSize: '13px', color: 'rgba(26,26,26,0.35)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Details Coming Soon</p>
+          </div>
+        </div>
+      </section>
+
+      {/* Other Info Sessions */}
+      <div style={{ maxWidth: '700px', margin: '0 auto', padding: '0 20px' }}><div style={{ height: '1px', background: 'linear-gradient(to right, transparent, rgba(26,26,26,0.1), transparent)' }} /></div>
+
+      <section style={{ padding: '40px 20px' }}>
+        <div style={{ maxWidth: '550px', margin: '0 auto' }}>
+          <p style={{ color: colors.gold, fontSize: '10px', letterSpacing: '0.25em', textTransform: 'uppercase', marginBottom: '16px', textAlign: 'center' }}>Other Info Sessions in Texas</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <a href="https://www.waiverelectronic.com/render/splash/Trevino_Houston" target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', background: 'white', border: '1px solid rgba(26,26,26,0.1)', textDecoration: 'none', transition: 'border-color 0.2s' }}>
+              <div>
+                <p style={{ fontSize: '14px', fontWeight: 500, color: colors.dark, margin: '0 0 2px' }}>Trevino Info Session</p>
+                <p style={{ fontSize: '12px', color: 'rgba(26,26,26,0.4)', margin: 0 }}>Houston, TX</p>
+              </div>
+              <Icons.ArrowRight style={{ width: '16px', height: '16px', color: 'rgba(26,26,26,0.3)' }} />
+            </a>
+            <a href="https://central-texas-ltd-team.square.site/product/gala-double-diamond-mindset-webcast-9-6-23/3" target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', background: 'white', border: '1px solid rgba(26,26,26,0.1)', textDecoration: 'none', transition: 'border-color 0.2s' }}>
+              <div>
+                <p style={{ fontSize: '14px', fontWeight: 500, color: colors.dark, margin: '0 0 2px' }}>Central Texas Info Session</p>
+                <p style={{ fontSize: '12px', color: 'rgba(26,26,26,0.4)', margin: 0 }}>Central Texas</p>
+              </div>
+              <Icons.ArrowRight style={{ width: '16px', height: '16px', color: 'rgba(26,26,26,0.3)' }} />
+            </a>
           </div>
         </div>
       </section>
