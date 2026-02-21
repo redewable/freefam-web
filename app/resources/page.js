@@ -34,7 +34,7 @@ const typeColors = {
 // ═══════════════ INVITE MODAL ═══════════════
 const InviteModal = ({ isOpen, onClose }) => {
   const [ltdId, setLtdId] = useState('');
-  const [role, setRole] = useState('member');
+  const [role, setRole] = useState('sponsor');
   const [loading, setLoading] = useState(false);
   const [inviteLink, setInviteLink] = useState('');
   const [copied, setCopied] = useState(false);
@@ -66,7 +66,7 @@ const InviteModal = ({ isOpen, onClose }) => {
 
   const handleClose = () => {
     setLtdId('');
-    setRole('member');
+    setRole('sponsor');
     setInviteLink('');
     setCopied(false);
     onClose();
@@ -92,18 +92,6 @@ const InviteModal = ({ isOpen, onClose }) => {
             <div>
               <label style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.4)', display: 'block', marginBottom: '6px' }}>Their LTD ID <span style={{ fontSize: '9px', color: 'rgba(26,26,26,0.3)', textTransform: 'none', letterSpacing: 'normal' }}>(optional)</span></label>
               <input type="text" value={ltdId} onChange={e => setLtdId(e.target.value.replace(/\D/g, ''))} placeholder="e.g. 2118394" style={inputStyle} inputMode="numeric" />
-            </div>
-            <div>
-              <label style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.4)', display: 'block', marginBottom: '6px' }}>Role</label>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                {['member', 'sponsor'].map(r => (
-                  <button key={r} onClick={() => setRole(r)} style={{
-                    flex: 1, padding: '10px', fontSize: '12px', letterSpacing: '0.05em', textTransform: 'capitalize',
-                    background: role === r ? colors.dark : 'transparent', color: role === r ? colors.bg : 'rgba(26,26,26,0.5)',
-                    border: role === r ? 'none' : '1px solid rgba(26,26,26,0.12)', cursor: 'pointer',
-                  }}>{r}</button>
-                ))}
-              </div>
             </div>
             <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
               <button onClick={handleClose} style={{ flex: 1, padding: '14px', background: 'transparent', border: '1px solid rgba(26,26,26,0.12)', color: 'rgba(26,26,26,0.5)', fontSize: '12px', letterSpacing: '0.05em', cursor: 'pointer' }}>Cancel</button>
@@ -251,9 +239,41 @@ const LOSTree = ({ userId, profile }) => {
         </div>
       )}
 
-      {/* Current User */}
+      {/* Current User + Partner */}
       <div style={{ marginBottom: '16px' }}>
-        <PersonCard person={tree.user} isCurrentUser />
+        {tree.partner ? (
+          <div style={{
+            padding: '16px 20px',
+            background: 'rgba(184,149,107,0.06)',
+            border: `1px solid rgba(184,149,107,0.3)`,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '12px' }}>
+              <span style={{ fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', color: colors.gold, fontWeight: 600 }}>You</span>
+              <div style={{ flex: 1, height: '1px', background: 'rgba(184,149,107,0.2)' }} />
+            </div>
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+              {[tree.user, tree.partner].map(person => {
+                const personAttendance = attendance?.records?.filter(r => r.ltd_id === person.ltd_id) || [];
+                return (
+                  <div key={person.id} style={{ flex: '1 1 200px', minWidth: 0 }}>
+                    <p style={{ fontSize: '15px', fontWeight: 500, color: colors.dark, margin: '0 0 4px' }}>{person.full_name || 'Unnamed'}</p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: '11px', padding: '2px 8px', background: 'rgba(184,149,107,0.15)', color: colors.gold, borderRadius: '2px' }}>{person.role === 'admin' ? 'Admin' : person.role === 'sponsor' ? 'Sponsor' : 'Member'}</span>
+                      {person.ltd_id && <span style={{ fontSize: '11px', color: 'rgba(26,26,26,0.35)' }}>LTD #{person.ltd_id}</span>}
+                      {showAttendance && personAttendance.length > 0 && (
+                        <span style={{ fontSize: '11px', padding: '2px 8px', background: 'rgba(34,197,94,0.1)', color: '#22c55e', borderRadius: '2px' }}>
+                          {personAttendance.length} event{personAttendance.length !== 1 ? 's' : ''}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ) : (
+          <PersonCard person={tree.user} isCurrentUser />
+        )}
       </div>
 
       {/* Downline */}

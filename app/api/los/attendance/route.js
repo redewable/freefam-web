@@ -9,26 +9,63 @@ export async function GET() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+    // Partner logic: LTD ID 6076043 <-> 60760432
+    function getPartnerLtdId(ltdId) {
+      if (!ltdId) return null;
+      if (ltdId.endsWith('2') && ltdId.length > 1) return ltdId.slice(0, -1);
+      return ltdId + '2';
+    }
+
     // Get current user's profile
     const { data: profile } = await supabase.from('profiles').select('ltd_id, role, sponsor_id').eq('id', user.id).single();
     if (!profile) return NextResponse.json({ records: [] });
 
-    // Get all LTD IDs in this user's LOS (self + downline)
+    // Get all LTD IDs in this user's LOS (self + partner + downline)
     const teamLtdIds = new Set();
-    if (profile.ltd_id) teamLtdIds.add(profile.ltd_id);
+    if (profile.ltd_id) {
+      teamLtdIds.add(profile.ltd_id);
+      const partnerLtd = getPartnerLtdId(profile.ltd_id);
+      if (partnerLtd) teamLtdIds.add(partnerLtd);
+    }
 
-    // Get direct downline LTD IDs
+    // Get direct downline LTD IDs (for both user and partner)
+    const sponsorIds = [user.id];
+
+    // Find partner's user ID to include their downline too
+    const partnerLtdId = getPartnerLtdId(profile.ltd_id);
+    if (partnerLtdId) {
+      const { data: partnerProfile } = await supabase
+        .from('profiles')
+        .select('id, ltd_id')
+        .eq('ltd_id', partnerLtdId)
+        .single();
+      if (partnerProfile) sponsorIds.push(partnerProfile.id);
+    }
+
     const { data: downline } = await supabase
       .from('profiles')
       .select('ltd_id')
-      .eq('sponsor_id', user.id);
+      .in('sponsor_id', sponsorIds);
 
-    (downline || []).forEach(d => { if (d.ltd_id) teamLtdIds.add(d.ltd_id); });
+    (downline || []).forEach(d => {
+      if (d.ltd_id) {
+        teamLtdIds.add(d.ltd_id);
+        // Also add each downline member's partner
+        const dPartner = getPartnerLtdId(d.ltd_id);
+        if (dPartner) teamLtdIds.add(dPartner);
+      }
+    });
 
-    // If admin, also get upline
+    // If admin, get all profiles
     if (profile.role === 'admin') {
       const { data: allProfiles } = await supabase.from('profiles').select('ltd_id');
-      (allProfiles || []).forEach(p => { if (p.ltd_id) teamLtdIds.add(p.ltd_id); });
+      (allProfiles || []).forEach(p => {
+        if (p.ltd_id) {
+          teamLtdIds.add(p.ltd_id);
+          const pPartner = getPartnerLtdId(p.ltd_id);
+          if (pPartner) teamLtdIds.add(pPartner);
+        }
+      });
     }
 
     if (teamLtdIds.size === 0) return NextResponse.json({ records: [] });
