@@ -194,20 +194,23 @@ function LineupContent() {
         )}
 
         {/* Speaker Reminders */}
-        <div style={{ marginTop: '24px', padding: '16px', background: colors.dark, color: colors.bg }}>
-          <p style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: colors.gold, marginBottom: '12px', fontWeight: 600 }}>Speaker Reminders</p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px', lineHeight: 1.5 }}>
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <span style={{ color: colors.gold, fontSize: '14px', lineHeight: 1.4 }}>1.</span>
-              <p style={{ margin: 0 }}><strong style={{ color: colors.gold }}>Slideshow content</strong> must be sent to <a href="mailto:elfreefamilia@gmail.com" style={{ color: colors.gold, textDecoration: 'underline' }}>elfreefamilia@gmail.com</a> by <strong>Monday at 10:00 AM</strong>.</p>
+        <div style={{ marginTop: '24px', padding: '20px', background: 'white', border: `1px solid rgba(184,149,107,0.25)` }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+            <p style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: colors.gold, margin: 0, fontWeight: 600 }}>Speaker Reminders</p>
+            <div style={{ flex: 1, height: '1px', background: 'rgba(184,149,107,0.25)' }} />
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '13px', color: 'rgba(26,26,26,0.7)', lineHeight: 1.6 }}>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <span style={{ color: colors.gold, fontWeight: 600, minWidth: '18px' }}>1.</span>
+              <p style={{ margin: 0 }}><span style={{ fontWeight: 500, color: colors.dark }}>Slideshow content</span> must be sent to <a href="mailto:elfreefamilia@gmail.com" style={{ color: colors.gold, textDecoration: 'none', borderBottom: '1px solid rgba(184,149,107,0.4)' }}>elfreefamilia@gmail.com</a> by <span style={{ fontWeight: 500, color: colors.dark }}>Monday at 10:00 AM</span>.</p>
             </div>
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <span style={{ color: colors.gold, fontSize: '14px', lineHeight: 1.4 }}>2.</span>
-              <p style={{ margin: 0 }}><strong style={{ color: colors.gold }}>Know your order.</strong> Be clear on who is before you and who follows you. You are responsible for <strong>edifying the next speaker</strong> as you bring them up.</p>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <span style={{ color: colors.gold, fontWeight: 600, minWidth: '18px' }}>2.</span>
+              <p style={{ margin: 0 }}><span style={{ fontWeight: 500, color: colors.dark }}>Know your order.</span> Be clear on who is before you and who follows you. You are responsible for edifying the next speaker as you bring them up.</p>
             </div>
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <span style={{ color: colors.gold, fontSize: '14px', lineHeight: 1.4 }}>3.</span>
-              <p style={{ margin: 0 }}><strong style={{ color: colors.gold }}>Respect the clock.</strong> A speaking timer will be running on the AV table. Stay within your allotted time — it keeps the entire meeting on track.</p>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <span style={{ color: colors.gold, fontWeight: 600, minWidth: '18px' }}>3.</span>
+              <p style={{ margin: 0 }}><span style={{ fontWeight: 500, color: colors.dark }}>Respect the clock.</span> A speaking timer will be running on the AV table. Stay within your allotted time — it keeps the entire meeting on track.</p>
             </div>
           </div>
         </div>

@@ -36,7 +36,7 @@ const DEFAULT_SEGMENTS = [
   { key: 'recognition', label: 'Recognition', speaker: '', topic: '', time: '8:45 PM', duration: '20 min', section: 'training' },
   { key: 'calendar', label: 'Calendar / Upcoming Events', speaker: '', topic: '', time: '9:05 PM', duration: '4 min', section: 'training' },
   { key: 'product', label: 'Product Demo', speaker: '', topic: '', time: '9:09 PM', duration: '7 min', section: 'training' },
-  { key: 'bsm', label: 'BSM / Book of the Month', speaker: '', topic: '', time: '9:16 PM', duration: '7 min', section: 'training' },
+  { key: 'bsm', label: 'BSM', speaker: '', topic: '', time: '9:16 PM', duration: '7 min', section: 'training' },
   { key: 'training', label: 'Training Topic', speaker: '', topic: '', time: '9:23 PM', duration: '25-30 min', section: 'training' },
 ];
 

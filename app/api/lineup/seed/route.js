@@ -8,7 +8,7 @@ const makeSegments = ({ host, plan, nextsteps, recognition, calendar, product, b
   { key: 'recognition', label: 'Recognition', speaker: recognition || '', topic: '', time: '8:45 PM', duration: '20 min', section: 'training' },
   { key: 'calendar', label: 'Calendar / Upcoming Events', speaker: calendar || '', topic: '', time: '9:05 PM', duration: '4 min', section: 'training' },
   { key: 'product', label: 'Product Demo', speaker: product || '', topic: '', time: '9:09 PM', duration: '7 min', section: 'training' },
-  { key: 'bsm', label: 'BSM / Book of the Month', speaker: bsm || '', topic: '', time: '9:16 PM', duration: '7 min', section: 'training' },
+  { key: 'bsm', label: 'BSM', speaker: bsm || '', topic: '', time: '9:16 PM', duration: '7 min', section: 'training' },
   { key: 'training', label: 'Training Topic', speaker: '', topic: trainingTopic || '', time: '9:23 PM', duration: '25-30 min', section: 'training' },
 ];
 

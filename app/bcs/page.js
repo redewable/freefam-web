@@ -210,21 +210,35 @@ const RegistrationModal = ({ isOpen, onClose, ticketType, setTicketType }) => {
   );
 };
 
+const Toast = ({ message, isVisible, onClose }) => {
+  useEffect(() => { if (isVisible) { const t = setTimeout(onClose, 3000); return () => clearTimeout(t); } }, [isVisible, onClose]);
+  if (!isVisible) return null;
+  return (
+    <div style={{ position: 'fixed', bottom: '32px', left: '50%', transform: 'translateX(-50%)', zIndex: 60 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px 24px', background: colors.dark, color: colors.bg }}>
+        <Icons.Check style={{ width: '16px', height: '16px', color: colors.gold }} />
+        <span style={{ fontSize: '14px' }}>{message}</span>
+      </div>
+    </div>
+  );
+};
+
 export default function BCSFreedomTeam() {
   const [modalOpen, setModalOpen] = useState(false);
   const [ticketType, setTicketType] = useState('');
+  const [toast, setToast] = useState({ visible: false, message: '' });
 
   const shareGuestLink = () => {
     const url = `${window.location.origin}/guest`;
     navigator.clipboard.writeText(url);
-    alert('Guest link copied!');
+    setToast({ visible: true, message: 'Guest link copied!' });
   };
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
-      if (params.get('success') === 'true') { alert('Payment successful!'); window.history.replaceState({}, '', window.location.pathname); }
-      if (params.get('canceled') === 'true') { alert('Payment canceled.'); window.history.replaceState({}, '', window.location.pathname); }
+      if (params.get('success') === 'true') { setToast({ visible: true, message: 'Payment successful!' }); window.history.replaceState({}, '', window.location.pathname); }
+      if (params.get('canceled') === 'true') { setToast({ visible: true, message: 'Payment canceled' }); window.history.replaceState({}, '', window.location.pathname); }
     }
   }, []);
 
@@ -262,7 +276,7 @@ export default function BCSFreedomTeam() {
           <h2 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 'clamp(28px, 6vw, 40px)', color: colors.dark, marginBottom: '8px', fontWeight: 400, lineHeight: 1.1 }}>Showing The Plan</h2>
           <p style={{ fontSize: '16px', color: 'rgba(26,26,26,0.5)', marginBottom: '24px' }}>Adrian &amp; Julia Williams</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}><Icons.Calendar style={{ width: '16px', height: '16px', color: colors.gold, flexShrink: 0 }} /><span style={{ fontSize: '14px', color: colors.dark }}>Monday, February 2, 2025 · 7:30 PM</span></div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}><Icons.Calendar style={{ width: '16px', height: '16px', color: colors.gold, flexShrink: 0 }} /><span style={{ fontSize: '14px', color: colors.dark }}>Every Monday · 7:30 PM CST</span></div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}><Icons.MapPin style={{ width: '16px', height: '16px', color: colors.gold, flexShrink: 0 }} /><span style={{ fontSize: '14px', color: colors.dark }}>Embassy Suites · College Station, TX</span></div>
           </div>
           <div style={{ background: 'rgba(26,26,26,0.02)', padding: '16px', marginBottom: '24px' }}>
@@ -289,6 +303,7 @@ export default function BCSFreedomTeam() {
       </footer>
 
       <RegistrationModal isOpen={modalOpen} onClose={() => setModalOpen(false)} ticketType={ticketType} setTicketType={setTicketType} />
+      <Toast message={toast.message} isVisible={toast.visible} onClose={() => setToast({ visible: false, message: '' })} />
     </div>
   );
 }
