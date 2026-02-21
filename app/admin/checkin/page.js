@@ -297,12 +297,12 @@ export default function CheckinPage() {
         </div>
       </div>
 
-      <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '16px' }}>
+      <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '24px', width: '100%', boxSizing: 'border-box' }}>
         {tab === 'checkin' ? (
           <>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginBottom: '16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px', marginBottom: '20px' }}>
               {[{ l: 'Total', v: stats.total, c: colors.dark }, { l: 'Arrived', v: stats.arrived, c: '#22c55e' }, { l: 'Pending', v: stats.pending, c: colors.gold }].map((s, i) => (
-                <div key={i} style={{ padding: '14px', background: 'white', border: '1px solid rgba(26,26,26,0.1)', textAlign: 'center' }}>
+                <div key={i} style={{ padding: '18px', background: 'white', border: '1px solid rgba(26,26,26,0.1)', textAlign: 'center' }}>
                   <p style={{ fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.5)', marginBottom: '4px' }}>{s.l}</p>
                   <p style={{ fontSize: '24px', fontWeight: 600, color: s.c, margin: 0 }}>{s.v}</p>
                 </div>

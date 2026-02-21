@@ -321,26 +321,27 @@ export default function FreedomFamily() {
         </div>
       </nav>
 
-      <section style={{ paddingTop: '100px', paddingBottom: '60px', textAlign: 'center', padding: '100px 20px 60px' }}>
-        <p style={{ color: colors.gold, fontSize: '11px', letterSpacing: '0.35em', textTransform: 'uppercase', marginBottom: '20px' }}>The Round Table</p>
-        <h1 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 'clamp(40px, 9vw, 80px)', color: colors.dark, lineHeight: 0.95, marginBottom: '32px', fontWeight: 400 }}>Freedom <em>Family</em></h1>
-        <button onClick={() => setModalOpen(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', padding: '16px 32px', background: colors.dark, color: colors.bg, fontSize: '12px', letterSpacing: '0.15em', textTransform: 'uppercase', border: 'none', cursor: 'pointer' }}>Register Now<Icons.ArrowRight style={{ width: '14px', height: '14px' }} /></button>
+      <section style={{ paddingTop: '140px', paddingBottom: '80px', textAlign: 'center', padding: '140px 20px 80px' }}>
+        <p style={{ color: colors.gold, fontSize: '11px', letterSpacing: '0.35em', textTransform: 'uppercase', marginBottom: '24px' }}>The Round Table</p>
+        <h1 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 'clamp(52px, 12vw, 100px)', color: colors.dark, lineHeight: 0.9, marginBottom: '20px', fontWeight: 400 }}>Freedom <em>Family</em></h1>
+        <p style={{ fontSize: '16px', color: 'rgba(26,26,26,0.45)', letterSpacing: '0.05em', marginBottom: '40px', maxWidth: '420px', marginLeft: 'auto', marginRight: 'auto' }}>Info Session &amp; Training · Every Monday · 7:30 PM</p>
+        <button onClick={() => setModalOpen(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', padding: '18px 40px', background: colors.dark, color: colors.bg, fontSize: '12px', letterSpacing: '0.15em', textTransform: 'uppercase', border: 'none', cursor: 'pointer' }}>Register Now<Icons.ArrowRight style={{ width: '14px', height: '14px' }} /></button>
       </section>
 
       <div style={{ maxWidth: '700px', margin: '0 auto', padding: '0 20px' }}><div style={{ height: '1px', background: 'linear-gradient(to right, transparent, rgba(26,26,26,0.1), transparent)' }} /></div>
 
-      <section style={{ padding: '60px 20px' }}>
-        <div style={{ maxWidth: '550px', margin: '0 auto' }}>
-          <p style={{ color: colors.gold, fontSize: '10px', letterSpacing: '0.25em', textTransform: 'uppercase', marginBottom: '12px' }}>This Monday</p>
-          <h2 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 'clamp(30px, 6vw, 44px)', color: colors.dark, marginBottom: '8px', fontWeight: 400, lineHeight: 1.1 }}>Showing The Plan</h2>
-          <p style={{ fontSize: '17px', color: 'rgba(26,26,26,0.5)', marginBottom: '28px' }}>Paul &amp; Liz Hinton</p>
+      <section style={{ padding: '70px 20px' }}>
+        <div style={{ maxWidth: '580px', margin: '0 auto' }}>
+          <p style={{ color: colors.gold, fontSize: '10px', letterSpacing: '0.25em', textTransform: 'uppercase', marginBottom: '14px' }}>This Monday</p>
+          <h2 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 'clamp(30px, 6vw, 44px)', color: colors.dark, marginBottom: '10px', fontWeight: 400, lineHeight: 1.1 }}>Showing The Plan</h2>
+          <p style={{ fontSize: '17px', color: 'rgba(26,26,26,0.5)', marginBottom: '32px' }}>Paul &amp; Liz Hinton</p>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '28px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '32px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}><Icons.Calendar style={{ width: '18px', height: '18px', color: colors.gold }} /><span style={{ fontSize: '15px', color: colors.dark }}>Monday, February 23, 2026 · 7:30 PM</span></div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}><Icons.MapPin style={{ width: '18px', height: '18px', color: colors.gold }} /><span style={{ fontSize: '15px', color: colors.dark }}>Embassy Suites · 201 University Dr E, College Station</span></div>
           </div>
           
-          <div style={{ background: 'rgba(26,26,26,0.02)', padding: '20px', marginBottom: '28px' }}>
+          <div style={{ background: 'rgba(26,26,26,0.02)', padding: '24px', marginBottom: '32px' }}>
             <p style={{ color: colors.gold, fontSize: '9px', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '14px' }}>Schedule</p>
             <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr', gap: '8px 16px' }}>
               {schedule.map((s, i) => (<React.Fragment key={i}><span style={{ fontSize: '14px', color: 'rgba(26,26,26,0.4)', fontVariantNumeric: 'tabular-nums' }}>{s.time}</span><span style={{ fontSize: '14px', color: colors.dark }}>{s.label}</span></React.Fragment>))}
@@ -356,9 +357,9 @@ export default function FreedomFamily() {
 
       <div style={{ maxWidth: '700px', margin: '0 auto', padding: '0 20px' }}><div style={{ height: '1px', background: 'linear-gradient(to right, transparent, rgba(26,26,26,0.1), transparent)' }} /></div>
 
-      <section style={{ padding: '60px 20px' }}>
-        <div style={{ maxWidth: '550px', margin: '0 auto', textAlign: 'center' }}>
-          <p style={{ color: colors.gold, fontSize: '10px', letterSpacing: '0.25em', textTransform: 'uppercase', marginBottom: '12px' }}>Upcoming Events</p>
+      <section style={{ padding: '70px 20px' }}>
+        <div style={{ maxWidth: '580px', margin: '0 auto', textAlign: 'center' }}>
+          <p style={{ color: colors.gold, fontSize: '10px', letterSpacing: '0.25em', textTransform: 'uppercase', marginBottom: '14px' }}>Upcoming Events</p>
 
           <div style={{ marginBottom: '40px' }}>
             <h2 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 'clamp(26px, 5vw, 36px)', color: colors.dark, marginBottom: '8px', fontWeight: 400 }}>HFT</h2>
@@ -390,9 +391,9 @@ export default function FreedomFamily() {
       {/* Other Info Sessions */}
       <div style={{ maxWidth: '700px', margin: '0 auto', padding: '0 20px' }}><div style={{ height: '1px', background: 'linear-gradient(to right, transparent, rgba(26,26,26,0.1), transparent)' }} /></div>
 
-      <section style={{ padding: '40px 20px' }}>
-        <div style={{ maxWidth: '550px', margin: '0 auto' }}>
-          <p style={{ color: colors.gold, fontSize: '10px', letterSpacing: '0.25em', textTransform: 'uppercase', marginBottom: '16px', textAlign: 'center' }}>Other Info Sessions in Texas</p>
+      <section style={{ padding: '50px 20px' }}>
+        <div style={{ maxWidth: '580px', margin: '0 auto' }}>
+          <p style={{ color: colors.gold, fontSize: '10px', letterSpacing: '0.25em', textTransform: 'uppercase', marginBottom: '18px', textAlign: 'center' }}>Other Info Sessions in Texas</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <a href="https://www.waiverelectronic.com/render/splash/Trevino_Houston" target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', background: 'white', border: '1px solid rgba(26,26,26,0.1)', textDecoration: 'none', transition: 'border-color 0.2s' }}>
               <div>
@@ -412,7 +413,7 @@ export default function FreedomFamily() {
         </div>
       </section>
 
-      <footer style={{ padding: '40px 20px', borderTop: '1px solid rgba(26,26,26,0.05)' }}>
+      <footer style={{ padding: '48px 20px', borderTop: '1px solid rgba(26,26,26,0.05)' }}>
         <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <p style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.25)', margin: 0 }}>LTD</p>
           <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>

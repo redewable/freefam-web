@@ -531,21 +531,21 @@ export default function LeadershipPage() {
         </div>
       </div>
 
-      <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px 16px 40px' }}>
+      <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '24px', width: '100%', boxSizing: 'border-box' }}>
         {loading ? <p style={{ padding: '40px', textAlign: 'center', color: 'rgba(26,26,26,0.5)' }}>Loading...</p> : (
 
           // ═══════════════ OVERVIEW TAB ═══════════════
           tab === 'overview' ? (
             <>
               {/* Financial Summary */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '10px', marginBottom: '24px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '14px', marginBottom: '28px' }}>
                 {[
                   { l: 'This Week', v: stats.total, c: colors.dark, sub: 'registrations' },
                   { l: 'Revenue', v: `$${totalRevenue.toFixed(2)}`, c: '#22c55e', sub: 'this period' },
                   { l: 'Expenses', v: `$${totalExpenses.toFixed(2)}`, c: '#ef4444', sub: 'total' },
                   { l: 'Net', v: `$${(totalRevenue - totalExpenses).toFixed(2)}`, c: (totalRevenue - totalExpenses) >= 0 ? '#22c55e' : '#ef4444', sub: 'revenue - expenses' },
                 ].map((s, i) => (
-                  <div key={i} style={{ padding: '14px', background: 'white', border: '1px solid rgba(26,26,26,0.1)', textAlign: 'center' }}>
+                  <div key={i} style={{ padding: '18px', background: 'white', border: '1px solid rgba(26,26,26,0.1)', textAlign: 'center' }}>
                     <p style={{ fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.5)', marginBottom: '4px' }}>{s.l}</p>
                     <p style={{ fontSize: '20px', fontWeight: 600, color: s.c, margin: 0 }}>{s.v}</p>
                     <p style={{ fontSize: '9px', color: 'rgba(26,26,26,0.3)', margin: '2px 0 0' }}>{s.sub}</p>
@@ -554,11 +554,11 @@ export default function LeadershipPage() {
               </div>
 
               {/* Quick Stats */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px', marginBottom: '24px' }}>
                 {/* Check-in Status */}
-                <div style={{ background: 'white', border: '1px solid rgba(26,26,26,0.1)', padding: '16px' }}>
-                  <p style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.4)', marginBottom: '12px' }}>Check-In Status</p>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+                <div style={{ background: 'white', border: '1px solid rgba(26,26,26,0.1)', padding: '20px' }}>
+                  <p style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.4)', marginBottom: '14px' }}>Check-In Status</p>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
                     <div style={{ textAlign: 'center' }}>
                       <p style={{ fontSize: '24px', fontWeight: 600, color: colors.dark, margin: 0 }}>{stats.total}</p>
                       <p style={{ fontSize: '9px', color: 'rgba(26,26,26,0.4)', textTransform: 'uppercase' }}>Total</p>
@@ -575,8 +575,8 @@ export default function LeadershipPage() {
                 </div>
 
                 {/* Upcoming Lineup */}
-                <div style={{ background: 'white', border: '1px solid rgba(26,26,26,0.1)', padding: '16px' }}>
-                  <p style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.4)', marginBottom: '12px' }}>Next Lineup</p>
+                <div style={{ background: 'white', border: '1px solid rgba(26,26,26,0.1)', padding: '20px' }}>
+                  <p style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.4)', marginBottom: '14px' }}>Next Lineup</p>
                   {lineups.length > 0 ? (
                     <div>
                       <p style={{ fontSize: '14px', fontWeight: 500, color: colors.dark, marginBottom: '8px' }}>{formatDateShort(lineups[0].date)}</p>
@@ -595,8 +595,8 @@ export default function LeadershipPage() {
               </div>
 
               {/* Recent Meetings */}
-              <div style={{ background: 'white', border: '1px solid rgba(26,26,26,0.1)', padding: '16px' }}>
-                <p style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.4)', marginBottom: '12px' }}>Meeting History</p>
+              <div style={{ background: 'white', border: '1px solid rgba(26,26,26,0.1)', padding: '20px' }}>
+                <p style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.4)', marginBottom: '14px' }}>Meeting History</p>
                 {history.length > 0 ? (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     {history.slice(0, 5).map((m, i) => {
@@ -624,15 +624,15 @@ export default function LeadershipPage() {
           // ═══════════════ CHECK-IN TAB ═══════════════
           ) : tab === 'checkin' ? (
             <>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginBottom: '16px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px', marginBottom: '20px' }}>
                 {[{ l: 'Total', v: stats.total, c: colors.dark }, { l: 'Arrived', v: stats.arrived, c: '#22c55e' }, { l: 'Pending', v: stats.pending, c: colors.gold }].map((s, i) => (
-                  <div key={i} style={{ padding: '14px', background: 'white', border: '1px solid rgba(26,26,26,0.1)', textAlign: 'center' }}>
-                    <p style={{ fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.5)', marginBottom: '4px' }}>{s.l}</p>
-                    <p style={{ fontSize: '24px', fontWeight: 600, color: s.c, margin: 0 }}>{s.v}</p>
+                  <div key={i} style={{ padding: '18px', background: 'white', border: '1px solid rgba(26,26,26,0.1)', textAlign: 'center' }}>
+                    <p style={{ fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.5)', marginBottom: '6px' }}>{s.l}</p>
+                    <p style={{ fontSize: '28px', fontWeight: 600, color: s.c, margin: 0 }}>{s.v}</p>
                   </div>
                 ))}
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
                 <div style={{ position: 'relative' }}>
                   <Icons.Search style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', width: '16px', height: '16px', color: 'rgba(26,26,26,0.3)' }} />
                   <input type="text" placeholder="Search name, email, or LTD ID..." value={search} onChange={e => setSearch(e.target.value)}
@@ -655,11 +655,11 @@ export default function LeadershipPage() {
                   <p style={{ color: 'rgba(26,26,26,0.5)', marginBottom: '4px' }}>No registrations this week</p>
                 </div>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {filtered.map(reg => {
                     const badge = getBadge(reg);
                     return (
-                      <div key={reg.id} style={{ display: 'flex', alignItems: 'center', padding: '10px 12px', background: reg.checkedIn ? 'rgba(34,197,94,0.06)' : 'white', border: reg.checkedIn ? '1px solid rgba(34,197,94,0.2)' : '1px solid rgba(26,26,26,0.1)', gap: '10px' }}>
+                      <div key={reg.id} style={{ display: 'flex', alignItems: 'center', padding: '12px 16px', background: reg.checkedIn ? 'rgba(34,197,94,0.06)' : 'white', border: reg.checkedIn ? '1px solid rgba(34,197,94,0.2)' : '1px solid rgba(26,26,26,0.1)', gap: '14px' }}>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <p style={{ fontSize: '14px', fontWeight: 500, color: colors.dark, margin: '0 0 2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{reg.name}</p>
                           <p style={{ fontSize: '11px', color: 'rgba(26,26,26,0.5)', margin: 0 }}>{reg.ltdId || reg.email?.split('@')[0]}</p>
@@ -1010,12 +1010,12 @@ export default function LeadershipPage() {
               // History List
               <>
                 {history.length > 0 && (
-                  <div style={{ background: 'white', border: '1px solid rgba(26,26,26,0.1)', padding: '16px', marginBottom: '20px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                  <div style={{ background: 'white', border: '1px solid rgba(26,26,26,0.1)', padding: '20px', marginBottom: '24px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
                       <p style={{ fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.4)', margin: 0 }}>Overview</p>
                       <p style={{ fontSize: '11px', color: 'rgba(26,26,26,0.4)', margin: 0 }}>{history.length} meeting{history.length !== 1 ? 's' : ''}</p>
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(80px, 1fr))', gap: '12px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: '16px' }}>
                       <div><p style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(26,26,26,0.4)', margin: '0 0 2px' }}>Avg</p><p style={{ fontSize: '20px', fontWeight: 600, color: colors.dark, margin: 0 }}>{Math.round(history.reduce((s, h) => s + h.total, 0) / history.length)}</p></div>
                       <div><p style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(26,26,26,0.4)', margin: '0 0 2px' }}>Best</p><p style={{ fontSize: '20px', fontWeight: 600, color: '#22c55e', margin: 0 }}>{Math.max(...history.map(h => h.total))}</p></div>
                       <div><p style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#3b82f6', margin: '0 0 2px' }}>Guests</p><p style={{ fontSize: '20px', fontWeight: 600, color: '#3b82f6', margin: 0 }}>{history.reduce((s, h) => s + (h.guests?.total || 0), 0)}</p></div>
@@ -1037,35 +1037,35 @@ export default function LeadershipPage() {
                     const speakerSummary = lineup?.segments?.filter(s => s.speaker).map(s => ({ label: s.label, speaker: s.speaker, topic: s.topic })) || [];
 
                     return (
-                      <div key={meeting.date} onClick={() => setSelectedDate(meeting.date)} style={{ background: 'white', border: '1px solid rgba(26,26,26,0.1)', cursor: 'pointer', marginBottom: '12px' }}>
-                        <div style={{ padding: '14px 16px 10px', borderBottom: '1px solid rgba(26,26,26,0.06)' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div key={meeting.date} onClick={() => setSelectedDate(meeting.date)} style={{ background: 'white', border: '1px solid rgba(26,26,26,0.1)', cursor: 'pointer', marginBottom: '14px' }}>
+                        <div style={{ padding: '16px 20px 12px', borderBottom: '1px solid rgba(26,26,26,0.06)' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px' }}>
                             <div>
-                              <p style={{ fontSize: '15px', fontWeight: 600, color: colors.dark, margin: '0 0 2px' }}>{formatDate(meeting.date)}</p>
-                              {lineup && <p style={{ fontSize: '11px', color: colors.gold, margin: 0 }}>Training: {lineup.segments?.find(s => s.key === 'training')?.topic || lineup.topics || '—'}</p>}
+                              <p style={{ fontSize: '15px', fontWeight: 600, color: colors.dark, margin: '0 0 3px' }}>{formatDate(meeting.date)}</p>
+                              {lineup && <p style={{ fontSize: '12px', color: colors.gold, margin: 0 }}>Training: {lineup.segments?.find(s => s.key === 'training')?.topic || lineup.topics || '—'}</p>}
                             </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
                               {trend !== null && trend !== 0 && (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '2px', fontSize: '11px', color: trend > 0 ? '#22c55e' : '#ef4444' }}>
-                                  {trend > 0 ? <Icons.TrendUp style={{ width: '12px', height: '12px' }} /> : <Icons.TrendDown style={{ width: '12px', height: '12px' }} />}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: '12px', color: trend > 0 ? '#22c55e' : '#ef4444' }}>
+                                  {trend > 0 ? <Icons.TrendUp style={{ width: '14px', height: '14px' }} /> : <Icons.TrendDown style={{ width: '14px', height: '14px' }} />}
                                   {trend > 0 ? '+' : ''}{trend}
                                 </div>
                               )}
                               {lineup && <Icons.List style={{ width: '14px', height: '14px', color: colors.gold }} />}
-                              <div style={{ background: colors.dark, color: colors.bg, padding: '4px 12px', fontSize: '16px', fontWeight: 700 }}>{meeting.total}</div>
+                              <div style={{ background: colors.dark, color: colors.bg, padding: '5px 14px', fontSize: '17px', fontWeight: 700 }}>{meeting.total}</div>
                             </div>
                           </div>
                         </div>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', borderBottom: speakerSummary.length > 0 ? '1px solid rgba(26,26,26,0.06)' : 'none' }}>
-                          <div style={{ padding: '10px 8px', textAlign: 'center', borderRight: '1px solid rgba(26,26,26,0.06)' }}><p style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(26,26,26,0.4)', margin: '0 0 2px' }}>IBOs</p><p style={{ fontSize: '16px', fontWeight: 600, color: colors.dark, margin: 0 }}>{meeting.ibos}</p></div>
-                          <div style={{ padding: '10px 8px', textAlign: 'center', borderRight: '1px solid rgba(26,26,26,0.06)' }}><p style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#a855f7', margin: '0 0 2px' }}>Appr.</p><p style={{ fontSize: '16px', fontWeight: 600, color: '#a855f7', margin: 0 }}>{meeting.apprentices}</p></div>
-                          <div style={{ padding: '10px 8px', textAlign: 'center', borderRight: '1px solid rgba(26,26,26,0.06)' }}><p style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#3b82f6', margin: '0 0 2px' }}>Guests</p><p style={{ fontSize: '16px', fontWeight: 600, color: '#3b82f6', margin: 0 }}>{guestTotal}</p></div>
-                          <div style={{ padding: '10px 8px', textAlign: 'center' }}><p style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(26,26,26,0.4)', margin: '0 0 2px' }}>Total</p><p style={{ fontSize: '16px', fontWeight: 600, color: colors.dark, margin: 0 }}>{meeting.total}</p></div>
+                          <div style={{ padding: '12px 10px', textAlign: 'center', borderRight: '1px solid rgba(26,26,26,0.06)' }}><p style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(26,26,26,0.4)', margin: '0 0 3px' }}>IBOs</p><p style={{ fontSize: '18px', fontWeight: 600, color: colors.dark, margin: 0 }}>{meeting.ibos}</p></div>
+                          <div style={{ padding: '12px 10px', textAlign: 'center', borderRight: '1px solid rgba(26,26,26,0.06)' }}><p style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#a855f7', margin: '0 0 3px' }}>Apprentices</p><p style={{ fontSize: '18px', fontWeight: 600, color: '#a855f7', margin: 0 }}>{meeting.apprentices}</p></div>
+                          <div style={{ padding: '12px 10px', textAlign: 'center', borderRight: '1px solid rgba(26,26,26,0.06)' }}><p style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#3b82f6', margin: '0 0 3px' }}>Guests</p><p style={{ fontSize: '18px', fontWeight: 600, color: '#3b82f6', margin: 0 }}>{guestTotal}</p></div>
+                          <div style={{ padding: '12px 10px', textAlign: 'center' }}><p style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(26,26,26,0.4)', margin: '0 0 3px' }}>Total</p><p style={{ fontSize: '18px', fontWeight: 600, color: colors.dark, margin: 0 }}>{meeting.total}</p></div>
                         </div>
                         {speakerSummary.length > 0 && (
-                          <div style={{ padding: '10px 16px' }}>
-                            <p style={{ fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.35)', margin: '0 0 6px' }}>Speakers</p>
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 12px' }}>
+                          <div style={{ padding: '12px 20px' }}>
+                            <p style={{ fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.35)', margin: '0 0 8px' }}>Speakers</p>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 16px' }}>
                               {speakerSummary.map((s, si) => {
                                 const sc = segmentColors[lineup.segments.find(seg => seg.label === s.label)?.key] || segmentColors.training;
                                 return (

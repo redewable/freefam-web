@@ -6,10 +6,10 @@ export const viewport = {
 };
 
 export const metadata = {
-  title: "Freedom Family | The Round Table",
+  title: "Freedom Family",
   description: "Info Session & Training · Every Monday · 7:30 PM · Embassy Suites, College Station TX · Dress: Business Professional",
   openGraph: {
-    title: "Freedom Family | The Round Table",
+    title: "Freedom Family",
     description: "Info Session & Training · Every Monday · 7:30 PM · Embassy Suites, College Station TX",
     images: [
       {
@@ -23,7 +23,7 @@ export const metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Freedom Family | The Round Table",
+    title: "Freedom Family",
     description: "Info Session & Training · Every Monday · 7:30 PM · Embassy Suites, College Station TX",
     images: ["/og-image.png"],
   },
