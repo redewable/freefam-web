@@ -1401,43 +1401,8 @@ export default function LeadershipPage() {
                 Control who can access the Leadership Portal and what level of access they have.
               </p>
 
-              {/* Current Access List */}
-              {accessList.length > 0 && (
-                <div style={{ marginBottom: '24px' }}>
-                  <p style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: colors.gold, marginBottom: '10px' }}>Current Access</p>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    {accessList.map(a => (
-                      <div key={a.ltdId} style={{ display: 'flex', alignItems: 'center', padding: '10px 14px', background: 'white', border: '1px solid rgba(26,26,26,0.1)', gap: '10px' }}>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <p style={{ fontSize: '14px', fontWeight: 500, color: colors.dark, margin: 0 }}>{a.fullName || 'Unknown'}</p>
-                          <p style={{ fontSize: '10px', color: 'rgba(26,26,26,0.35)', margin: '1px 0 0' }}>LTD #{a.ltdId}</p>
-                        </div>
-                        <select
-                          value={a.level}
-                          onChange={e => grantAccess({ ltd_id: a.ltdId, full_name: a.fullName }, e.target.value)}
-                          disabled={updatingAccess === a.ltdId}
-                          style={{ padding: '6px 8px', border: '1px solid rgba(26,26,26,0.15)', fontSize: '11px', background: 'white', color: colors.dark, cursor: 'pointer' }}
-                        >
-                          <option value="leadership">Leadership</option>
-                          <option value="admin">Admin</option>
-                          <option value="viewer">Viewer</option>
-                        </select>
-                        <button
-                          onClick={() => revokeAccess(a.ltdId)}
-                          disabled={updatingAccess === a.ltdId}
-                          style={{ padding: '6px 10px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: '#ef4444', fontSize: '10px', cursor: 'pointer' }}
-                        >
-                          Revoke
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* All Members — search + grant access */}
+              {/* All Members — unified list with inline access controls */}
               <div>
-                <p style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.4)', marginBottom: '10px' }}>All Members</p>
                 <div style={{ position: 'relative', marginBottom: '12px' }}>
                   <Icons.Search style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', width: '16px', height: '16px', color: 'rgba(26,26,26,0.3)' }} />
                   <input
@@ -1449,31 +1414,71 @@ export default function LeadershipPage() {
                   />
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '400px', overflow: 'auto' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '500px', overflow: 'auto' }}>
                   {allProfiles
                     .filter(p => {
                       if (!userSearch) return true;
                       const q = userSearch.toLowerCase();
                       return (p.full_name || '').toLowerCase().includes(q) || (p.ltd_id || '').toLowerCase().includes(q);
                     })
+                    .sort((a, b) => {
+                      // Sort: users with access first, then alphabetical
+                      const aAccess = a.role === 'admin' || accessList.some(x => x.ltdId === a.ltd_id);
+                      const bAccess = b.role === 'admin' || accessList.some(x => x.ltdId === b.ltd_id);
+                      if (aAccess && !bAccess) return -1;
+                      if (!aAccess && bAccess) return 1;
+                      return (a.full_name || '').localeCompare(b.full_name || '');
+                    })
                     .map(p => {
-                      const hasAccess = p.role === 'admin' || accessList.some(a => a.ltdId === p.ltd_id);
-                      const currentAccess = p.role === 'admin' ? 'leadership (built-in)' : accessList.find(a => a.ltdId === p.ltd_id)?.level || null;
+                      const isBuiltIn = p.role === 'admin';
+                      const accessEntry = accessList.find(a => a.ltdId === p.ltd_id);
+                      const currentLevel = isBuiltIn ? 'leadership' : accessEntry?.level || null;
                       return (
-                        <div key={p.id} style={{ display: 'flex', alignItems: 'center', padding: '10px 14px', background: 'white', border: '1px solid rgba(26,26,26,0.08)', gap: '10px' }}>
-                          <div style={{ flex: 1, minWidth: 0 }}>
+                        <div key={p.id} style={{ display: 'flex', alignItems: 'center', padding: '10px 14px', background: currentLevel ? 'rgba(34,197,94,0.03)' : 'white', border: currentLevel ? '1px solid rgba(34,197,94,0.15)' : '1px solid rgba(26,26,26,0.08)', gap: '8px', flexWrap: 'wrap' }}>
+                          <div style={{ flex: 1, minWidth: '120px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                               <p style={{ fontSize: '13px', fontWeight: 500, color: colors.dark, margin: 0 }}>{p.full_name || 'Unnamed'}</p>
-                              <span style={{ fontSize: '9px', padding: '1px 5px', background: 'rgba(26,26,26,0.05)', color: 'rgba(26,26,26,0.5)', textTransform: 'capitalize' }}>{p.role}</span>
                             </div>
                             {p.ltd_id && <p style={{ fontSize: '10px', color: 'rgba(26,26,26,0.3)', margin: '1px 0 0' }}>#{p.ltd_id}</p>}
                           </div>
-                          {currentAccess ? (
-                            <span style={{ fontSize: '10px', padding: '3px 8px', background: 'rgba(34,197,94,0.08)', color: '#22c55e', border: '1px solid rgba(34,197,94,0.2)' }}>
-                              {currentAccess}
+                          {isBuiltIn ? (
+                            /* Built-in admin — always leadership, can't change */
+                            <span style={{ fontSize: '9px', padding: '3px 8px', background: 'rgba(34,197,94,0.1)', color: '#22c55e', border: '1px solid rgba(34,197,94,0.25)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                              Leadership (built-in)
                             </span>
+                          ) : currentLevel ? (
+                            /* Has granted access — show level buttons with active one highlighted */
+                            <div style={{ display: 'flex', gap: '3px', alignItems: 'center' }}>
+                              {['leadership', 'admin', 'viewer'].map(level => (
+                                <button
+                                  key={level}
+                                  onClick={() => { if (level !== currentLevel) grantAccess(p, level); }}
+                                  disabled={updatingAccess === p.ltd_id}
+                                  style={{
+                                    padding: '4px 8px', fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.05em',
+                                    background: level === currentLevel ? 'rgba(34,197,94,0.12)' : 'transparent',
+                                    border: level === currentLevel ? '1px solid rgba(34,197,94,0.35)' : '1px solid rgba(26,26,26,0.1)',
+                                    color: level === currentLevel ? '#22c55e' : 'rgba(26,26,26,0.35)',
+                                    fontWeight: level === currentLevel ? 600 : 400,
+                                    cursor: level === currentLevel ? 'default' : 'pointer',
+                                    opacity: updatingAccess === p.ltd_id ? 0.5 : 1,
+                                  }}
+                                >
+                                  {level}
+                                </button>
+                              ))}
+                              <button
+                                onClick={() => revokeAccess(p.ltd_id)}
+                                disabled={updatingAccess === p.ltd_id}
+                                style={{ padding: '4px 6px', background: 'none', border: 'none', cursor: 'pointer', opacity: updatingAccess === p.ltd_id ? 0.3 : 0.4 }}
+                                title="Revoke access"
+                              >
+                                <Icons.X style={{ width: '12px', height: '12px', color: '#ef4444' }} />
+                              </button>
+                            </div>
                           ) : (
-                            <div style={{ display: 'flex', gap: '4px' }}>
+                            /* No access — show grant buttons */
+                            <div style={{ display: 'flex', gap: '3px' }}>
                               {['leadership', 'admin', 'viewer'].map(level => (
                                 <button
                                   key={level}
@@ -1481,8 +1486,8 @@ export default function LeadershipPage() {
                                   disabled={updatingAccess === p.ltd_id}
                                   style={{
                                     padding: '4px 8px', fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.05em',
-                                    background: 'transparent', border: '1px solid rgba(26,26,26,0.15)',
-                                    color: 'rgba(26,26,26,0.5)', cursor: 'pointer',
+                                    background: 'transparent', border: '1px solid rgba(26,26,26,0.12)',
+                                    color: 'rgba(26,26,26,0.35)', cursor: 'pointer',
                                     opacity: updatingAccess === p.ltd_id ? 0.5 : 1,
                                   }}
                                 >
