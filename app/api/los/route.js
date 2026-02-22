@@ -115,41 +115,74 @@ export async function GET() {
       return count;
     };
 
+    // Build a global set of all partner LTD ID pairs for quick lookup
+    const partnerLtdMap = new Map(); // ltd_id -> partner profile
+    for (const p of (allProfiles || [])) {
+      const pLtd = getPartnerLtdId(p.ltd_id);
+      if (pLtd) {
+        const partnerProfile = (allProfiles || []).find(x => x.ltd_id === pLtd && x.id !== p.id);
+        if (partnerProfile) {
+          partnerLtdMap.set(p.ltd_id, partnerProfile);
+        }
+      }
+    }
+
+    // GLOBAL processed set — prevents any person from appearing more than once in the entire tree
+    const globalProcessed = new Set();
+    // Always exclude the current user and their partner from the tree (they're shown separately)
+    globalProcessed.add(user.id);
+    if (partnerId) globalProcessed.add(partnerId);
+
     // Recursive function to build tree — merges partner pairs, sorts by leg size
     const buildTree = (personId, depth = 0, maxDepth = 10) => {
       if (depth >= maxDepth) return [];
       const children = childrenMap.get(personId) || [];
-      const processed = new Set();
       const result = [];
 
       for (const c of children) {
-        if (c.id === partnerId || c.id === user.id || processed.has(c.id)) continue;
-        processed.add(c.id);
+        if (globalProcessed.has(c.id)) continue;
+        globalProcessed.add(c.id);
 
         // Look up partner by LTD ID
-        const pLtd = getPartnerLtdId(c.ltd_id);
-        let pNode = null;
-        if (pLtd) {
-          pNode = (allProfiles || []).find(p => p.ltd_id === pLtd && p.id !== c.id);
-          if (pNode) processed.add(pNode.id);
+        const pNode = partnerLtdMap.get(c.ltd_id) || null;
+        if (pNode && !globalProcessed.has(pNode.id)) {
+          globalProcessed.add(pNode.id);
         }
+        const mergedPartner = (pNode && pNode.id !== c.id) ? pNode : null;
 
         // Build children from both this person and their partner
         let nodeChildren = buildTree(c.id, depth + 1, maxDepth);
-        if (pNode) {
-          const partnerKids = buildTree(pNode.id, depth + 1, maxDepth);
+        if (mergedPartner) {
+          const partnerKids = buildTree(mergedPartner.id, depth + 1, maxDepth);
+          // Dedupe — partnerKids may have entries already in nodeChildren via globalProcessed,
+          // but just in case, check by id
           const seen = new Set(nodeChildren.map(ch => ch.id));
           for (const pk of partnerKids) {
             if (!seen.has(pk.id)) { nodeChildren.push(pk); seen.add(pk.id); }
           }
         }
 
+        // Sort children by descendants before counting
+        nodeChildren.sort((a, b) => (b.totalDescendants || 0) - (a.totalDescendants || 0));
         const totalDescendants = countTreeDescendants(nodeChildren);
 
+        // Determine husband/wife display order:
+        // The person whose LTD ID does NOT end in '2' is listed first (husband)
+        let primaryPerson = c;
+        let partnerName = mergedPartner?.full_name || null;
+        let partnerLtdId = mergedPartner?.ltd_id || null;
+
+        if (mergedPartner && c.ltd_id && c.ltd_id.endsWith('2') && c.ltd_id.length > 1) {
+          // Current person is the '2' account (wife) — swap so husband is primary
+          primaryPerson = mergedPartner;
+          partnerName = c.full_name;
+          partnerLtdId = c.ltd_id;
+        }
+
         result.push({
-          ...c,
-          partner_name: pNode?.full_name || null,
-          partner_ltd_id: pNode?.ltd_id || null,
+          ...primaryPerson,
+          partner_name: partnerName,
+          partner_ltd_id: partnerLtdId,
           children: nodeChildren,
           totalDescendants,
         });
@@ -160,25 +193,12 @@ export async function GET() {
       return result;
     };
 
-    // Get downline for user + partner combined
+    // Get downline for user + partner combined — single pass with global dedup
     const userChildren = buildTree(user.id);
     const partnerChildren = partnerId ? buildTree(partnerId) : [];
 
-    // Merge and deduplicate (in case of overlap)
-    const downlineIds = new Set();
-    const downlineList = [];
-
-    const addToList = (items) => {
-      for (const item of items) {
-        if (!downlineIds.has(item.id)) {
-          downlineIds.add(item.id);
-          downlineList.push(item);
-        }
-      }
-    };
-
-    addToList(userChildren);
-    addToList(partnerChildren);
+    // Merge (globalProcessed already prevents duplicates)
+    const downlineList = [...userChildren, ...partnerChildren];
 
     // Sort combined downline by total descendants (biggest legs at top)
     downlineList.sort((a, b) => (b.totalDescendants || 0) - (a.totalDescendants || 0));
