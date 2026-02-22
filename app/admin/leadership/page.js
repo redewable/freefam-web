@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { createClient } from '@/app/lib/supabase/client';
 
 const colors = { bg: '#fafaf8', dark: '#1a1a1a', gold: '#b8956b' };
 
@@ -74,11 +75,41 @@ const getSection = (seg) => seg.section || (INFO_KEYS.includes(seg.key) ? 'info'
 
 const EXPENSE_CATEGORIES = ['Conference Room', 'Supplies', 'Food & Beverage', 'Audio/Visual', 'Printing', 'Other'];
 
-// ═══════════════ PASSWORD GATE ═══════════════
-const PasswordGate = ({ onSuccess }) => {
-  const [pw, setPw] = useState('');
-  const [error, setError] = useState(false);
-  const submit = (e) => { e.preventDefault(); if (pw.toLowerCase() === 'freedom') { sessionStorage.setItem('leadership_auth', 'true'); onSuccess(); } else { setError(true); setPw(''); } };
+// ═══════════════ LOGIN GATE ═══════════════
+const LoginGate = ({ onSuccess }) => {
+  const [ltdId, setLtdId] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    try {
+      const supabase = createClient();
+      const email = `${ltdId.trim()}@freedomfamily.app`;
+      const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password });
+      if (authError) { setError('Invalid LTD ID or password.'); setLoading(false); return; }
+
+      // Check leadership access
+      const res = await fetch('/api/admin/leadership-access?action=check');
+      const access = await res.json();
+      if (!access.hasAccess) {
+        await supabase.auth.signOut();
+        setError('You do not have leadership portal access.');
+        setLoading(false);
+        return;
+      }
+      onSuccess(access.level || 'viewer', access.profile);
+    } catch (err) {
+      setError('Something went wrong. Try again.');
+      setLoading(false);
+    }
+  };
+
+  const inputStyle = { width: '100%', padding: '14px', background: 'white', border: '1px solid rgba(26,26,26,0.15)', outline: 'none', color: colors.dark, fontSize: '16px', boxSizing: 'border-box' };
+
   return (
     <div style={{ minHeight: '100vh', background: colors.bg, display: 'flex', flexDirection: 'column', fontFamily: 'Inter, system-ui, sans-serif' }}>
       <nav style={{ borderBottom: '1px solid rgba(26,26,26,0.05)', padding: '14px 16px' }}>
@@ -88,14 +119,26 @@ const PasswordGate = ({ onSuccess }) => {
         </div>
       </nav>
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-      <form onSubmit={submit} style={{ width: '100%', maxWidth: '300px', textAlign: 'center' }}>
-        <p style={{ color: colors.gold, fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '8px' }}>Leadership</p>
-        <h1 style={{ fontSize: '22px', color: colors.dark, marginBottom: '24px', fontWeight: 500 }}>Enter Password</h1>
-        <input type="password" value={pw} onChange={(e) => { setPw(e.target.value); setError(false); }} placeholder="Password" autoFocus
-          style={{ width: '100%', padding: '14px', border: error ? '1px solid #ef4444' : '1px solid rgba(26,26,26,0.2)', background: 'white', fontSize: '16px', textAlign: 'center', marginBottom: '12px', boxSizing: 'border-box' }} />
-        {error && <p style={{ color: '#ef4444', fontSize: '13px', marginBottom: '12px' }}>Incorrect</p>}
-        <button type="submit" style={{ width: '100%', padding: '14px', background: colors.dark, color: colors.bg, fontSize: '13px', letterSpacing: '0.1em', textTransform: 'uppercase', border: 'none', cursor: 'pointer' }}>Enter</button>
-      </form>
+        <form onSubmit={submit} style={{ width: '100%', maxWidth: '320px' }}>
+          <div style={{ textAlign: 'center', marginBottom: '28px' }}>
+            <p style={{ color: colors.gold, fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '8px' }}>Leadership Portal</p>
+            <h1 style={{ fontSize: '22px', color: colors.dark, fontWeight: 500, margin: 0 }}>Sign In</h1>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <div>
+              <label style={{ fontSize: '10px', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.4)', display: 'block', marginBottom: '5px' }}>LTD ID</label>
+              <input type="text" value={ltdId} onChange={e => setLtdId(e.target.value.replace(/\D/g, ''))} placeholder="e.g. 6076043" style={inputStyle} required autoFocus inputMode="numeric" autoComplete="username" />
+            </div>
+            <div>
+              <label style={{ fontSize: '10px', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.4)', display: 'block', marginBottom: '5px' }}>Password</label>
+              <input type="password" value={password} onChange={e => setPassword(e.target.value)} style={inputStyle} required autoComplete="current-password" />
+            </div>
+            {error && <p style={{ color: '#ef4444', fontSize: '13px', margin: 0 }}>{error}</p>}
+            <button type="submit" disabled={loading} style={{ width: '100%', padding: '14px', background: loading ? 'rgba(26,26,26,0.3)' : colors.dark, color: colors.bg, fontSize: '12px', letterSpacing: '0.1em', textTransform: 'uppercase', border: 'none', cursor: loading ? 'not-allowed' : 'pointer', marginTop: '4px' }}>
+              {loading ? 'Signing in...' : 'Sign In'}
+            </button>
+          </div>
+        </form>
       </div>
       <footer style={{ padding: '24px 16px', borderTop: '1px solid rgba(26,26,26,0.05)' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -137,6 +180,9 @@ const Modal = ({ isOpen, onClose, title, children }) => {
 // ═══════════════ MAIN COMPONENT ═══════════════
 export default function LeadershipPage() {
   const [auth, setAuth] = useState(false);
+  const [accessLevel, setAccessLevel] = useState('viewer');
+  const [authProfile, setAuthProfile] = useState(null);
+  const [authChecking, setAuthChecking] = useState(true);
   const [tab, setTab] = useState(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
@@ -145,6 +191,12 @@ export default function LeadershipPage() {
     return 'overview';
   });
   const [toast, setToast] = useState('');
+
+  // User management states
+  const [allProfiles, setAllProfiles] = useState([]);
+  const [accessList, setAccessList] = useState([]);
+  const [userSearch, setUserSearch] = useState('');
+  const [updatingAccess, setUpdatingAccess] = useState(null);
 
   // Data states
   const [regs, setRegs] = useState([]);
@@ -188,15 +240,69 @@ export default function LeadershipPage() {
   const [shareUrl, setShareUrl] = useState('');
   const [showShareModal, setShowShareModal] = useState(false);
 
-  useEffect(() => { if (sessionStorage.getItem('leadership_auth') === 'true') setAuth(true); }, []);
+  // Check if already logged in with leadership access
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const res = await fetch('/api/admin/leadership-access?action=check');
+          const access = await res.json();
+          if (access.hasAccess) {
+            setAuth(true);
+            setAccessLevel(access.level || 'viewer');
+            setAuthProfile(access.profile);
+          }
+        }
+      } catch (e) {}
+      setAuthChecking(false);
+    };
+    checkAuth();
+  }, []);
 
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(''), 3000); };
 
   // ═══════ DATA FETCHERS ═══════
   const fetchAll = async () => {
     setLoading(true);
-    await Promise.all([fetchRegs(), fetchHistory(), fetchLineups(), fetchExpenses()]);
+    const fetches = [fetchRegs(), fetchHistory(), fetchLineups(), fetchExpenses()];
+    if (accessLevel === 'admin') fetches.push(fetchUserAccess());
+    await Promise.all(fetches);
     setLoading(false);
+  };
+
+  const fetchUserAccess = async () => {
+    try {
+      const res = await fetch('/api/admin/leadership-access');
+      const data = await res.json();
+      setAllProfiles(data.profiles || []);
+      setAccessList(data.accessList || []);
+    } catch (e) { console.error(e); }
+  };
+
+  const grantAccess = async (profile, level) => {
+    setUpdatingAccess(profile.ltd_id);
+    try {
+      const res = await fetch('/api/admin/leadership-access', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ltdId: profile.ltd_id, level, fullName: profile.full_name }),
+      });
+      const data = await res.json();
+      if (data.success) { showToast(`Access granted to ${profile.full_name}`); fetchUserAccess(); }
+    } catch (e) { console.error(e); }
+    setUpdatingAccess(null);
+  };
+
+  const revokeAccess = async (ltdId) => {
+    setUpdatingAccess(ltdId);
+    try {
+      await fetch(`/api/admin/leadership-access?ltdId=${ltdId}`, { method: 'DELETE' });
+      showToast('Access revoked');
+      fetchUserAccess();
+    } catch (e) { console.error(e); }
+    setUpdatingAccess(null);
   };
 
   const fetchRegs = async () => {
@@ -470,7 +576,13 @@ export default function LeadershipPage() {
     showToast('Link copied');
   };
 
-  if (!auth) return <PasswordGate onSuccess={() => setAuth(true)} />;
+  if (authChecking) return (
+    <div style={{ minHeight: '100vh', background: colors.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Inter, system-ui, sans-serif' }}>
+      <p style={{ color: 'rgba(26,26,26,0.4)' }}>Checking access...</p>
+    </div>
+  );
+
+  if (!auth) return <LoginGate onSuccess={(level, profile) => { setAuth(true); setAccessLevel(level); setAuthProfile(profile); }} />;
 
   // ═══════ FILTER/SORT for check-in ═══════
   const getBadge = (reg) => {
@@ -497,13 +609,25 @@ export default function LeadershipPage() {
   // Revenue from Stripe paid registrations
   const totalRevenue = regs.filter(r => r.type === 'ibo' && r.amount > 0).reduce((sum, r) => sum + r.amount, 0);
 
+  const isAdmin = accessLevel === 'admin';
+  const canEdit = accessLevel === 'admin' || accessLevel === 'editor';
+
   const tabs = [
     { id: 'overview', label: 'Overview' },
     { id: 'checkin', label: 'Check-In' },
     { id: 'lineups', label: 'Lineups' },
     { id: 'finances', label: 'Finances' },
     { id: 'history', label: 'History' },
+    ...(isAdmin ? [{ id: 'users', label: 'Users' }] : []),
   ];
+
+  const handleLogout = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    setAuth(false);
+    setAccessLevel('viewer');
+    setAuthProfile(null);
+  };
 
   return (
     <div style={{ minHeight: '100vh', background: colors.bg, fontFamily: 'Inter, system-ui, sans-serif', display: 'flex', flexDirection: 'column' }}>
@@ -513,6 +637,15 @@ export default function LeadershipPage() {
           <span style={{ fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', color: colors.gold }}>Leadership</span>
         </div>
       </nav>
+      {/* Nav with logout */}
+      <div style={{ borderBottom: '1px solid rgba(26,26,26,0.05)', padding: '10px 16px', background: 'rgba(250,250,248,0.95)' }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '12px' }}>
+          {authProfile && <span style={{ fontSize: '10px', color: 'rgba(26,26,26,0.4)' }}>{authProfile.full_name}</span>}
+          <span style={{ fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', padding: '2px 6px', background: 'rgba(184,149,107,0.12)', color: colors.gold }}>{accessLevel}</span>
+          <button onClick={handleLogout} style={{ fontSize: '10px', color: 'rgba(26,26,26,0.4)', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', textDecoration: 'underline' }}>Logout</button>
+        </div>
+      </div>
+
       <Toast message={toast} isVisible={!!toast} />
 
       {/* Share Modal */}
@@ -1233,6 +1366,121 @@ export default function LeadershipPage() {
                 )}
               </>
             )
+          // ═══════════════ USERS TAB ═══════════════
+          ) : tab === 'users' && isAdmin ? (
+            <>
+              <h2 style={{ fontSize: '18px', color: colors.dark, margin: '0 0 16px', fontWeight: 500 }}>User Access Management</h2>
+              <p style={{ fontSize: '13px', color: 'rgba(26,26,26,0.5)', marginBottom: '20px' }}>
+                Control who can access the Leadership Portal and what level of access they have.
+              </p>
+
+              {/* Current Access List */}
+              {accessList.length > 0 && (
+                <div style={{ marginBottom: '24px' }}>
+                  <p style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: colors.gold, marginBottom: '10px' }}>Current Access</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    {accessList.map(a => (
+                      <div key={a.ltdId} style={{ display: 'flex', alignItems: 'center', padding: '10px 14px', background: 'white', border: '1px solid rgba(26,26,26,0.1)', gap: '10px' }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p style={{ fontSize: '14px', fontWeight: 500, color: colors.dark, margin: 0 }}>{a.fullName || 'Unknown'}</p>
+                          <p style={{ fontSize: '10px', color: 'rgba(26,26,26,0.35)', margin: '1px 0 0' }}>LTD #{a.ltdId}</p>
+                        </div>
+                        <select
+                          value={a.level}
+                          onChange={e => grantAccess({ ltd_id: a.ltdId, full_name: a.fullName }, e.target.value)}
+                          disabled={updatingAccess === a.ltdId}
+                          style={{ padding: '6px 8px', border: '1px solid rgba(26,26,26,0.15)', fontSize: '11px', background: 'white', color: colors.dark, cursor: 'pointer' }}
+                        >
+                          <option value="admin">Admin</option>
+                          <option value="editor">Editor</option>
+                          <option value="viewer">Viewer</option>
+                        </select>
+                        <button
+                          onClick={() => revokeAccess(a.ltdId)}
+                          disabled={updatingAccess === a.ltdId}
+                          style={{ padding: '6px 10px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: '#ef4444', fontSize: '10px', cursor: 'pointer' }}
+                        >
+                          Revoke
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* All Members — search + grant access */}
+              <div>
+                <p style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.4)', marginBottom: '10px' }}>All Members</p>
+                <div style={{ position: 'relative', marginBottom: '12px' }}>
+                  <Icons.Search style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', width: '16px', height: '16px', color: 'rgba(26,26,26,0.3)' }} />
+                  <input
+                    type="text"
+                    value={userSearch}
+                    onChange={e => setUserSearch(e.target.value)}
+                    placeholder="Search by name or LTD ID..."
+                    style={{ width: '100%', padding: '10px 10px 10px 40px', border: '1px solid rgba(26,26,26,0.2)', background: 'white', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '400px', overflow: 'auto' }}>
+                  {allProfiles
+                    .filter(p => {
+                      if (!userSearch) return true;
+                      const q = userSearch.toLowerCase();
+                      return (p.full_name || '').toLowerCase().includes(q) || (p.ltd_id || '').toLowerCase().includes(q);
+                    })
+                    .map(p => {
+                      const hasAccess = p.role === 'admin' || accessList.some(a => a.ltdId === p.ltd_id);
+                      const currentAccess = p.role === 'admin' ? 'admin (built-in)' : accessList.find(a => a.ltdId === p.ltd_id)?.level || null;
+                      return (
+                        <div key={p.id} style={{ display: 'flex', alignItems: 'center', padding: '10px 14px', background: 'white', border: '1px solid rgba(26,26,26,0.08)', gap: '10px' }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <p style={{ fontSize: '13px', fontWeight: 500, color: colors.dark, margin: 0 }}>{p.full_name || 'Unnamed'}</p>
+                              <span style={{ fontSize: '9px', padding: '1px 5px', background: 'rgba(26,26,26,0.05)', color: 'rgba(26,26,26,0.5)', textTransform: 'capitalize' }}>{p.role}</span>
+                            </div>
+                            {p.ltd_id && <p style={{ fontSize: '10px', color: 'rgba(26,26,26,0.3)', margin: '1px 0 0' }}>#{p.ltd_id}</p>}
+                          </div>
+                          {currentAccess ? (
+                            <span style={{ fontSize: '10px', padding: '3px 8px', background: 'rgba(34,197,94,0.08)', color: '#22c55e', border: '1px solid rgba(34,197,94,0.2)' }}>
+                              {currentAccess}
+                            </span>
+                          ) : (
+                            <div style={{ display: 'flex', gap: '4px' }}>
+                              {['admin', 'editor', 'viewer'].map(level => (
+                                <button
+                                  key={level}
+                                  onClick={() => grantAccess(p, level)}
+                                  disabled={updatingAccess === p.ltd_id}
+                                  style={{
+                                    padding: '4px 8px', fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.05em',
+                                    background: 'transparent', border: '1px solid rgba(26,26,26,0.15)',
+                                    color: 'rgba(26,26,26,0.5)', cursor: 'pointer',
+                                    opacity: updatingAccess === p.ltd_id ? 0.5 : 1,
+                                  }}
+                                >
+                                  {level}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })
+                  }
+                </div>
+
+                {/* Access Level Legend */}
+                <div style={{ marginTop: '20px', padding: '14px', background: 'rgba(26,26,26,0.02)', border: '1px solid rgba(26,26,26,0.06)' }}>
+                  <p style={{ fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.35)', marginBottom: '8px' }}>Access Levels</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '12px', color: 'rgba(26,26,26,0.5)' }}>
+                    <p style={{ margin: 0 }}><strong style={{ color: colors.dark }}>Admin</strong> — Full access: check-in, lineups, finances, history, user management</p>
+                    <p style={{ margin: 0 }}><strong style={{ color: colors.dark }}>Editor</strong> — Can check in, manage lineups and history. No finances or user management</p>
+                    <p style={{ margin: 0 }}><strong style={{ color: colors.dark }}>Viewer</strong> — Read-only access to all data</p>
+                  </div>
+                </div>
+              </div>
+            </>
           ) : null
         )}
       </main>

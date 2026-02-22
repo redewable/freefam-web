@@ -407,7 +407,7 @@ const LOSTree = ({ userId, profile }) => {
                     {legCount > 0 && (
                       <span style={{ fontSize: '10px', color: colors.gold, fontWeight: 600 }}>{legCount} in leg</span>
                     )}
-                    {hasChildren && !legCount && <span style={{ fontSize: '10px', color: 'rgba(26,26,26,0.3)' }}>{person.children.length} direct</span>}
+                    {hasChildren && legCount === 0 && <span style={{ fontSize: '10px', color: 'rgba(26,26,26,0.3)' }}>{person.children.length} direct</span>}
                   </div>
                 </div>
                 {showAttendance && personAttendance.length > 0 && (
@@ -426,11 +426,92 @@ const LOSTree = ({ userId, profile }) => {
     );
   };
 
+  // Calculate total team size
+  const totalTeamSize = (() => {
+    const count = (nodes) => {
+      let c = 0;
+      for (const n of (nodes || [])) { c += 1; if (n.children) c += count(n.children); }
+      return c;
+    };
+    return count(tree.downline || []);
+  })();
+
   return (
     <div>
-      {/* Attendance Section */}
+      {/* Upline — compact display */}
+      {tree.upline && tree.upline.length > 0 && (
+        <div style={{ marginBottom: '16px' }}>
+          <p style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.35)', marginBottom: '8px' }}>Upline</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            {tree.upline.map((person, i) => (
+              <div key={person.id} style={{
+                padding: '10px 16px', background: 'white', border: '1px solid rgba(26,26,26,0.08)',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <p style={{ fontSize: '14px', fontWeight: 500, color: colors.dark, margin: 0 }}>{person.full_name || 'Unnamed'}</p>
+                  {i === tree.upline.length - 1 && (
+                    <span style={{ fontSize: '9px', letterSpacing: '0.08em', textTransform: 'uppercase', color: colors.gold, fontWeight: 600 }}>Sponsor</span>
+                  )}
+                </div>
+                {person.ltd_id && <span style={{ fontSize: '10px', color: 'rgba(26,26,26,0.3)' }}>#{person.ltd_id}</span>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* You + Partner */}
+      <div style={{ marginBottom: '16px' }}>
+        <div style={{
+          padding: '16px 20px',
+          background: 'rgba(184,149,107,0.06)',
+          border: `1px solid rgba(184,149,107,0.3)`,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
+            <span style={{ fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', color: colors.gold, fontWeight: 600 }}>You</span>
+            <div style={{ flex: 1, height: '1px', background: 'rgba(184,149,107,0.2)' }} />
+            {totalTeamSize > 0 && (
+              <span style={{ fontSize: '10px', color: 'rgba(26,26,26,0.4)' }}>{totalTeamSize} in team</span>
+            )}
+          </div>
+          {tree.partner ? (
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+              {[tree.user, tree.partner].map(person => (
+                <div key={person.id} style={{ flex: '1 1 180px', minWidth: 0 }}>
+                  <p style={{ fontSize: '15px', fontWeight: 500, color: colors.dark, margin: '0 0 4px' }}>{person.full_name || 'Unnamed'}</p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '10px', padding: '2px 6px', background: 'rgba(184,149,107,0.15)', color: colors.gold, borderRadius: '2px' }}>{person.role === 'admin' ? 'Admin' : person.role === 'sponsor' ? 'Sponsor' : 'Member'}</span>
+                    {person.ltd_id && <span style={{ fontSize: '10px', color: 'rgba(26,26,26,0.35)' }}>#{person.ltd_id}</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div>
+              <p style={{ fontSize: '15px', fontWeight: 500, color: colors.dark, margin: '0 0 4px' }}>{tree.user.full_name || 'Unnamed'}</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontSize: '10px', padding: '2px 6px', background: 'rgba(184,149,107,0.15)', color: colors.gold, borderRadius: '2px' }}>{tree.user.role === 'admin' ? 'Admin' : tree.user.role === 'sponsor' ? 'Sponsor' : 'Member'}</span>
+                {tree.user.ltd_id && <span style={{ fontSize: '10px', color: 'rgba(26,26,26,0.35)' }}>#{tree.user.ltd_id}</span>}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Downline */}
+      {tree.downline && tree.downline.length > 0 && (
+        <div style={{ marginBottom: '24px' }}>
+          <p style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.35)', marginBottom: '8px' }}>
+            Your Team — {tree.downline.length} leg{tree.downline.length !== 1 ? 's' : ''}
+          </p>
+          <DownlineTree people={tree.downline} showAttendance={showAttendance} attendance={attendance} depth={0} />
+        </div>
+      )}
+
+      {/* Attendance Section — below the tree */}
       {attendance?.records?.length > 0 && (
-        <div style={{ marginBottom: '20px' }}>
+        <div style={{ marginTop: '8px' }}>
           <button onClick={() => setShowAttendance(!showAttendance)} style={{
             display: 'flex', alignItems: 'center', gap: '8px',
             padding: '10px 16px', background: showAttendance ? 'rgba(184,149,107,0.08)' : 'white',
@@ -445,71 +526,6 @@ const LOSTree = ({ userId, profile }) => {
             <Icons.ChevronDown style={{ width: '14px', height: '14px', transform: showAttendance ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
           </button>
           {showAttendance && <AttendanceDashboard attendance={attendance} tree={tree} />}
-        </div>
-      )}
-
-      {/* Upline Chain */}
-      {tree.upline && tree.upline.length > 0 && (
-        <div style={{ marginBottom: '16px' }}>
-          <p style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.35)', marginBottom: '8px' }}>Upline</p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            {tree.upline.map((person, i) => (
-              <div key={person.id}>
-                <PersonCard person={person} isSponsor={i === 0} />
-                <div style={{ display: 'flex', justifyContent: 'center', padding: '4px 0' }}>
-                  <div style={{ width: '1px', height: '16px', background: 'rgba(26,26,26,0.1)' }} />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Current User + Partner */}
-      <div style={{ marginBottom: '16px' }}>
-        {tree.partner ? (
-          <div style={{
-            padding: '16px 20px',
-            background: 'rgba(184,149,107,0.06)',
-            border: `1px solid rgba(184,149,107,0.3)`,
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '12px' }}>
-              <span style={{ fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', color: colors.gold, fontWeight: 600 }}>You</span>
-              <div style={{ flex: 1, height: '1px', background: 'rgba(184,149,107,0.2)' }} />
-            </div>
-            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-              {[tree.user, tree.partner].map(person => {
-                const personAttendance = attendance?.records?.filter(r => r.ltd_id === person.ltd_id) || [];
-                return (
-                  <div key={person.id} style={{ flex: '1 1 200px', minWidth: 0 }}>
-                    <p style={{ fontSize: '15px', fontWeight: 500, color: colors.dark, margin: '0 0 4px' }}>{person.full_name || 'Unnamed'}</p>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: '11px', padding: '2px 8px', background: 'rgba(184,149,107,0.15)', color: colors.gold, borderRadius: '2px' }}>{person.role === 'admin' ? 'Admin' : person.role === 'sponsor' ? 'Sponsor' : 'Member'}</span>
-                      {person.ltd_id && <span style={{ fontSize: '11px', color: 'rgba(26,26,26,0.35)' }}>LTD #{person.ltd_id}</span>}
-                      {showAttendance && personAttendance.length > 0 && (
-                        <span style={{ fontSize: '11px', padding: '2px 8px', background: 'rgba(34,197,94,0.1)', color: '#22c55e', borderRadius: '2px' }}>
-                          {personAttendance.length} event{personAttendance.length !== 1 ? 's' : ''}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        ) : (
-          <PersonCard person={tree.user} isCurrentUser />
-        )}
-      </div>
-
-      {/* Downline */}
-      {tree.downline && tree.downline.length > 0 && (
-        <div>
-          <div style={{ display: 'flex', justifyContent: 'center', padding: '4px 0', marginBottom: '8px' }}>
-            <div style={{ width: '1px', height: '16px', background: 'rgba(184,149,107,0.3)' }} />
-          </div>
-          <p style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.35)', marginBottom: '8px' }}>Your Team ({tree.downline.length} leg{tree.downline.length !== 1 ? 's' : ''})</p>
-          <DownlineTree people={tree.downline} showAttendance={showAttendance} attendance={attendance} depth={0} />
         </div>
       )}
     </div>
