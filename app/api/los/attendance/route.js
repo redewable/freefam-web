@@ -1,8 +1,8 @@
-import Stripe from 'stripe';
 import { kv } from '@vercel/kv';
 import { createClient } from '@/app/lib/supabase/server';
 import { NextResponse } from 'next/server';
 
+// Attendance API — pulls from ACTUAL meeting history records and cross-references with LOS
 export async function GET() {
   try {
     const supabase = await createClient();
@@ -20,7 +20,7 @@ export async function GET() {
     const { data: profile } = await supabase.from('profiles').select('ltd_id, role, sponsor_id').eq('id', user.id).single();
     if (!profile) return NextResponse.json({ records: [] });
 
-    // Get all LTD IDs in this user's LOS (self + partner + downline)
+    // Build set of all LTD IDs in this user's LOS (self + partner + full downline)
     const teamLtdIds = new Set();
     if (profile.ltd_id) {
       teamLtdIds.add(profile.ltd_id);
@@ -30,8 +30,6 @@ export async function GET() {
 
     // Get direct downline LTD IDs (for both user and partner)
     const sponsorIds = [user.id];
-
-    // Find partner's user ID to include their downline too
     const partnerLtdId = getPartnerLtdId(profile.ltd_id);
     if (partnerLtdId) {
       const { data: partnerProfile } = await supabase
@@ -42,23 +40,42 @@ export async function GET() {
       if (partnerProfile) sponsorIds.push(partnerProfile.id);
     }
 
-    const { data: downline } = await supabase
-      .from('profiles')
-      .select('ltd_id')
-      .in('sponsor_id', sponsorIds);
+    // Get full recursive downline (not just direct)
+    const { data: allProfiles } = await supabase.from('profiles').select('id, ltd_id, sponsor_id, full_name');
 
-    (downline || []).forEach(d => {
-      if (d.ltd_id) {
-        teamLtdIds.add(d.ltd_id);
-        // Also add each downline member's partner
-        const dPartner = getPartnerLtdId(d.ltd_id);
-        if (dPartner) teamLtdIds.add(dPartner);
+    // Build recursive downline by walking sponsor chain
+    const childMap = new Map();
+    for (const p of (allProfiles || [])) {
+      if (p.sponsor_id) {
+        if (!childMap.has(p.sponsor_id)) childMap.set(p.sponsor_id, []);
+        childMap.get(p.sponsor_id).push(p);
       }
-    });
+    }
 
-    // If admin, get all profiles
+    const collectDownline = (parentIds) => {
+      const queue = [...parentIds];
+      const visited = new Set(parentIds);
+      while (queue.length > 0) {
+        const pid = queue.shift();
+        const kids = childMap.get(pid) || [];
+        for (const kid of kids) {
+          if (!visited.has(kid.id)) {
+            visited.add(kid.id);
+            if (kid.ltd_id) {
+              teamLtdIds.add(kid.ltd_id);
+              const kPartner = getPartnerLtdId(kid.ltd_id);
+              if (kPartner) teamLtdIds.add(kPartner);
+            }
+            queue.push(kid.id);
+          }
+        }
+      }
+    };
+
+    collectDownline(sponsorIds);
+
+    // If admin, include all profiles
     if (profile.role === 'admin') {
-      const { data: allProfiles } = await supabase.from('profiles').select('ltd_id');
       (allProfiles || []).forEach(p => {
         if (p.ltd_id) {
           teamLtdIds.add(p.ltd_id);
@@ -68,84 +85,70 @@ export async function GET() {
       });
     }
 
+    // Build name->ltdId map from profiles for matching by name
+    const nameToLtdId = new Map();
+    for (const p of (allProfiles || [])) {
+      if (p.full_name && p.ltd_id) {
+        nameToLtdId.set(p.full_name.toLowerCase().trim(), p.ltd_id);
+      }
+    }
+
     if (teamLtdIds.size === 0) return NextResponse.json({ records: [] });
 
+    // 1. Get all actual meeting dates from history
+    let meetingDates = new Set();
+    try {
+      const indexDates = await kv.smembers('history:dates') || [];
+      indexDates.forEach(d => meetingDates.add(d));
+    } catch (e) {}
+
+    // Fallback: scan for history:* keys
+    try {
+      const keys = await kv.keys('history:*') || [];
+      keys.forEach(k => {
+        const d = k.replace('history:', '');
+        if (/^\d{4}-\d{2}-\d{2}$/.test(d)) meetingDates.add(d);
+      });
+    } catch (e) {}
+
+    // 2. For each meeting date, get attendees and cross-reference with LOS
     const records = [];
 
-    // 1. Pull from Stripe (paid registrations with ltdId)
-    try {
-      const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-      let hasMore = true;
-      let startingAfter = null;
-      let pages = 0;
+    for (const date of meetingDates) {
+      const historyKey = `history:${date}`;
+      let items = [];
+      try {
+        items = await kv.smembers(historyKey) || [];
+      } catch (e) { continue; }
 
-      while (hasMore && pages < 5) {
-        const params = { limit: 100, status: 'complete' };
-        if (startingAfter) params.starting_after = startingAfter;
+      const attendees = items.map(item => {
+        try { return typeof item === 'string' ? JSON.parse(item) : item; }
+        catch (e) { return null; }
+      }).filter(Boolean);
 
-        const sessions = await stripe.checkout.sessions.list(params);
+      // Skip empty meetings
+      if (attendees.length === 0) continue;
 
-        for (const session of sessions.data) {
-          const ltdId = session.metadata?.ltdId;
-          if (ltdId && teamLtdIds.has(ltdId)) {
-            records.push({
-              ltd_id: ltdId,
-              name: session.metadata?.customerName || session.customer_details?.name || '',
-              event_source: session.metadata?.source || 'main',
-              date: new Date(session.created * 1000).toISOString(),
-              checked_in: false, // will update below
-              registration_id: session.id,
-            });
-          }
+      // Check each attendee — try to match to a team LTD ID
+      for (const att of attendees) {
+        let ltdId = att.ltdId || null;
+
+        // If no ltdId stored, try matching by name
+        if (!ltdId && att.name) {
+          ltdId = nameToLtdId.get(att.name.toLowerCase().trim()) || null;
         }
 
-        hasMore = sessions.has_more;
-        if (sessions.data.length > 0) startingAfter = sessions.data[sessions.data.length - 1].id;
-        pages++;
-      }
-    } catch (stripeErr) {
-      console.error('Stripe attendance error:', stripeErr.message);
-    }
-
-    // 2. Pull from KV (free registrations - guests/apprentices with ltdId)
-    try {
-      const keys = await kv.keys('registration:free_*');
-      if (keys && keys.length > 0) {
-        const regs = await Promise.all(keys.map(key => kv.get(key)));
-        for (const reg of regs) {
-          if (!reg || !reg.ltdId || !teamLtdIds.has(reg.ltdId)) continue;
+        // Only include if this attendee is in the user's LOS team
+        if (ltdId && teamLtdIds.has(ltdId)) {
           records.push({
-            ltd_id: reg.ltdId,
-            name: reg.name || '',
-            event_source: reg.source || 'main',
-            date: reg.createdAt || '',
-            checked_in: false,
-            registration_id: reg.id,
+            ltd_id: ltdId,
+            name: att.name || 'Unknown',
+            type: att.type || 'ibo',
+            date: date, // The actual meeting date (YYYY-MM-DD)
+            checked_in: true, // They're in history = they attended
+            meeting_date: date,
           });
         }
-      }
-    } catch (kvErr) {
-      console.error('KV attendance error:', kvErr.message);
-    }
-
-    // 3. Check check-in status for each record
-    for (const rec of records) {
-      try {
-        // Derive the week key from the registration date
-        const regDate = new Date(rec.date);
-        const day = regDate.getDay();
-        const monday = new Date(regDate);
-        monday.setDate(regDate.getDate() - day + (day === 0 ? -6 : 1));
-        monday.setHours(0, 0, 0, 0);
-        const weekKey = `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, '0')}-${String(monday.getDate()).padStart(2, '0')}`;
-
-        const checkinKey = `checkin:week:${weekKey}:${rec.registration_id}`;
-        const status = await kv.get(checkinKey);
-        if (status?.checkedIn) {
-          rec.checked_in = true;
-        }
-      } catch (e) {
-        // Ignore
       }
     }
 

@@ -188,18 +188,13 @@ const LOSTree = ({ userId, profile }) => {
     const records = attendance?.records || [];
     const losMembers = getAllLosMembers(tree.downline);
 
-    // Group records by date (week/meeting date)
+    // Group records by actual meeting date
     const byDate = {};
     for (const rec of records) {
-      const d = rec.date ? new Date(rec.date).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'America/Chicago' }) : 'Unknown';
-      // Use Monday of the week as meeting key
-      const recDate = new Date(rec.date);
-      const day = recDate.getDay();
-      const monday = new Date(recDate);
-      monday.setDate(recDate.getDate() - day + (day === 0 ? -6 : 1));
-      const weekKey = monday.toISOString().split('T')[0];
-      if (!byDate[weekKey]) byDate[weekKey] = [];
-      byDate[weekKey].push(rec);
+      const dateKey = rec.meeting_date || rec.date;
+      if (!dateKey) continue;
+      if (!byDate[dateKey]) byDate[dateKey] = [];
+      byDate[dateKey].push(rec);
     }
 
     // Sort meeting dates newest first
@@ -213,15 +208,15 @@ const LOSTree = ({ userId, profile }) => {
         {meetingDates.map(dateKey => {
           const meetingRecords = byDate[dateKey];
           const isExpanded = expandedMeeting[dateKey];
-          const attendedLtdIds = new Set(meetingRecords.filter(r => r.checked_in).map(r => r.ltd_id));
-          const registeredLtdIds = new Set(meetingRecords.map(r => r.ltd_id));
 
-          // Cross-reference with LOS
+          // Build set of LTD IDs that attended this meeting
+          const attendedLtdIds = new Set(meetingRecords.map(r => r.ltd_id));
+
+          // Cross-reference with LOS — couples count as one unit
           const present = [];
           const missing = [];
           for (const m of losMembers) {
             const wasPresent = attendedLtdIds.has(m.ltd_id) || (m.partner_ltd_id && attendedLtdIds.has(m.partner_ltd_id));
-            const wasRegistered = registeredLtdIds.has(m.ltd_id) || (m.partner_ltd_id && registeredLtdIds.has(m.partner_ltd_id));
             const displayName = m.partner_name ? `${m.name} & ${m.partner_name}` : m.name;
             if (wasPresent) {
               present.push(displayName);
@@ -230,8 +225,7 @@ const LOSTree = ({ userId, profile }) => {
             }
           }
 
-          const totalAttended = meetingRecords.filter(r => r.checked_in).length;
-          const totalRegistered = meetingRecords.length;
+          const totalAttended = meetingRecords.length;
           const meetingLabel = new Date(dateKey + 'T12:00:00-06:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'America/Chicago' });
 
           return (
@@ -258,7 +252,7 @@ const LOSTree = ({ userId, profile }) => {
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span style={{ fontSize: '18px', fontWeight: 700, color: colors.dark }}>{totalAttended}</span>
-                  <span style={{ fontSize: '11px', color: 'rgba(26,26,26,0.3)' }}>/ {totalRegistered}</span>
+                  <span style={{ fontSize: '11px', color: 'rgba(26,26,26,0.3)' }}>total</span>
                   <Icons.ChevronDown style={{ width: '14px', height: '14px', color: 'rgba(26,26,26,0.3)', transform: isExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
                 </div>
               </button>
