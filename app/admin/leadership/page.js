@@ -175,11 +175,14 @@ export default function LeadershipPage() {
 
   // Expense modal
   const [showExpenseModal, setShowExpenseModal] = useState(false);
+  const [editingExpenseId, setEditingExpenseId] = useState(null);
   const [expenseForm, setExpenseForm] = useState({ description: '', amount: '', date: '', category: 'Conference Room', paidBy: '', account: '', notes: '' });
 
   // Add attendee modal
   const [showAddAttendee, setShowAddAttendee] = useState(false);
-  const [attendeeForm, setAttendeeForm] = useState({ name: '', type: 'ibo', visitNumber: '' });
+  const [attendeeForm, setAttendeeForm] = useState({ name: '', type: 'ibo', visitNumber: '', ltdId: '' });
+  const [profileSuggestions, setProfileSuggestions] = useState([]);
+  const [profileSearchTimeout, setProfileSearchTimeout] = useState(null);
 
   // Share modal
   const [shareUrl, setShareUrl] = useState('');
@@ -322,16 +325,52 @@ export default function LeadershipPage() {
     } catch (e) { console.error(e); }
   };
 
-  const addExpense = async () => {
+  const resetExpenseForm = () => {
+    setExpenseForm({ description: '', amount: '', date: '', category: 'Conference Room', paidBy: '', account: '', notes: '' });
+    setEditingExpenseId(null);
+  };
+
+  const openAddExpense = () => {
+    resetExpenseForm();
+    setShowExpenseModal(true);
+  };
+
+  const openEditExpense = (exp) => {
+    setEditingExpenseId(exp.id);
+    setExpenseForm({
+      description: exp.description || '',
+      amount: String(exp.amount || ''),
+      date: exp.date || '',
+      category: exp.category || 'Conference Room',
+      paidBy: exp.paidBy || '',
+      account: exp.account || '',
+      notes: exp.notes || '',
+    });
+    setShowExpenseModal(true);
+  };
+
+  const saveExpense = async () => {
     if (!expenseForm.description || !expenseForm.amount || !expenseForm.date) return;
     try {
-      const res = await fetch('/api/expenses', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(expenseForm),
-      });
-      const data = await res.json();
-      if (data.success) { showToast('Expense added'); setShowExpenseModal(false); setExpenseForm({ description: '', amount: '', date: '', category: 'Conference Room', paidBy: '', account: '', notes: '' }); fetchExpenses(); }
+      if (editingExpenseId) {
+        // Update existing
+        const res = await fetch('/api/expenses', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: editingExpenseId, ...expenseForm }),
+        });
+        const data = await res.json();
+        if (data.success) { showToast('Expense updated'); setShowExpenseModal(false); resetExpenseForm(); fetchExpenses(); }
+      } else {
+        // Create new
+        const res = await fetch('/api/expenses', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(expenseForm),
+        });
+        const data = await res.json();
+        if (data.success) { showToast('Expense added'); setShowExpenseModal(false); resetExpenseForm(); fetchExpenses(); }
+      }
     } catch (e) { console.error(e); }
   };
 
@@ -350,11 +389,31 @@ export default function LeadershipPage() {
       const res = await fetch('/api/meetings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'add-attendee', date: selectedDate, attendee: attendeeForm }),
+        body: JSON.stringify({ action: 'add-attendee', date: selectedDate, attendee: { ...attendeeForm, ltdId: attendeeForm.ltdId || undefined } }),
       });
       const data = await res.json();
-      if (data.success) { showToast('Attendee added'); setShowAddAttendee(false); setAttendeeForm({ name: '', type: 'ibo', visitNumber: '' }); fetchDateDetail(selectedDate); fetchHistory(); }
+      if (data.success) { showToast('Attendee added'); setShowAddAttendee(false); setAttendeeForm({ name: '', type: 'ibo', visitNumber: '', ltdId: '' }); setProfileSuggestions([]); fetchDateDetail(selectedDate); fetchHistory(); }
     } catch (e) { console.error(e); }
+  };
+
+  const searchProfiles = async (query) => {
+    if (query.trim().length < 2) { setProfileSuggestions([]); return; }
+    try {
+      const res = await fetch(`/api/admin/profiles/search?q=${encodeURIComponent(query)}`);
+      const data = await res.json();
+      setProfileSuggestions(data.profiles || []);
+    } catch (e) { setProfileSuggestions([]); }
+  };
+
+  const handleAttendeeSearch = (value, field) => {
+    setAttendeeForm(p => ({ ...p, [field]: value }));
+    if (profileSearchTimeout) clearTimeout(profileSearchTimeout);
+    setProfileSearchTimeout(setTimeout(() => searchProfiles(value), 300));
+  };
+
+  const selectProfile = (profile) => {
+    setAttendeeForm(p => ({ ...p, name: profile.full_name || '', ltdId: profile.ltd_id || '' }));
+    setProfileSuggestions([]);
   };
 
   const removeAttendee = async (attendeeId) => {
@@ -467,8 +526,8 @@ export default function LeadershipPage() {
         </div>
       </Modal>
 
-      {/* Add Expense Modal */}
-      <Modal isOpen={showExpenseModal} onClose={() => setShowExpenseModal(false)} title="Add Expense">
+      {/* Add/Edit Expense Modal */}
+      <Modal isOpen={showExpenseModal} onClose={() => { setShowExpenseModal(false); resetExpenseForm(); }} title={editingExpenseId ? 'Edit Expense' : 'Add Expense'}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <div>
             <label style={{ display: 'block', fontSize: '11px', color: 'rgba(26,26,26,0.5)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Description *</label>
@@ -504,16 +563,36 @@ export default function LeadershipPage() {
             <label style={{ display: 'block', fontSize: '11px', color: 'rgba(26,26,26,0.5)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Notes</label>
             <textarea value={expenseForm.notes} onChange={e => setExpenseForm(p => ({ ...p, notes: e.target.value }))} rows={2} placeholder="Additional notes..." style={{ width: '100%', padding: '10px', border: '1px solid rgba(26,26,26,0.2)', fontSize: '14px', boxSizing: 'border-box', resize: 'vertical' }} />
           </div>
-          <button onClick={addExpense} style={{ padding: '12px', background: colors.dark, color: colors.bg, border: 'none', cursor: 'pointer', fontSize: '13px', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Add Expense</button>
+          <button onClick={saveExpense} style={{ padding: '12px', background: colors.dark, color: colors.bg, border: 'none', cursor: 'pointer', fontSize: '13px', letterSpacing: '0.05em', textTransform: 'uppercase' }}>{editingExpenseId ? 'Save Changes' : 'Add Expense'}</button>
         </div>
       </Modal>
 
       {/* Add Attendee Modal */}
-      <Modal isOpen={showAddAttendee} onClose={() => setShowAddAttendee(false)} title="Add Attendee">
+      <Modal isOpen={showAddAttendee} onClose={() => { setShowAddAttendee(false); setProfileSuggestions([]); }} title="Add Attendee">
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div style={{ position: 'relative' }}>
+            <label style={{ display: 'block', fontSize: '11px', color: 'rgba(26,26,26,0.5)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>LTD ID or Name</label>
+            <input value={attendeeForm.ltdId} onChange={e => handleAttendeeSearch(e.target.value, 'ltdId')} placeholder="Search by LTD ID or name..." inputMode="text" style={{ width: '100%', padding: '10px', border: '1px solid rgba(26,26,26,0.2)', fontSize: '14px', boxSizing: 'border-box' }} />
+            {profileSuggestions.length > 0 && (
+              <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10, background: 'white', border: '1px solid rgba(26,26,26,0.15)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', maxHeight: '200px', overflow: 'auto' }}>
+                {profileSuggestions.map(p => (
+                  <button key={p.id} onClick={() => selectProfile(p)} style={{ width: '100%', padding: '10px 12px', background: 'none', border: 'none', borderBottom: '1px solid rgba(26,26,26,0.06)', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ flex: 1 }}>
+                      <p style={{ fontSize: '14px', fontWeight: 500, color: colors.dark, margin: 0 }}>{p.full_name}</p>
+                      <p style={{ fontSize: '11px', color: 'rgba(26,26,26,0.4)', margin: 0 }}>LTD #{p.ltd_id}</p>
+                    </div>
+                    <span style={{ fontSize: '10px', padding: '2px 6px', background: 'rgba(26,26,26,0.05)', color: 'rgba(26,26,26,0.5)', textTransform: 'capitalize' }}>{p.role}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            {attendeeForm.ltdId && attendeeForm.name && profileSuggestions.length === 0 && (
+              <p style={{ fontSize: '11px', color: '#22c55e', margin: '4px 0 0' }}>Matched: {attendeeForm.name} (#{attendeeForm.ltdId})</p>
+            )}
+          </div>
           <div>
             <label style={{ display: 'block', fontSize: '11px', color: 'rgba(26,26,26,0.5)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Name *</label>
-            <input value={attendeeForm.name} onChange={e => setAttendeeForm(p => ({ ...p, name: e.target.value }))} placeholder="Full name" style={{ width: '100%', padding: '10px', border: '1px solid rgba(26,26,26,0.2)', fontSize: '14px', boxSizing: 'border-box' }} />
+            <input value={attendeeForm.name} onChange={e => handleAttendeeSearch(e.target.value, 'name')} placeholder="Full name" style={{ width: '100%', padding: '10px', border: '1px solid rgba(26,26,26,0.2)', fontSize: '14px', boxSizing: 'border-box' }} />
           </div>
           <div>
             <label style={{ display: 'block', fontSize: '11px', color: 'rgba(26,26,26,0.5)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Type</label>
@@ -922,7 +1001,7 @@ export default function LeadershipPage() {
               {/* Expenses List */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                 <p style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.4)', margin: 0 }}>Expenses</p>
-                <button onClick={() => setShowExpenseModal(true)} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', background: colors.dark, color: colors.bg, border: 'none', cursor: 'pointer', fontSize: '11px' }}>
+                <button onClick={openAddExpense} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', background: colors.dark, color: colors.bg, border: 'none', cursor: 'pointer', fontSize: '11px' }}>
                   <Icons.Plus style={{ width: '12px', height: '12px' }} /> Add Expense
                 </button>
               </div>
@@ -937,20 +1016,26 @@ export default function LeadershipPage() {
                   {expenses.map(exp => (
                     <div key={exp.id} style={{ display: 'flex', alignItems: 'center', padding: '12px', background: 'white', border: '1px solid rgba(26,26,26,0.1)', gap: '12px' }}>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px', flexWrap: 'wrap' }}>
                           <p style={{ fontSize: '14px', fontWeight: 500, color: colors.dark, margin: 0 }}>{exp.description}</p>
                           <span style={{ fontSize: '9px', padding: '2px 6px', background: 'rgba(26,26,26,0.05)', color: 'rgba(26,26,26,0.5)', textTransform: 'uppercase' }}>{exp.category}</span>
                         </div>
-                        <div style={{ display: 'flex', gap: '12px', fontSize: '11px', color: 'rgba(26,26,26,0.4)' }}>
+                        <div style={{ display: 'flex', gap: '12px', fontSize: '11px', color: 'rgba(26,26,26,0.4)', flexWrap: 'wrap' }}>
                           <span>{formatDateShort(exp.date)}</span>
                           {exp.paidBy && <span>Paid by: {exp.paidBy}</span>}
-                          {exp.account && <span>Account: {exp.account}</span>}
+                          {exp.account && <span>Acct: {exp.account}</span>}
+                          {exp.notes && <span style={{ fontStyle: 'italic' }}>{exp.notes}</span>}
                         </div>
                       </div>
                       <p style={{ fontSize: '16px', fontWeight: 600, color: '#ef4444', margin: 0, whiteSpace: 'nowrap' }}>${parseFloat(exp.amount).toFixed(2)}</p>
-                      <button onClick={() => deleteExpense(exp.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}>
-                        <Icons.Trash style={{ width: '14px', height: '14px', color: 'rgba(26,26,26,0.3)' }} />
-                      </button>
+                      <div style={{ display: 'flex', gap: '2px', flexShrink: 0 }}>
+                        <button onClick={() => openEditExpense(exp)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}>
+                          <Icons.Edit style={{ width: '14px', height: '14px', color: 'rgba(26,26,26,0.3)' }} />
+                        </button>
+                        <button onClick={() => deleteExpense(exp.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}>
+                          <Icons.Trash style={{ width: '14px', height: '14px', color: 'rgba(26,26,26,0.3)' }} />
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -1047,7 +1132,10 @@ export default function LeadershipPage() {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                       {section.items.map((c, i) => (
                         <div key={i} style={{ display: 'flex', alignItems: 'center', padding: '8px 12px', background: 'white', border: '1px solid rgba(26,26,26,0.08)', gap: '10px' }}>
-                          <p style={{ flex: 1, fontSize: '14px', color: colors.dark, margin: 0 }}>{c.name}</p>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <p style={{ fontSize: '14px', color: colors.dark, margin: 0 }}>{c.name}</p>
+                            {c.ltdId && <p style={{ fontSize: '10px', color: 'rgba(26,26,26,0.35)', margin: '1px 0 0' }}>LTD #{c.ltdId}</p>}
+                          </div>
                           {c.visitNumber && <span style={{ fontSize: '10px', fontWeight: 600, color: '#3b82f6', padding: '2px 6px', background: 'rgba(59,130,246,0.1)' }}>{c.visitNumber}</span>}
                           {c.priceType === 'monthly' && c.type === 'ibo' && <span style={{ fontSize: '10px', fontWeight: 600, color: colors.gold, padding: '2px 6px', background: 'rgba(184,149,107,0.15)' }}>Monthly</span>}
                           {c.manual && <span style={{ fontSize: '9px', color: 'rgba(26,26,26,0.3)', padding: '2px 6px', background: 'rgba(26,26,26,0.04)' }}>Manual</span>}

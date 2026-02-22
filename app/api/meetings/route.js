@@ -24,6 +24,7 @@ export async function POST(request) {
         type: attendee.type || 'ibo',
         priceType: attendee.priceType || 'manual',
         visitNumber: attendee.visitNumber || '',
+        ltdId: attendee.ltdId || '',
         timestamp: new Date().toISOString(),
         manual: true,
       };

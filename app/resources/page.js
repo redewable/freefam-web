@@ -169,6 +169,130 @@ const LOSTree = ({ userId, profile }) => {
   if (loading) return <p style={{ color: 'rgba(26,26,26,0.4)', fontSize: '14px' }}>Loading LOS...</p>;
   if (!tree || !tree.user) return <p style={{ color: 'rgba(26,26,26,0.4)', fontSize: '14px' }}>No LOS data available.</p>;
 
+  // Gather all LOS member LTD IDs for attendance matching
+  const getAllLosMembers = (downline) => {
+    const members = [];
+    const walk = (nodes) => {
+      for (const n of nodes) {
+        members.push({ name: n.full_name, ltd_id: n.ltd_id, partner_name: n.partner_name, partner_ltd_id: n.partner_ltd_id });
+        if (n.children) walk(n.children);
+      }
+    };
+    walk(downline || []);
+    return members;
+  };
+
+  // Attendance Dashboard sub-component
+  const AttendanceDashboard = ({ attendance, tree }) => {
+    const [expandedMeeting, setExpandedMeeting] = useState({});
+    const records = attendance?.records || [];
+    const losMembers = getAllLosMembers(tree.downline);
+
+    // Group records by date (week/meeting date)
+    const byDate = {};
+    for (const rec of records) {
+      const d = rec.date ? new Date(rec.date).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'America/Chicago' }) : 'Unknown';
+      // Use Monday of the week as meeting key
+      const recDate = new Date(rec.date);
+      const day = recDate.getDay();
+      const monday = new Date(recDate);
+      monday.setDate(recDate.getDate() - day + (day === 0 ? -6 : 1));
+      const weekKey = monday.toISOString().split('T')[0];
+      if (!byDate[weekKey]) byDate[weekKey] = [];
+      byDate[weekKey].push(rec);
+    }
+
+    // Sort meeting dates newest first
+    const meetingDates = Object.keys(byDate).sort((a, b) => new Date(b) - new Date(a));
+
+    if (meetingDates.length === 0) return null;
+
+    return (
+      <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+        <p style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.35)', marginBottom: '4px' }}>Meeting Attendance</p>
+        {meetingDates.map(dateKey => {
+          const meetingRecords = byDate[dateKey];
+          const isExpanded = expandedMeeting[dateKey];
+          const attendedLtdIds = new Set(meetingRecords.filter(r => r.checked_in).map(r => r.ltd_id));
+          const registeredLtdIds = new Set(meetingRecords.map(r => r.ltd_id));
+
+          // Cross-reference with LOS
+          const present = [];
+          const missing = [];
+          for (const m of losMembers) {
+            const wasPresent = attendedLtdIds.has(m.ltd_id) || (m.partner_ltd_id && attendedLtdIds.has(m.partner_ltd_id));
+            const wasRegistered = registeredLtdIds.has(m.ltd_id) || (m.partner_ltd_id && registeredLtdIds.has(m.partner_ltd_id));
+            const displayName = m.partner_name ? `${m.name} & ${m.partner_name}` : m.name;
+            if (wasPresent) {
+              present.push(displayName);
+            } else {
+              missing.push(displayName);
+            }
+          }
+
+          const totalAttended = meetingRecords.filter(r => r.checked_in).length;
+          const totalRegistered = meetingRecords.length;
+          const meetingLabel = new Date(dateKey + 'T12:00:00-06:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'America/Chicago' });
+
+          return (
+            <div key={dateKey} style={{ background: 'white', border: '1px solid rgba(26,26,26,0.08)' }}>
+              <button
+                onClick={() => setExpandedMeeting(prev => ({ ...prev, [dateKey]: !prev[dateKey] }))}
+                style={{
+                  width: '100%', padding: '12px 16px', background: 'none', border: 'none', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <span style={{ fontSize: '13px', fontWeight: 500, color: colors.dark }}>{meetingLabel}</span>
+                  {present.length > 0 && (
+                    <span style={{ fontSize: '10px', padding: '2px 8px', background: 'rgba(34,197,94,0.1)', color: '#22c55e', borderRadius: '2px' }}>
+                      {present.length} present
+                    </span>
+                  )}
+                  {missing.length > 0 && (
+                    <span style={{ fontSize: '10px', padding: '2px 8px', background: 'rgba(239,68,68,0.06)', color: '#ef4444', borderRadius: '2px' }}>
+                      {missing.length} missing
+                    </span>
+                  )}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '18px', fontWeight: 700, color: colors.dark }}>{totalAttended}</span>
+                  <span style={{ fontSize: '11px', color: 'rgba(26,26,26,0.3)' }}>/ {totalRegistered}</span>
+                  <Icons.ChevronDown style={{ width: '14px', height: '14px', color: 'rgba(26,26,26,0.3)', transform: isExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+                </div>
+              </button>
+              {isExpanded && (
+                <div style={{ padding: '0 16px 16px', borderTop: '1px solid rgba(26,26,26,0.06)' }}>
+                  {present.length > 0 && (
+                    <div style={{ marginTop: '12px' }}>
+                      <p style={{ fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#22c55e', marginBottom: '6px', fontWeight: 600 }}>Present from LOS ({present.length})</p>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                        {present.map((name, i) => (
+                          <span key={i} style={{ fontSize: '11px', padding: '3px 8px', background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.15)', color: colors.dark }}>{name}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {missing.length > 0 && (
+                    <div style={{ marginTop: '12px' }}>
+                      <p style={{ fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#ef4444', marginBottom: '6px', fontWeight: 600 }}>Missing from LOS ({missing.length})</p>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                        {missing.map((name, i) => (
+                          <span key={i} style={{ fontSize: '11px', padding: '3px 8px', background: 'rgba(239,68,68,0.04)', border: '1px solid rgba(239,68,68,0.12)', color: 'rgba(26,26,26,0.5)' }}>{name}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
   const PersonCard = ({ person, isCurrentUser, isSponsor }) => {
     const roleBadge = {
       admin: { bg: 'rgba(184,149,107,0.15)', color: colors.gold, label: 'Admin' },
@@ -236,13 +360,17 @@ const LOSTree = ({ userId, profile }) => {
         {people.map(person => {
           const hasChildren = person.children && person.children.length > 0;
           const isExpanded = expanded[person.id];
-          const personAttendance = attendance?.records?.filter(r => r.ltd_id === person.ltd_id) || [];
+          const personAttendance = attendance?.records?.filter(r => r.ltd_id === person.ltd_id || (person.partner_ltd_id && r.ltd_id === person.partner_ltd_id)) || [];
           const roleBadge = {
             admin: { bg: 'rgba(184,149,107,0.15)', color: colors.gold, label: 'Admin' },
             sponsor: { bg: 'rgba(59,130,246,0.1)', color: '#3b82f6', label: 'Sponsor' },
             member: { bg: 'rgba(26,26,26,0.06)', color: 'rgba(26,26,26,0.5)', label: 'Member' },
           };
           const badge = roleBadge[person.role] || roleBadge.member;
+          const displayName = person.partner_name
+            ? `${person.full_name || 'Unnamed'} & ${person.partner_name}`
+            : (person.full_name || 'Unnamed');
+          const legCount = person.totalDescendants || 0;
 
           return (
             <div key={person.id}>
@@ -268,12 +396,18 @@ const LOSTree = ({ userId, profile }) => {
                 )}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
-                    <p style={{ fontSize: '14px', fontWeight: 500, color: colors.dark, margin: 0 }}>{person.full_name || 'Unnamed'}</p>
+                    <p style={{ fontSize: '14px', fontWeight: 500, color: colors.dark, margin: 0 }}>{displayName}</p>
+                    {person.partner_name && (
+                      <svg style={{ width: '12px', height: '12px', color: 'rgba(184,149,107,0.5)', flexShrink: 0 }} viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" /></svg>
+                    )}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                     <span style={{ fontSize: '10px', padding: '1px 6px', background: badge.bg, color: badge.color, borderRadius: '2px' }}>{badge.label}</span>
                     {person.ltd_id && <span style={{ fontSize: '10px', color: 'rgba(26,26,26,0.3)' }}>#{person.ltd_id}</span>}
-                    {hasChildren && <span style={{ fontSize: '10px', color: 'rgba(26,26,26,0.3)' }}>{person.children.length} downline</span>}
+                    {legCount > 0 && (
+                      <span style={{ fontSize: '10px', color: colors.gold, fontWeight: 600 }}>{legCount} in leg</span>
+                    )}
+                    {hasChildren && !legCount && <span style={{ fontSize: '10px', color: 'rgba(26,26,26,0.3)' }}>{person.children.length} direct</span>}
                   </div>
                 </div>
                 {showAttendance && personAttendance.length > 0 && (
@@ -294,7 +428,7 @@ const LOSTree = ({ userId, profile }) => {
 
   return (
     <div>
-      {/* Attendance toggle */}
+      {/* Attendance Section */}
       {attendance?.records?.length > 0 && (
         <div style={{ marginBottom: '20px' }}>
           <button onClick={() => setShowAttendance(!showAttendance)} style={{
@@ -302,10 +436,15 @@ const LOSTree = ({ userId, profile }) => {
             padding: '10px 16px', background: showAttendance ? 'rgba(184,149,107,0.08)' : 'white',
             border: showAttendance ? `1px solid rgba(184,149,107,0.25)` : '1px solid rgba(26,26,26,0.1)',
             cursor: 'pointer', fontSize: '12px', color: showAttendance ? colors.gold : 'rgba(26,26,26,0.5)',
+            width: '100%', justifyContent: 'space-between',
           }}>
-            <Icons.Calendar style={{ width: '14px', height: '14px' }} />
-            {showAttendance ? 'Hide Attendance' : 'Show Team Attendance'}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Icons.Calendar style={{ width: '14px', height: '14px' }} />
+              {showAttendance ? 'Hide Attendance' : 'Show Team Attendance'}
+            </div>
+            <Icons.ChevronDown style={{ width: '14px', height: '14px', transform: showAttendance ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
           </button>
+          {showAttendance && <AttendanceDashboard attendance={attendance} tree={tree} />}
         </div>
       )}
 
@@ -369,7 +508,7 @@ const LOSTree = ({ userId, profile }) => {
           <div style={{ display: 'flex', justifyContent: 'center', padding: '4px 0', marginBottom: '8px' }}>
             <div style={{ width: '1px', height: '16px', background: 'rgba(184,149,107,0.3)' }} />
           </div>
-          <p style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.35)', marginBottom: '8px' }}>Your Team ({tree.downline.length})</p>
+          <p style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.35)', marginBottom: '8px' }}>Your Team ({tree.downline.length} leg{tree.downline.length !== 1 ? 's' : ''})</p>
           <DownlineTree people={tree.downline} showAttendance={showAttendance} attendance={attendance} depth={0} />
         </div>
       )}

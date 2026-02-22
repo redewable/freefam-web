@@ -74,6 +74,47 @@ export async function POST(request) {
   }
 }
 
+// PUT - Update an existing expense
+export async function PUT(request) {
+  try {
+    const body = await request.json();
+    const { id, description, amount, date, category, paidBy, account, notes } = body;
+
+    if (!id) {
+      return NextResponse.json({ error: 'ID required' }, { status: 400 });
+    }
+    if (!description || !amount || !date) {
+      return NextResponse.json({ error: 'Description, amount, and date required' }, { status: 400 });
+    }
+
+    // Get existing to preserve createdAt
+    const existing = await kv.get(`expense:${id}`);
+    if (!existing) {
+      return NextResponse.json({ error: 'Expense not found' }, { status: 404 });
+    }
+
+    const updated = {
+      description,
+      amount: parseFloat(amount),
+      date,
+      category: category || 'general',
+      paidBy: paidBy || '',
+      account: account || '',
+      notes: notes || '',
+      createdAt: existing.createdAt,
+      updatedAt: new Date().toISOString(),
+    };
+
+    await kv.set(`expense:${id}`, updated);
+    await kv.expire(`expense:${id}`, 365 * 24 * 60 * 60);
+
+    return NextResponse.json({ success: true, id, expense: updated });
+  } catch (error) {
+    console.error('Expense PUT error:', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
 // DELETE - Delete an expense
 export async function DELETE(request) {
   try {

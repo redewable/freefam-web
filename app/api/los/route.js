@@ -105,17 +105,59 @@ export async function GET() {
       }
     }
 
-    // Recursive function to build tree
+    // Count total descendants in a built tree
+    const countTreeDescendants = (nodes) => {
+      let count = 0;
+      for (const n of nodes) {
+        count += 1;
+        if (n.children) count += countTreeDescendants(n.children);
+      }
+      return count;
+    };
+
+    // Recursive function to build tree — merges partner pairs, sorts by leg size
     const buildTree = (personId, depth = 0, maxDepth = 10) => {
       if (depth >= maxDepth) return [];
       const children = childrenMap.get(personId) || [];
-      return children
-        .filter(c => c.id !== partnerId && c.id !== user.id) // Skip partner and self
-        .map(c => ({
+      const processed = new Set();
+      const result = [];
+
+      for (const c of children) {
+        if (c.id === partnerId || c.id === user.id || processed.has(c.id)) continue;
+        processed.add(c.id);
+
+        // Look up partner by LTD ID
+        const pLtd = getPartnerLtdId(c.ltd_id);
+        let pNode = null;
+        if (pLtd) {
+          pNode = (allProfiles || []).find(p => p.ltd_id === pLtd && p.id !== c.id);
+          if (pNode) processed.add(pNode.id);
+        }
+
+        // Build children from both this person and their partner
+        let nodeChildren = buildTree(c.id, depth + 1, maxDepth);
+        if (pNode) {
+          const partnerKids = buildTree(pNode.id, depth + 1, maxDepth);
+          const seen = new Set(nodeChildren.map(ch => ch.id));
+          for (const pk of partnerKids) {
+            if (!seen.has(pk.id)) { nodeChildren.push(pk); seen.add(pk.id); }
+          }
+        }
+
+        const totalDescendants = countTreeDescendants(nodeChildren);
+
+        result.push({
           ...c,
-          children: buildTree(c.id, depth + 1, maxDepth),
-        }))
-        .sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''));
+          partner_name: pNode?.full_name || null,
+          partner_ltd_id: pNode?.ltd_id || null,
+          children: nodeChildren,
+          totalDescendants,
+        });
+      }
+
+      // Sort by total descendants (biggest legs at top)
+      result.sort((a, b) => b.totalDescendants - a.totalDescendants);
+      return result;
     };
 
     // Get downline for user + partner combined
@@ -138,8 +180,8 @@ export async function GET() {
     addToList(userChildren);
     addToList(partnerChildren);
 
-    // Sort combined downline by name
-    downlineList.sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''));
+    // Sort combined downline by total descendants (biggest legs at top)
+    downlineList.sort((a, b) => (b.totalDescendants || 0) - (a.totalDescendants || 0));
 
     // Visibility rules:
     // - Upline members: downline can only see name and LTD ID
