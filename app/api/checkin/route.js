@@ -54,6 +54,7 @@ export async function POST(request) {
         type: registrationData?.type || 'ibo',
         priceType: priceType || 'single',
         visitNumber: registrationData?.visitNumber || '',
+        ltdId: registrationData?.ltdId || '',
         timestamp,
       };
 

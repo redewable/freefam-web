@@ -240,6 +240,10 @@ export default function LeadershipPage() {
   const [shareUrl, setShareUrl] = useState('');
   const [showShareModal, setShowShareModal] = useState(false);
 
+  // Attendance sync
+  const [syncStatus, setSyncStatus] = useState(null);
+  const [syncing, setSyncing] = useState(false);
+
   // Check if already logged in with leadership access
   useEffect(() => {
     const checkAuth = async () => {
@@ -267,7 +271,7 @@ export default function LeadershipPage() {
   const fetchAll = async () => {
     setLoading(true);
     const fetches = [fetchRegs(), fetchHistory(), fetchLineups(), fetchExpenses()];
-    if (accessLevel === 'leadership') fetches.push(fetchUserAccess());
+    if (accessLevel === 'leadership') fetches.push(fetchUserAccess(), checkSyncStatus());
     await Promise.all(fetches);
     setLoading(false);
   };
@@ -361,7 +365,7 @@ export default function LeadershipPage() {
           sessionId: reg.id,
           action,
           priceType: reg.priceType,
-          registrationData: { name: reg.name, type: reg.type, visitNumber: reg.visitNumber || '' },
+          registrationData: { name: reg.name, type: reg.type, visitNumber: reg.visitNumber || '', ltdId: reg.ltdId || '' },
         }),
       });
       const data = await res.json();
@@ -391,6 +395,27 @@ export default function LeadershipPage() {
       setFixMsg('Error fixing dates');
       setTimeout(() => setFixMsg(null), 3000);
     }
+  };
+
+  const checkSyncStatus = async () => {
+    try {
+      const res = await fetch('/api/admin/sync-attendance');
+      const data = await res.json();
+      setSyncStatus(data);
+    } catch (e) { console.error(e); }
+  };
+
+  const runSync = async () => {
+    setSyncing(true);
+    try {
+      const res = await fetch('/api/admin/sync-attendance', { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        showToast(`Synced ${data.totalUpdated} records with LTD IDs`);
+        setSyncStatus({ ...syncStatus, withoutLtdId: (syncStatus?.withoutLtdId || 0) - data.totalUpdated, withLtdId: (syncStatus?.withLtdId || 0) + data.totalUpdated });
+      }
+    } catch (e) { showToast('Sync failed'); }
+    setSyncing(false);
   };
 
   const saveLineup = async () => {
@@ -1310,8 +1335,16 @@ export default function LeadershipPage() {
               // History List
               <>
                 {isLeadership && (
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', alignItems: 'center', marginBottom: '16px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap' }}>
                     {fixMsg && <span style={{ fontSize: '11px', color: '#22c55e' }}>{fixMsg}</span>}
+                    {syncStatus && syncStatus.withoutLtdId > 0 && (
+                      <span style={{ fontSize: '10px', color: 'rgba(26,26,26,0.4)' }}>
+                        {syncStatus.withoutLtdId} records unlinked
+                      </span>
+                    )}
+                    <button onClick={runSync} disabled={syncing} style={{ padding: '8px 14px', background: syncing ? 'rgba(26,26,26,0.1)' : 'rgba(59,130,246,0.08)', color: syncing ? 'rgba(26,26,26,0.4)' : '#3b82f6', border: `1px solid ${syncing ? 'rgba(26,26,26,0.15)' : 'rgba(59,130,246,0.25)'}`, cursor: syncing ? 'not-allowed' : 'pointer', fontSize: '11px' }}>
+                      {syncing ? 'Syncing...' : 'Sync LTD IDs'}
+                    </button>
                     <button onClick={fixHistoryDates} style={{ padding: '8px 14px', background: 'transparent', color: colors.gold, border: `1px solid ${colors.gold}`, cursor: 'pointer', fontSize: '11px' }}>
                       Fix Dates
                     </button>
