@@ -267,7 +267,7 @@ export default function LeadershipPage() {
   const fetchAll = async () => {
     setLoading(true);
     const fetches = [fetchRegs(), fetchHistory(), fetchLineups(), fetchExpenses()];
-    if (accessLevel === 'admin') fetches.push(fetchUserAccess());
+    if (accessLevel === 'leadership') fetches.push(fetchUserAccess());
     await Promise.all(fetches);
     setLoading(false);
   };
@@ -609,16 +609,21 @@ export default function LeadershipPage() {
   // Revenue from Stripe paid registrations
   const totalRevenue = regs.filter(r => r.type === 'ibo' && r.amount > 0).reduce((sum, r) => sum + r.amount, 0);
 
-  const isAdmin = accessLevel === 'admin';
-  const canEdit = accessLevel === 'admin' || accessLevel === 'editor';
+  // Access level permissions:
+  // leadership — Full access: check-in, lineups, finances, history, user management
+  // admin — Can check in and view check-in history only. No finances, user management, or lineup
+  // viewer — Read-only access to all data
+  const isLeadership = accessLevel === 'leadership';
+  const canCheckIn = accessLevel === 'leadership' || accessLevel === 'admin';
+  const canViewAll = accessLevel === 'leadership' || accessLevel === 'viewer';
 
   const tabs = [
     { id: 'overview', label: 'Overview' },
     { id: 'checkin', label: 'Check-In' },
-    { id: 'lineups', label: 'Lineups' },
-    { id: 'finances', label: 'Finances' },
+    ...(canViewAll ? [{ id: 'lineups', label: 'Lineups' }] : []),
+    ...(canViewAll ? [{ id: 'finances', label: 'Finances' }] : []),
     { id: 'history', label: 'History' },
-    ...(isAdmin ? [{ id: 'users', label: 'Users' }] : []),
+    ...(isLeadership ? [{ id: 'users', label: 'Users' }] : []),
   ];
 
   const handleLogout = async () => {
@@ -780,13 +785,15 @@ export default function LeadershipPage() {
           // ═══════════════ OVERVIEW TAB ═══════════════
           tab === 'overview' ? (
             <>
-              {/* Financial Summary */}
+              {/* Summary Cards — admin only sees registrations count, leadership & viewer see finances too */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '14px', marginBottom: '28px' }}>
                 {[
                   { l: 'This Week', v: stats.total, c: colors.dark, sub: 'registrations' },
-                  { l: 'Revenue', v: `$${totalRevenue.toFixed(2)}`, c: '#22c55e', sub: 'this period' },
-                  { l: 'Expenses', v: `$${totalExpenses.toFixed(2)}`, c: '#ef4444', sub: 'total' },
-                  { l: 'Net', v: `$${(totalRevenue - totalExpenses).toFixed(2)}`, c: (totalRevenue - totalExpenses) >= 0 ? '#22c55e' : '#ef4444', sub: 'revenue - expenses' },
+                  ...(canViewAll ? [
+                    { l: 'Revenue', v: `$${totalRevenue.toFixed(2)}`, c: '#22c55e', sub: 'this period' },
+                    { l: 'Expenses', v: `$${totalExpenses.toFixed(2)}`, c: '#ef4444', sub: 'total' },
+                    { l: 'Net', v: `$${(totalRevenue - totalExpenses).toFixed(2)}`, c: (totalRevenue - totalExpenses) >= 0 ? '#22c55e' : '#ef4444', sub: 'revenue - expenses' },
+                  ] : []),
                 ].map((s, i) => (
                   <div key={i} style={{ padding: '18px', background: 'white', border: '1px solid rgba(26,26,26,0.1)', textAlign: 'center' }}>
                     <p style={{ fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.5)', marginBottom: '4px' }}>{s.l}</p>
@@ -797,7 +804,7 @@ export default function LeadershipPage() {
               </div>
 
               {/* Quick Stats */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px', marginBottom: '24px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: canViewAll ? 'repeat(auto-fit, minmax(280px, 1fr))' : '1fr', gap: '14px', marginBottom: '24px' }}>
                 {/* Check-in Status */}
                 <div style={{ background: 'white', border: '1px solid rgba(26,26,26,0.1)', padding: '20px' }}>
                   <p style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.4)', marginBottom: '14px' }}>Check-In Status</p>
@@ -817,24 +824,26 @@ export default function LeadershipPage() {
                   </div>
                 </div>
 
-                {/* Upcoming Lineup */}
-                <div style={{ background: 'white', border: '1px solid rgba(26,26,26,0.1)', padding: '20px' }}>
-                  <p style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.4)', marginBottom: '14px' }}>Next Lineup</p>
-                  {lineups.length > 0 ? (
-                    <div>
-                      <p style={{ fontSize: '14px', fontWeight: 500, color: colors.dark, marginBottom: '8px' }}>{formatDateShort(lineups[0].date)}</p>
-                      {(lineups[0].segments || []).slice(0, 4).map((seg, i) => (
-                        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '3px' }}>
-                          <span style={{ color: 'rgba(26,26,26,0.5)' }}>{seg.label}</span>
-                          <span style={{ color: colors.dark, fontWeight: 500 }}>{seg.speaker || 'TBD'}</span>
-                        </div>
-                      ))}
-                      {lineups[0].segments?.length > 4 && <p style={{ fontSize: '11px', color: 'rgba(26,26,26,0.3)', marginTop: '4px' }}>+{lineups[0].segments.length - 4} more</p>}
-                    </div>
-                  ) : (
-                    <p style={{ fontSize: '13px', color: 'rgba(26,26,26,0.4)' }}>No lineups created yet</p>
-                  )}
-                </div>
+                {/* Upcoming Lineup — only for leadership & viewer */}
+                {canViewAll && (
+                  <div style={{ background: 'white', border: '1px solid rgba(26,26,26,0.1)', padding: '20px' }}>
+                    <p style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.4)', marginBottom: '14px' }}>Next Lineup</p>
+                    {lineups.length > 0 ? (
+                      <div>
+                        <p style={{ fontSize: '14px', fontWeight: 500, color: colors.dark, marginBottom: '8px' }}>{formatDateShort(lineups[0].date)}</p>
+                        {(lineups[0].segments || []).slice(0, 4).map((seg, i) => (
+                          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '3px' }}>
+                            <span style={{ color: 'rgba(26,26,26,0.5)' }}>{seg.label}</span>
+                            <span style={{ color: colors.dark, fontWeight: 500 }}>{seg.speaker || 'TBD'}</span>
+                          </div>
+                        ))}
+                        {lineups[0].segments?.length > 4 && <p style={{ fontSize: '11px', color: 'rgba(26,26,26,0.3)', marginTop: '4px' }}>+{lineups[0].segments.length - 4} more</p>}
+                      </div>
+                    ) : (
+                      <p style={{ fontSize: '13px', color: 'rgba(26,26,26,0.4)' }}>No lineups created yet</p>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Recent Meetings */}
@@ -912,27 +921,33 @@ export default function LeadershipPage() {
                             <p style={{ fontSize: '11px', color: 'rgba(26,26,26,0.5)', margin: 0 }}>{reg.ltdId || reg.email?.split('@')[0]}</p>
                           </div>
                           <div style={{ padding: '3px 8px', background: badge.bg, fontSize: '9px', fontWeight: 600, color: badge.color, textTransform: 'uppercase', whiteSpace: 'nowrap', flexShrink: 0 }}>{badge.label}</div>
-                          {reg.checkedIn ? (
-                            <button onClick={() => updateStatus(reg, 'checkout')} disabled={isUpdating}
-                              style={{ padding: '6px 12px', background: '#22c55e', border: '1px solid #22c55e', color: 'white', fontSize: '10px', fontWeight: 600, cursor: 'pointer', opacity: isUpdating ? 0.5 : 1, display: 'flex', alignItems: 'center', gap: '4px', textTransform: 'uppercase', flexShrink: 0 }}>
-                              <Icons.Check style={{ width: '12px', height: '12px' }} />Arrived
-                            </button>
-                          ) : reg.noShow ? (
-                            <button onClick={() => updateStatus(reg, 'clear_noshow')} disabled={isUpdating}
-                              style={{ padding: '6px 12px', background: '#ef4444', border: '1px solid #ef4444', color: 'white', fontSize: '10px', fontWeight: 600, cursor: 'pointer', opacity: isUpdating ? 0.5 : 1, textTransform: 'uppercase', flexShrink: 0 }}>
-                              No Show
-                            </button>
+                          {canCheckIn ? (
+                            reg.checkedIn ? (
+                              <button onClick={() => updateStatus(reg, 'checkout')} disabled={isUpdating}
+                                style={{ padding: '6px 12px', background: '#22c55e', border: '1px solid #22c55e', color: 'white', fontSize: '10px', fontWeight: 600, cursor: 'pointer', opacity: isUpdating ? 0.5 : 1, display: 'flex', alignItems: 'center', gap: '4px', textTransform: 'uppercase', flexShrink: 0 }}>
+                                <Icons.Check style={{ width: '12px', height: '12px' }} />Arrived
+                              </button>
+                            ) : reg.noShow ? (
+                              <button onClick={() => updateStatus(reg, 'clear_noshow')} disabled={isUpdating}
+                                style={{ padding: '6px 12px', background: '#ef4444', border: '1px solid #ef4444', color: 'white', fontSize: '10px', fontWeight: 600, cursor: 'pointer', opacity: isUpdating ? 0.5 : 1, textTransform: 'uppercase', flexShrink: 0 }}>
+                                No Show
+                              </button>
+                            ) : (
+                              <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
+                                <button onClick={() => updateStatus(reg, 'checkin')} disabled={isUpdating}
+                                  style={{ padding: '6px 10px', background: 'transparent', border: '1px solid rgba(26,26,26,0.3)', color: colors.dark, fontSize: '10px', fontWeight: 600, cursor: 'pointer', opacity: isUpdating ? 0.5 : 1, textTransform: 'uppercase' }}>
+                                  In
+                                </button>
+                                <button onClick={() => updateStatus(reg, 'noshow')} disabled={isUpdating}
+                                  style={{ padding: '6px 8px', background: 'transparent', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444', fontSize: '10px', fontWeight: 600, cursor: 'pointer', opacity: isUpdating ? 0.5 : 1, textTransform: 'uppercase' }}>
+                                  NS
+                                </button>
+                              </div>
+                            )
                           ) : (
-                            <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
-                              <button onClick={() => updateStatus(reg, 'checkin')} disabled={isUpdating}
-                                style={{ padding: '6px 10px', background: 'transparent', border: '1px solid rgba(26,26,26,0.3)', color: colors.dark, fontSize: '10px', fontWeight: 600, cursor: 'pointer', opacity: isUpdating ? 0.5 : 1, textTransform: 'uppercase' }}>
-                                In
-                              </button>
-                              <button onClick={() => updateStatus(reg, 'noshow')} disabled={isUpdating}
-                                style={{ padding: '6px 8px', background: 'transparent', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444', fontSize: '10px', fontWeight: 600, cursor: 'pointer', opacity: isUpdating ? 0.5 : 1, textTransform: 'uppercase' }}>
-                                NS
-                              </button>
-                            </div>
+                            <span style={{ padding: '4px 8px', fontSize: '9px', textTransform: 'uppercase', fontWeight: 600, flexShrink: 0, color: reg.checkedIn ? '#22c55e' : reg.noShow ? '#ef4444' : 'rgba(26,26,26,0.4)', background: reg.checkedIn ? 'rgba(34,197,94,0.08)' : reg.noShow ? 'rgba(239,68,68,0.08)' : 'rgba(26,26,26,0.05)' }}>
+                              {reg.checkedIn ? 'Arrived' : reg.noShow ? 'No Show' : 'Pending'}
+                            </span>
                           )}
                         </div>
                       </div>
@@ -1053,9 +1068,11 @@ export default function LeadershipPage() {
               <>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                   <h2 style={{ fontSize: '18px', color: colors.dark, margin: 0, fontWeight: 500 }}>Meeting Lineups</h2>
-                  <button onClick={() => openLineupEditor()} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px', background: colors.dark, color: colors.bg, border: 'none', cursor: 'pointer', fontSize: '12px' }}>
-                    <Icons.Plus style={{ width: '14px', height: '14px' }} /> New Lineup
-                  </button>
+                  {isLeadership && (
+                    <button onClick={() => openLineupEditor()} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px', background: colors.dark, color: colors.bg, border: 'none', cursor: 'pointer', fontSize: '12px' }}>
+                      <Icons.Plus style={{ width: '14px', height: '14px' }} /> New Lineup
+                    </button>
+                  )}
                 </div>
 
                 {lineups.length === 0 ? (
@@ -1075,7 +1092,7 @@ export default function LeadershipPage() {
                           </div>
                           <div style={{ display: 'flex', gap: '6px' }}>
                             <button onClick={() => shareLineup(lineup.date)} style={{ padding: '6px 10px', background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.25)', color: '#3b82f6', fontSize: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}><Icons.Share style={{ width: '12px', height: '12px' }} /> Share</button>
-                            <button onClick={() => openLineupEditor(lineup)} style={{ padding: '6px 10px', background: 'rgba(26,26,26,0.05)', border: '1px solid rgba(26,26,26,0.15)', color: colors.dark, fontSize: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}><Icons.Edit style={{ width: '12px', height: '12px' }} /> Edit</button>
+                            {isLeadership && <button onClick={() => openLineupEditor(lineup)} style={{ padding: '6px 10px', background: 'rgba(26,26,26,0.05)', border: '1px solid rgba(26,26,26,0.15)', color: colors.dark, fontSize: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}><Icons.Edit style={{ width: '12px', height: '12px' }} /> Edit</button>}
                             <button onClick={() => deleteLineup(lineup.date)} style={{ padding: '6px 10px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: '#ef4444', fontSize: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}><Icons.Trash style={{ width: '12px', height: '12px' }} /> Delete</button>
                           </div>
                         </div>
@@ -1134,9 +1151,11 @@ export default function LeadershipPage() {
               {/* Expenses List */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                 <p style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.4)', margin: 0 }}>Expenses</p>
-                <button onClick={openAddExpense} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', background: colors.dark, color: colors.bg, border: 'none', cursor: 'pointer', fontSize: '11px' }}>
-                  <Icons.Plus style={{ width: '12px', height: '12px' }} /> Add Expense
-                </button>
+                {isLeadership && (
+                  <button onClick={openAddExpense} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', background: colors.dark, color: colors.bg, border: 'none', cursor: 'pointer', fontSize: '11px' }}>
+                    <Icons.Plus style={{ width: '12px', height: '12px' }} /> Add Expense
+                  </button>
+                )}
               </div>
 
               {expenses.length === 0 ? (
@@ -1161,14 +1180,16 @@ export default function LeadershipPage() {
                         </div>
                       </div>
                       <p style={{ fontSize: '16px', fontWeight: 600, color: '#ef4444', margin: 0, whiteSpace: 'nowrap' }}>${parseFloat(exp.amount).toFixed(2)}</p>
-                      <div style={{ display: 'flex', gap: '2px', flexShrink: 0 }}>
-                        <button onClick={() => openEditExpense(exp)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}>
-                          <Icons.Edit style={{ width: '14px', height: '14px', color: 'rgba(26,26,26,0.3)' }} />
-                        </button>
-                        <button onClick={() => deleteExpense(exp.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}>
-                          <Icons.Trash style={{ width: '14px', height: '14px', color: 'rgba(26,26,26,0.3)' }} />
-                        </button>
-                      </div>
+                      {isLeadership && (
+                        <div style={{ display: 'flex', gap: '2px', flexShrink: 0 }}>
+                          <button onClick={() => openEditExpense(exp)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}>
+                            <Icons.Edit style={{ width: '14px', height: '14px', color: 'rgba(26,26,26,0.3)' }} />
+                          </button>
+                          <button onClick={() => deleteExpense(exp.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}>
+                            <Icons.Trash style={{ width: '14px', height: '14px', color: 'rgba(26,26,26,0.3)' }} />
+                          </button>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -1198,14 +1219,16 @@ export default function LeadershipPage() {
                   <button onClick={() => setSelectedDate(null)} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '13px', color: 'rgba(26,26,26,0.5)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0' }}>
                     <Icons.Back style={{ width: '16px', height: '16px' }} /> All Meetings
                   </button>
-                  <div style={{ display: 'flex', gap: '6px' }}>
-                    <button onClick={() => setShowAddAttendee(true)} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 12px', background: colors.dark, color: colors.bg, border: 'none', cursor: 'pointer', fontSize: '11px' }}>
-                      <Icons.Plus style={{ width: '12px', height: '12px' }} /> Add Person
-                    </button>
-                    <button onClick={() => deleteMeeting(selectedDate)} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 12px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: '#ef4444', cursor: 'pointer', fontSize: '11px' }}>
-                      <Icons.Trash style={{ width: '12px', height: '12px' }} /> Delete Meeting
-                    </button>
-                  </div>
+                  {isLeadership && (
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      <button onClick={() => setShowAddAttendee(true)} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 12px', background: colors.dark, color: colors.bg, border: 'none', cursor: 'pointer', fontSize: '11px' }}>
+                        <Icons.Plus style={{ width: '12px', height: '12px' }} /> Add Person
+                      </button>
+                      <button onClick={() => deleteMeeting(selectedDate)} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 12px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: '#ef4444', cursor: 'pointer', fontSize: '11px' }}>
+                        <Icons.Trash style={{ width: '12px', height: '12px' }} /> Delete Meeting
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 <div style={{ marginBottom: '20px' }}>
@@ -1272,9 +1295,11 @@ export default function LeadershipPage() {
                           {c.visitNumber && <span style={{ fontSize: '10px', fontWeight: 600, color: '#3b82f6', padding: '2px 6px', background: 'rgba(59,130,246,0.1)' }}>{c.visitNumber}</span>}
                           {c.priceType === 'monthly' && c.type === 'ibo' && <span style={{ fontSize: '10px', fontWeight: 600, color: colors.gold, padding: '2px 6px', background: 'rgba(184,149,107,0.15)' }}>Monthly</span>}
                           {c.manual && <span style={{ fontSize: '9px', color: 'rgba(26,26,26,0.3)', padding: '2px 6px', background: 'rgba(26,26,26,0.04)' }}>Manual</span>}
-                          <button onClick={() => removeAttendee(c.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px' }}>
-                            <Icons.X style={{ width: '14px', height: '14px', color: 'rgba(26,26,26,0.3)' }} />
-                          </button>
+                          {isLeadership && (
+                            <button onClick={() => removeAttendee(c.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px' }}>
+                              <Icons.X style={{ width: '14px', height: '14px', color: 'rgba(26,26,26,0.3)' }} />
+                            </button>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -1284,12 +1309,14 @@ export default function LeadershipPage() {
             ) : (
               // History List
               <>
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', alignItems: 'center', marginBottom: '16px' }}>
-                  {fixMsg && <span style={{ fontSize: '11px', color: '#22c55e' }}>{fixMsg}</span>}
-                  <button onClick={fixHistoryDates} style={{ padding: '8px 14px', background: 'transparent', color: colors.gold, border: `1px solid ${colors.gold}`, cursor: 'pointer', fontSize: '11px' }}>
-                    Fix Dates
-                  </button>
-                </div>
+                {isLeadership && (
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', alignItems: 'center', marginBottom: '16px' }}>
+                    {fixMsg && <span style={{ fontSize: '11px', color: '#22c55e' }}>{fixMsg}</span>}
+                    <button onClick={fixHistoryDates} style={{ padding: '8px 14px', background: 'transparent', color: colors.gold, border: `1px solid ${colors.gold}`, cursor: 'pointer', fontSize: '11px' }}>
+                      Fix Dates
+                    </button>
+                  </div>
+                )}
                 {history.length > 0 && (
                   <div style={{ background: 'white', border: '1px solid rgba(26,26,26,0.1)', padding: '20px', marginBottom: '24px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
@@ -1367,7 +1394,7 @@ export default function LeadershipPage() {
               </>
             )
           // ═══════════════ USERS TAB ═══════════════
-          ) : tab === 'users' && isAdmin ? (
+          ) : tab === 'users' && isLeadership ? (
             <>
               <h2 style={{ fontSize: '18px', color: colors.dark, margin: '0 0 16px', fontWeight: 500 }}>User Access Management</h2>
               <p style={{ fontSize: '13px', color: 'rgba(26,26,26,0.5)', marginBottom: '20px' }}>
@@ -1391,8 +1418,8 @@ export default function LeadershipPage() {
                           disabled={updatingAccess === a.ltdId}
                           style={{ padding: '6px 8px', border: '1px solid rgba(26,26,26,0.15)', fontSize: '11px', background: 'white', color: colors.dark, cursor: 'pointer' }}
                         >
+                          <option value="leadership">Leadership</option>
                           <option value="admin">Admin</option>
-                          <option value="editor">Editor</option>
                           <option value="viewer">Viewer</option>
                         </select>
                         <button
@@ -1431,7 +1458,7 @@ export default function LeadershipPage() {
                     })
                     .map(p => {
                       const hasAccess = p.role === 'admin' || accessList.some(a => a.ltdId === p.ltd_id);
-                      const currentAccess = p.role === 'admin' ? 'admin (built-in)' : accessList.find(a => a.ltdId === p.ltd_id)?.level || null;
+                      const currentAccess = p.role === 'admin' ? 'leadership (built-in)' : accessList.find(a => a.ltdId === p.ltd_id)?.level || null;
                       return (
                         <div key={p.id} style={{ display: 'flex', alignItems: 'center', padding: '10px 14px', background: 'white', border: '1px solid rgba(26,26,26,0.08)', gap: '10px' }}>
                           <div style={{ flex: 1, minWidth: 0 }}>
@@ -1447,7 +1474,7 @@ export default function LeadershipPage() {
                             </span>
                           ) : (
                             <div style={{ display: 'flex', gap: '4px' }}>
-                              {['admin', 'editor', 'viewer'].map(level => (
+                              {['leadership', 'admin', 'viewer'].map(level => (
                                 <button
                                   key={level}
                                   onClick={() => grantAccess(p, level)}
@@ -1474,9 +1501,10 @@ export default function LeadershipPage() {
                 <div style={{ marginTop: '20px', padding: '14px', background: 'rgba(26,26,26,0.02)', border: '1px solid rgba(26,26,26,0.06)' }}>
                   <p style={{ fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.35)', marginBottom: '8px' }}>Access Levels</p>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '12px', color: 'rgba(26,26,26,0.5)' }}>
-                    <p style={{ margin: 0 }}><strong style={{ color: colors.dark }}>Admin</strong> — Full access: check-in, lineups, finances, history, user management</p>
-                    <p style={{ margin: 0 }}><strong style={{ color: colors.dark }}>Editor</strong> — Can check in, manage lineups and history. No finances or user management</p>
+                    <p style={{ margin: 0 }}><strong style={{ color: colors.dark }}>Leadership</strong> — Full access: check-in, lineups, finances, history, user management</p>
+                    <p style={{ margin: 0 }}><strong style={{ color: colors.dark }}>Admin</strong> — Can check in and view check-in history. No finances, user management, or lineup</p>
                     <p style={{ margin: 0 }}><strong style={{ color: colors.dark }}>Viewer</strong> — Read-only access to all data</p>
+                    <p style={{ margin: 0, marginTop: '4px', fontStyle: 'italic', fontSize: '11px' }}>Members without any granted access level cannot see the leadership portal.</p>
                   </div>
                 </div>
               </div>

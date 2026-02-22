@@ -2,8 +2,12 @@ import { kv } from '@vercel/kv';
 import { createClient } from '@/app/lib/supabase/server';
 import { NextResponse } from 'next/server';
 
-// Access levels: 'admin' (full), 'editor' (check-in, lineups), 'viewer' (read only)
-const VALID_LEVELS = ['admin', 'editor', 'viewer'];
+// Access levels:
+// 'leadership' — Full access: check-in, lineups, finances, history, user management
+// 'admin' — Can check in and view check-in history. No finances, user management, or lineup
+// 'viewer' — Read-only access to all data
+// 'member' — No access to admin dashboard or leadership portals (not stored in KV, just means no entry)
+const VALID_LEVELS = ['leadership', 'admin', 'viewer'];
 
 // GET - Check current user's access OR list all access entries (admin only)
 export async function GET(request) {
@@ -25,9 +29,9 @@ export async function GET(request) {
 
     // Check own access
     if (action === 'check') {
-      // Admins always have access
+      // Admins always have full leadership access
       if (profile.role === 'admin') {
-        return NextResponse.json({ hasAccess: true, level: 'admin', profile });
+        return NextResponse.json({ hasAccess: true, level: 'leadership', profile });
       }
 
       // Check KV for granted access
