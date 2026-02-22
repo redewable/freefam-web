@@ -21,6 +21,8 @@ const Icons = {
   Calendar: ({ style }) => <svg style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>,
   Check: ({ style }) => <svg style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 6L9 17l-5-5" /></svg>,
   Home: ({ style }) => <svg style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" /><path d="M9 22V12h6v10" /></svg>,
+  Search: ({ style }) => <svg style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" /></svg>,
+  XCircle: ({ style }) => <svg style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="12" cy="12" r="10" /><path d="M15 9l-6 6M9 9l6 6" /></svg>,
 };
 
 const typeIcons = { document: Icons.File, media: Icons.Music, video: Icons.Video, tool: Icons.Tool };
@@ -383,6 +385,7 @@ export default function ResourcesDashboard() {
   const [resources, setResources] = useState([]);
   const [activity, setActivity] = useState([]);
   const [filterType, setFilterType] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [inviteOpen, setInviteOpen] = useState(false);
 
@@ -450,7 +453,24 @@ export default function ResourcesDashboard() {
     { id: 'activity', label: 'Activity', icon: Icons.Clock },
   ];
 
-  const filteredResources = filterType === 'all' ? resources : resources.filter(r => r.type === filterType);
+  // Flexible search: split query into words, match against title, description, category, type
+  const searchTerms = searchQuery.toLowerCase().trim().split(/\s+/).filter(Boolean);
+  const matchesSearch = (r) => {
+    if (searchTerms.length === 0) return true;
+    const haystack = `${r.title || ''} ${r.description || ''} ${r.category || ''} ${r.type || ''}`.toLowerCase();
+    return searchTerms.every(term => haystack.includes(term));
+  };
+
+  // Built-in shared docs that live outside the DB
+  const sharedDocs = [
+    { id: '_booklist', title: 'First Year Book List', description: '13 essential reads for your journey', type: 'document', category: 'Shared Documents', url: '/resources/books', isSharedDoc: true },
+  ];
+
+  const allItems = [...sharedDocs, ...resources];
+  const filteredResources = allItems
+    .filter(r => filterType === 'all' || r.type === filterType)
+    .filter(matchesSearch);
+
   const grouped = {};
   filteredResources.forEach(r => {
     const cat = r.category || 'General';
@@ -524,7 +544,7 @@ export default function ResourcesDashboard() {
         {/* LIBRARY TAB */}
         {tab === 'library' && (
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
               <h1 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: '28px', color: colors.dark, fontWeight: 400, margin: 0 }}>Resource Library</h1>
               <div style={{ display: 'flex', gap: '6px' }}>
                 {[{ id: 'all', label: 'All' }, { id: 'document', label: 'Docs' }, { id: 'media', label: 'Media' }, { id: 'video', label: 'Video' }, { id: 'tool', label: 'Tools' }].map(f => (
@@ -545,24 +565,29 @@ export default function ResourcesDashboard() {
               </div>
             </div>
 
-            {/* Shared Documents - only show under Docs filter */}
-            {(filterType === 'document') && (
-              <div style={{ marginBottom: '32px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                  <p style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: colors.gold, margin: 0, fontWeight: 600 }}>Shared Documents</p>
-                  <div style={{ flex: 1, height: '1px', background: 'rgba(184,149,107,0.2)' }} />
-                </div>
-                <a href="/resources/books" style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px 20px', background: 'white', border: '1px solid rgba(26,26,26,0.08)', textDecoration: 'none', cursor: 'pointer' }}>
-                  <div style={{ width: '40px', height: '40px', background: 'rgba(184,149,107,0.1)', border: '1px solid rgba(184,149,107,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <Icons.Book style={{ width: '18px', height: '18px', color: colors.gold }} />
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <p style={{ fontSize: '15px', fontWeight: 500, color: colors.dark, margin: '0 0 3px' }}>First Year Book List</p>
-                    <p style={{ fontSize: '13px', color: 'rgba(26,26,26,0.45)', margin: 0 }}>13 essential reads for your journey</p>
-                  </div>
-                </a>
-              </div>
-            )}
+            {/* Search */}
+            <div style={{ position: 'relative', marginBottom: '24px' }}>
+              <Icons.Search style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', width: '15px', height: '15px', color: 'rgba(26,26,26,0.3)', pointerEvents: 'none' }} />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search resources..."
+                style={{
+                  width: '100%', padding: '12px 40px 12px 40px', background: 'white',
+                  border: '1px solid rgba(26,26,26,0.1)', outline: 'none',
+                  color: colors.dark, fontSize: '14px', boxSizing: 'border-box',
+                }}
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px', display: 'flex' }}
+                >
+                  <Icons.XCircle style={{ width: '16px', height: '16px', color: 'rgba(26,26,26,0.3)' }} />
+                </button>
+              )}
+            </div>
 
             {filteredResources.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '40px 20px' }}>
@@ -577,15 +602,18 @@ export default function ResourcesDashboard() {
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     {items.map(resource => {
-                      const tc = typeColors[resource.type] || typeColors.document;
-                      const TypeIcon = typeIcons[resource.type] || Icons.File;
+                      const tc = resource.isSharedDoc
+                        ? { bg: 'rgba(184,149,107,0.1)', border: 'rgba(184,149,107,0.2)', color: colors.gold }
+                        : (typeColors[resource.type] || typeColors.document);
+                      const TypeIcon = resource.isSharedDoc ? Icons.Book : (typeIcons[resource.type] || Icons.File);
+                      const isInternal = resource.isSharedDoc || (resource.url && resource.url.startsWith('/'));
                       return (
                         <a
                           key={resource.id}
                           href={resource.url || '#'}
-                          target={resource.url ? '_blank' : undefined}
-                          rel="noopener noreferrer"
-                          onClick={() => logResourceView(resource.id)}
+                          target={isInternal ? undefined : '_blank'}
+                          rel={isInternal ? undefined : 'noopener noreferrer'}
+                          onClick={() => { if (!resource.isSharedDoc) logResourceView(resource.id); }}
                           style={{
                             display: 'flex', alignItems: 'center', gap: '16px',
                             padding: '16px 20px', background: 'white',
@@ -600,7 +628,7 @@ export default function ResourcesDashboard() {
                             <p style={{ fontSize: '15px', fontWeight: 500, color: colors.dark, margin: '0 0 3px' }}>{resource.title}</p>
                             {resource.description && <p style={{ fontSize: '13px', color: 'rgba(26,26,26,0.45)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{resource.description}</p>}
                           </div>
-                          {resource.url && <Icons.ExternalLink style={{ width: '14px', height: '14px', color: 'rgba(26,26,26,0.2)', flexShrink: 0 }} />}
+                          {resource.url && !isInternal && <Icons.ExternalLink style={{ width: '14px', height: '14px', color: 'rgba(26,26,26,0.2)', flexShrink: 0 }} />}
                         </a>
                       );
                     })}
