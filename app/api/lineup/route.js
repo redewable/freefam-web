@@ -2,6 +2,20 @@ import { kv } from '@vercel/kv';
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 
+// Normalize segment labels (e.g. strip "/ Book of the Month" from BSM)
+const normalizeSegments = (lineup) => {
+  if (!lineup || !lineup.segments) return lineup;
+  return {
+    ...lineup,
+    segments: lineup.segments.map(seg => {
+      if (seg.key === 'bsm' && seg.label && seg.label.toLowerCase().includes('book of the month')) {
+        return { ...seg, label: 'BSM' };
+      }
+      return seg;
+    }),
+  };
+};
+
 // GET - Fetch lineups (all or by date)
 export async function GET(request) {
   try {
@@ -16,13 +30,13 @@ export async function GET(request) {
         return NextResponse.json({ error: 'Lineup not found' }, { status: 404 });
       }
       const lineup = await kv.get(`lineup:${shareData.date}`);
-      return NextResponse.json({ lineup: lineup || null, date: shareData.date });
+      return NextResponse.json({ lineup: normalizeSegments(lineup) || null, date: shareData.date });
     }
 
     // If specific date requested
     if (date) {
       const lineup = await kv.get(`lineup:${date}`);
-      return NextResponse.json({ lineup: lineup || null, date });
+      return NextResponse.json({ lineup: normalizeSegments(lineup) || null, date });
     }
 
     // Get all lineup dates
@@ -39,7 +53,7 @@ export async function GET(request) {
     const lineups = [];
     for (const d of dates) {
       const lineup = await kv.get(`lineup:${d}`);
-      if (lineup) lineups.push({ date: d, ...lineup });
+      if (lineup) lineups.push({ date: d, ...normalizeSegments(lineup) });
     }
 
     return NextResponse.json({ lineups });
@@ -59,9 +73,17 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Date required' }, { status: 400 });
     }
 
+    // Normalize BSM label on save
+    const cleanSegments = (segments || []).map(seg => {
+      if (seg.key === 'bsm' && seg.label && seg.label.toLowerCase().includes('book of the month')) {
+        return { ...seg, label: 'BSM' };
+      }
+      return seg;
+    });
+
     const lineup = {
       date,
-      segments: segments || [],
+      segments: cleanSegments,
       topics: topics || '',
       notes: notes || '',
       updatedAt: new Date().toISOString(),
