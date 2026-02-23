@@ -119,7 +119,7 @@ const RegistrationModal = ({ isOpen, onClose, ticketType, setTicketType }) => {
     { id: 'guest', label: 'Guest', sub: 'First-time visitor', price: 'Free' },
     { id: 'apprentice', label: 'Apprentice', sub: 'First-year IBO', price: 'Free' },
     { id: 'ibo', label: 'Business Owner', sub: 'Active IBO', price: '$12' },
-    { id: 'webcast', label: 'Webcast', sub: 'Watch live via Zoom', price: '$5' },
+    { id: 'webcast', label: 'Webcast', sub: 'Watch live via Zoom', price: '$10' },
   ];
 
   const label = { fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.4)', display: 'block', marginBottom: '4px' };
@@ -206,7 +206,7 @@ const RegistrationModal = ({ isOpen, onClose, ticketType, setTicketType }) => {
                 </div>
                 <button type="submit" disabled={processing || !form.agreed || !form.signature}
                   style={{ width: '100%', padding: '14px', background: processing || !form.agreed || !form.signature ? 'rgba(26,26,26,0.2)' : colors.dark, color: processing || !form.agreed || !form.signature ? 'rgba(26,26,26,0.4)' : colors.bg, fontSize: '12px', letterSpacing: '0.1em', textTransform: 'uppercase', border: 'none', cursor: processing || !form.agreed || !form.signature ? 'not-allowed' : 'pointer', marginTop: '4px' }}>
-                  {processing ? 'Processing...' : ticketType === 'ibo' ? 'Continue — $12' : ticketType === 'webcast' ? 'Continue — $5' : 'Complete Registration'}
+                  {processing ? 'Processing...' : ticketType === 'ibo' ? 'Continue — $12' : ticketType === 'webcast' ? 'Continue — $10' : 'Complete Registration'}
                 </button>
               </div>
             </form>
