@@ -16,6 +16,9 @@ const PROSPECT_STATUSES = {
   saw_plan:    { label: 'Saw the Plan',     short: 'STP',     border: 'dashed', color: '#a855f7' },
 };
 
+const RELATIONSHIP_OPTIONS = ['Single', 'Dating', 'Engaged', 'Married', 'Divorced', 'Widowed'];
+const NEXT_STEP_OPTIONS = ['Follow Up', 'QI Meeting', 'Show the Plan', 'Second Look', 'Register', 'Grand Opening', 'Conference', 'Other'];
+
 export default function RadialTree({ tree, onNodeAction }) {
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
@@ -30,6 +33,11 @@ export default function RadialTree({ tree, onNodeAction }) {
   const [prospectName, setProspectName] = useState('');
   const [prospectStatus, setProspectStatus] = useState('looking');
   const [saving, setSaving] = useState(false);
+  // Vitals state for add modal
+  const [prospectVitals, setProspectVitals] = useState({});
+  // Editing vitals on selected prospect
+  const [editingVitals, setEditingVitals] = useState(false);
+  const [editVitalsForm, setEditVitalsForm] = useState({});
   const nodesRef = useRef([]);
 
   if (!tree || !tree.user) return null;
@@ -47,13 +55,13 @@ export default function RadialTree({ tree, onNodeAction }) {
   }, []);
 
   // CRUD helpers
-  const addProspect = async (name, parentNodeId, status) => {
+  const addProspect = async (name, parentNodeId, status, vitals) => {
     setSaving(true);
     try {
       const res = await fetch('/api/prospects', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, parentNodeId, status }),
+        body: JSON.stringify({ name, parentNodeId, status, vitals: Object.keys(vitals || {}).length > 0 ? vitals : undefined }),
       });
       const data = await res.json();
       if (data.success) {
@@ -61,6 +69,7 @@ export default function RadialTree({ tree, onNodeAction }) {
         setAddingProspect(null);
         setProspectName('');
         setProspectStatus('looking');
+        setProspectVitals({});
       }
     } catch {}
     setSaving(false);
@@ -76,7 +85,14 @@ export default function RadialTree({ tree, onNodeAction }) {
       });
       const data = await res.json();
       if (data.success) {
-        setProspects(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
+        setProspects(prev => prev.map(p => {
+          if (p.id !== id) return p;
+          const updated = { ...p };
+          if (updates.status) updated.status = updates.status;
+          if (updates.name) updated.name = updates.name;
+          if (updates.vitals) updated.vitals = { ...(p.vitals || {}), ...updates.vitals };
+          return updated;
+        }));
       }
     } catch {}
     setSaving(false);
@@ -85,31 +101,49 @@ export default function RadialTree({ tree, onNodeAction }) {
   const deleteProspect = async (id) => {
     setSaving(true);
     try {
-      const res = await fetch(`/api/prospects?id=${id}`, { method: 'DELETE' });
-      const data = await res.json();
-      if (data.success) {
-        setProspects(prev => prev.filter(p => p.id !== id));
-        setSelectedNode(null);
+      // Also delete any child prospects (recursively)
+      const toDelete = [id];
+      const findChildren = (parentId) => {
+        prospects.filter(p => p.parentNodeId === parentId).forEach(child => {
+          toDelete.push(child.id);
+          findChildren(child.id);
+        });
+      };
+      findChildren(id);
+
+      for (const delId of toDelete) {
+        await fetch(`/api/prospects?id=${delId}`, { method: 'DELETE' });
       }
+      setProspects(prev => prev.filter(p => !toDelete.includes(p.id)));
+      setSelectedNode(null);
     } catch {}
     setSaving(false);
   };
 
-  // Top-down pyramid layout — includes prospect nodes
+  // Top-down pyramid layout — includes prospect nodes (with nesting)
   const layoutTree = useCallback(() => {
     const nodes = [];
     const edges = [];
     const NODE_W = 120, NODE_H = 50, H_GAP = 20, V_GAP = 70;
     const PROSPECT_W = 100, PROSPECT_H = 40;
 
-    // Count prospect children for width calculation
-    const getProspectCount = (nodeId) => prospects.filter(p => p.parentNodeId === nodeId).length;
+    // Recursive: get subtree width including prospect chains
+    const getProspectsUnder = (nodeId) => prospects.filter(p => p.parentNodeId === nodeId);
 
     const getSubtreeWidth = (children, parentId) => {
-      const pCount = getProspectCount(parentId);
+      const pChildren = getProspectsUnder(parentId);
       const iboWidth = (!children || children.length === 0) ? 0 :
         children.reduce((sum, c) => sum + getSubtreeWidth(c.children, c.id), 0) + H_GAP * (children.length - 1);
-      const prospectWidth = pCount > 0 ? pCount * (PROSPECT_W + H_GAP) - H_GAP : 0;
+      // Prospect chains can have their own sub-prospects
+      const getProspectChainWidth = (prospectId) => {
+        const subProspects = getProspectsUnder(prospectId);
+        if (subProspects.length === 0) return PROSPECT_W;
+        const childWidths = subProspects.reduce((sum, sp) => sum + getProspectChainWidth(sp.id), 0) + H_GAP * (subProspects.length - 1);
+        return Math.max(PROSPECT_W, childWidths);
+      };
+      const prospectWidth = pChildren.length > 0
+        ? pChildren.reduce((sum, p) => sum + getProspectChainWidth(p.id), 0) + H_GAP * (pChildren.length - 1)
+        : 0;
       const totalChildren = iboWidth + (iboWidth > 0 && prospectWidth > 0 ? H_GAP : 0) + prospectWidth;
       return Math.max(NODE_W, totalChildren);
     };
@@ -128,48 +162,71 @@ export default function RadialTree({ tree, onNodeAction }) {
 
     const totalTreeWidth = getSubtreeWidth(downline, rootId);
 
-    // Place prospect nodes under a parent
-    const placeProspectNodes = (parentId, parentX, parentY, startX, availableWidth, depth, legColor) => {
-      const parentProspects = prospects.filter(p => p.parentNodeId === parentId);
-      if (parentProspects.length === 0) return;
+    // Recursively place prospect chains (prospect → sub-prospect → sub-sub-prospect...)
+    const placeProspectChain = (prospectId, parentId, px, py, availW, startX, depth, legColor) => {
+      const prospect = prospects.find(p => p.id === prospectId);
+      if (!prospect) return;
 
-      const totalNeeded = parentProspects.length * (PROSPECT_W + H_GAP) - H_GAP;
-      let cursorX = startX + (availableWidth - totalNeeded) / 2;
+      const cx = px;
+      const cy = py;
 
-      parentProspects.forEach((prospect) => {
-        const cx = cursorX + PROSPECT_W / 2;
-        const cy = parentY + V_GAP + NODE_H;
-
-        nodes.push({
-          id: prospect.id,
-          x: cx, y: cy,
-          label: prospect.name,
-          w: PROSPECT_W, h: PROSPECT_H,
-          color: PROSPECT_STATUSES[prospect.status]?.color || '#f59e0b',
-          depth,
-          isProspect: true,
-          prospectStatus: prospect.status,
-          prospectId: prospect.id,
-        });
-
-        edges.push({ from: parentId, to: prospect.id, color: legColor || 'rgba(26,26,26,0.2)', isDashed: true });
-        cursorX += PROSPECT_W + H_GAP;
+      nodes.push({
+        id: prospect.id,
+        x: cx, y: cy,
+        label: prospect.name,
+        w: PROSPECT_W, h: PROSPECT_H,
+        color: PROSPECT_STATUSES[prospect.status]?.color || '#f59e0b',
+        depth,
+        isProspect: true,
+        prospectStatus: prospect.status,
+        prospectId: prospect.id,
+        prospectData: prospect,
       });
+
+      edges.push({ from: parentId, to: prospect.id, color: legColor || 'rgba(26,26,26,0.2)', isDashed: true });
+
+      // Place child prospects under this prospect
+      const subProspects = getProspectsUnder(prospect.id);
+      if (subProspects.length > 0) {
+        const getChainW = (pid) => {
+          const subs = getProspectsUnder(pid);
+          if (subs.length === 0) return PROSPECT_W;
+          return Math.max(PROSPECT_W, subs.reduce((s, sp) => s + getChainW(sp.id), 0) + H_GAP * (subs.length - 1));
+        };
+        const totalW = subProspects.reduce((s, sp) => s + getChainW(sp.id), 0) + H_GAP * (subProspects.length - 1);
+        let cursor = cx - totalW / 2;
+
+        subProspects.forEach(sp => {
+          const spW = getChainW(sp.id);
+          const spCx = cursor + spW / 2;
+          const spCy = cy + V_GAP + PROSPECT_H;
+          placeProspectChain(sp.id, prospect.id, spCx, spCy, spW, cursor, depth + 1, legColor);
+          cursor += spW + H_GAP;
+        });
+      }
     };
 
     const placeChildren = (children, parentId, parentX, parentY, startX, availableWidth, depth, legIdx) => {
       if (depth > 8) return;
 
       const iboChildren = children || [];
-      const parentProspects = prospects.filter(p => p.parentNodeId === parentId);
-      const allItems = [...iboChildren.map(c => ({ type: 'ibo', data: c })), ...parentProspects.map(p => ({ type: 'prospect', data: p }))];
+      const parentProspects = getProspectsUnder(parentId);
 
-      if (allItems.length === 0) return;
+      if (iboChildren.length === 0 && parentProspects.length === 0) return;
 
       // Calculate widths
       const iboWidths = iboChildren.map(c => getSubtreeWidth(c.children, c.id));
       const iboTotal = iboWidths.reduce((a, b) => a + b, 0) + (iboChildren.length > 0 ? H_GAP * (iboChildren.length - 1) : 0);
-      const prospectTotal = parentProspects.length > 0 ? parentProspects.length * (PROSPECT_W + H_GAP) - H_GAP : 0;
+
+      const getChainW = (pid) => {
+        const subs = getProspectsUnder(pid);
+        if (subs.length === 0) return PROSPECT_W;
+        return Math.max(PROSPECT_W, subs.reduce((s, sp) => s + getChainW(sp.id), 0) + H_GAP * (subs.length - 1));
+      };
+      const prospectTotal = parentProspects.length > 0
+        ? parentProspects.reduce((s, p) => s + getChainW(p.id), 0) + H_GAP * (parentProspects.length - 1)
+        : 0;
+
       const gap = iboTotal > 0 && prospectTotal > 0 ? H_GAP : 0;
       const totalNeeded = iboTotal + gap + prospectTotal;
       let cursorX = startX + (availableWidth - totalNeeded) / 2;
@@ -208,26 +265,17 @@ export default function RadialTree({ tree, onNodeAction }) {
       // Place prospect nodes after IBOs
       if (gap > 0) cursorX += gap - H_GAP;
       parentProspects.forEach((prospect) => {
-        const cx = cursorX + PROSPECT_W / 2;
+        const chainW = getChainW(prospect.id);
+        const cx = cursorX + chainW / 2;
         const cy = parentY + V_GAP + NODE_H;
         const legColor = depth === 1 ? LEG_COLORS[(iboChildren.length) % LEG_COLORS.length] : LEG_COLORS[legIdx % LEG_COLORS.length];
 
-        nodes.push({
-          id: prospect.id, x: cx, y: cy,
-          label: prospect.name, w: PROSPECT_W, h: PROSPECT_H,
-          color: PROSPECT_STATUSES[prospect.status]?.color || '#f59e0b',
-          depth, isProspect: true, prospectStatus: prospect.status, prospectId: prospect.id,
-        });
-
-        edges.push({ from: parentId, to: prospect.id, color: 'rgba(26,26,26,0.15)', isDashed: true });
-        cursorX += PROSPECT_W + H_GAP;
+        placeProspectChain(prospect.id, parentId, cx, cy, chainW, cursorX, depth, legColor);
+        cursorX += chainW + H_GAP;
       });
     };
 
     placeChildren(downline, rootId, 0, 0, -totalTreeWidth / 2, totalTreeWidth, 1, 0);
-
-    // Also place prospects directly under root
-    // (already handled in placeChildren since we check parentNodeId === parentId)
 
     return { nodes, edges };
   }, [tree, downline, userName, partnerName, prospects]);
@@ -297,7 +345,6 @@ export default function RadialTree({ tree, onNodeAction }) {
       const r = 4 * scale;
 
       if (node.isProspect) {
-        // Prospect node rendering based on status
         const status = node.prospectStatus;
         const statusDef = PROSPECT_STATUSES[status] || PROSPECT_STATUSES.looking;
 
@@ -313,18 +360,14 @@ export default function RadialTree({ tree, onNodeAction }) {
         ctx.arcTo(nx - w/2, ny - h/2, nx - w/2 + r, ny - h/2, r);
         ctx.closePath();
 
-        // Fill
         ctx.fillStyle = highlight ? statusDef.color + '15' : 'rgba(255,255,255,0.7)';
         ctx.fill();
 
-        // Border based on status
         if (status === 'looking') {
-          // No border — just a very subtle background
           ctx.strokeStyle = highlight ? statusDef.color + '40' : 'transparent';
           ctx.lineWidth = 1 * scale;
           ctx.stroke();
         } else if (status === 'qi_complete') {
-          // Underline only (bottom border)
           ctx.strokeStyle = 'transparent';
           ctx.stroke();
           ctx.beginPath();
@@ -334,7 +377,6 @@ export default function RadialTree({ tree, onNodeAction }) {
           ctx.lineWidth = 2 * scale;
           ctx.stroke();
         } else if (status === 'saw_plan') {
-          // Dashed border
           ctx.setLineDash([4 * scale, 3 * scale]);
           ctx.strokeStyle = highlight ? statusDef.color : statusDef.color + '80';
           ctx.lineWidth = 1.5 * scale;
@@ -361,8 +403,22 @@ export default function RadialTree({ tree, onNodeAction }) {
         }
         ctx.fillText(label, nx + 4 * scale, ny);
 
+        // Vitals hint: small icon if has vitals
+        const pd = node.prospectData;
+        if (pd?.vitals && Object.keys(pd.vitals).length > 0 && scale > 0.5) {
+          ctx.font = `${Math.max(6, 7 * scale)}px Inter, system-ui, sans-serif`;
+          ctx.fillStyle = 'rgba(26,26,26,0.25)';
+          const hints = [];
+          if (pd.vitals.city) hints.push(pd.vitals.city);
+          if (pd.vitals.nextStep) hints.push(pd.vitals.nextStep);
+          if (hints.length > 0) {
+            const hintText = hints.join(' \u00b7 ');
+            ctx.fillText(hintText, nx + 4 * scale, ny + h/2 + 8 * scale);
+          }
+        }
+
       } else {
-        // IBO node rendering (existing)
+        // IBO node rendering
         ctx.beginPath();
         ctx.moveTo(nx - w/2 + r, ny - h/2);
         ctx.lineTo(nx + w/2 - r, ny - h/2);
@@ -455,11 +511,13 @@ export default function RadialTree({ tree, onNodeAction }) {
       if (mx >= node.screenX - node.screenW/2 && mx <= node.screenX + node.screenW/2 &&
           my >= node.screenY - node.screenH/2 && my <= node.screenY + node.screenH/2) {
         setSelectedNode(prev => prev === node.id ? null : node.id);
+        setEditingVitals(false);
         return;
       }
     }
     setSelectedNode(null);
     setAddingProspect(null);
+    setEditingVitals(false);
   };
 
   // Touch
@@ -586,14 +644,41 @@ export default function RadialTree({ tree, onNodeAction }) {
 
   const selectedInfo = selectedNode ? layoutNodes.find(n => n.id === selectedNode) : null;
 
+  // Mobile-first panel styles
+  const panelStyle = {
+    position: 'absolute', bottom: '12px', left: '12px', right: '12px',
+    background: 'white', padding: '14px 16px',
+    maxWidth: '320px', borderRadius: '6px',
+    boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+    maxHeight: '50vh', overflowY: 'auto',
+    WebkitOverflowScrolling: 'touch',
+  };
+
   const btnStyle = (bg, fg) => ({
-    padding: '6px 10px', fontSize: '11px', background: bg, color: fg,
-    border: 'none', cursor: saving ? 'wait' : 'pointer', borderRadius: '3px',
+    padding: '8px 12px', fontSize: '12px', background: bg, color: fg,
+    border: 'none', cursor: saving ? 'wait' : 'pointer', borderRadius: '4px',
     letterSpacing: '0.03em', opacity: saving ? 0.6 : 1,
+    WebkitTapHighlightColor: 'transparent',
+    minHeight: '36px',
   });
 
+  const smallInputStyle = {
+    width: '100%', padding: '8px 10px', border: '1px solid rgba(26,26,26,0.12)',
+    outline: 'none', fontSize: '14px', color: colors.dark, boxSizing: 'border-box',
+    borderRadius: '3px', background: 'white',
+    WebkitAppearance: 'none',
+  };
+
+  const vitalsLabelStyle = {
+    fontSize: '10px', letterSpacing: '0.08em', textTransform: 'uppercase',
+    color: 'rgba(26,26,26,0.4)', display: 'block', marginBottom: '3px',
+  };
+
+  // Get prospect data for selected prospect
+  const selectedProspect = selectedInfo?.isProspect ? prospects.find(p => p.id === selectedInfo.prospectId) : null;
+
   return (
-    <div ref={containerRef} style={{ position: 'relative', width: '100%', height: 'min(70vh, 600px)', minHeight: '350px', background: colors.bg, border: '1px solid rgba(26,26,26,0.08)', overflow: 'hidden', borderRadius: '4px' }}>
+    <div ref={containerRef} style={{ position: 'relative', width: '100%', height: 'min(75vh, 600px)', minHeight: '350px', background: colors.bg, border: '1px solid rgba(26,26,26,0.08)', overflow: 'hidden', borderRadius: '6px' }}>
       <canvas
         ref={canvasRef}
         onMouseDown={handleMouseDown} onMouseMove={handleMouseMove}
@@ -603,86 +688,162 @@ export default function RadialTree({ tree, onNodeAction }) {
         style={{ width: '100%', height: '100%', touchAction: 'none' }}
       />
 
-      {/* Controls */}
-      <div style={{ position: 'absolute', bottom: '12px', right: '12px', display: 'flex', gap: '4px' }}>
+      {/* Controls — mobile-friendly sizing */}
+      <div style={{ position: 'absolute', bottom: '12px', right: '12px', display: 'flex', gap: '4px', zIndex: 10 }}>
         <button onClick={handleShare} disabled={sharing} aria-label="Share tree"
-          style={{ width: '40px', height: '40px', background: sharing ? 'rgba(184,149,107,0.15)' : 'white', border: `1px solid ${sharing ? 'rgba(184,149,107,0.3)' : 'rgba(26,26,26,0.15)'}`, cursor: sharing ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '4px' }}>
+          style={{ width: '44px', height: '44px', background: sharing ? 'rgba(184,149,107,0.15)' : 'white', border: `1px solid ${sharing ? 'rgba(184,149,107,0.3)' : 'rgba(26,26,26,0.15)'}`, cursor: sharing ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '6px' }}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={sharing ? colors.gold : colors.dark} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" />
           </svg>
         </button>
         <button onClick={() => setTransform(prev => ({ ...prev, scale: Math.min(3, prev.scale * 1.2) }))} aria-label="Zoom in"
-          style={{ width: '40px', height: '40px', background: 'white', border: '1px solid rgba(26,26,26,0.15)', cursor: 'pointer', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: colors.dark, borderRadius: '4px' }}>+</button>
+          style={{ width: '44px', height: '44px', background: 'white', border: '1px solid rgba(26,26,26,0.15)', cursor: 'pointer', fontSize: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: colors.dark, borderRadius: '6px' }}>+</button>
         <button onClick={() => setTransform(prev => ({ ...prev, scale: Math.max(0.15, prev.scale * 0.8) }))} aria-label="Zoom out"
-          style={{ width: '40px', height: '40px', background: 'white', border: '1px solid rgba(26,26,26,0.15)', cursor: 'pointer', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: colors.dark, borderRadius: '4px' }}>{'\u2212'}</button>
+          style={{ width: '44px', height: '44px', background: 'white', border: '1px solid rgba(26,26,26,0.15)', cursor: 'pointer', fontSize: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: colors.dark, borderRadius: '6px' }}>{'\u2212'}</button>
         <button onClick={resetView} aria-label="Reset view"
-          style={{ height: '40px', padding: '0 12px', background: 'white', border: '1px solid rgba(26,26,26,0.15)', cursor: 'pointer', fontSize: '11px', color: 'rgba(26,26,26,0.5)', borderRadius: '4px' }}>Reset</button>
+          style={{ height: '44px', padding: '0 14px', background: 'white', border: '1px solid rgba(26,26,26,0.15)', cursor: 'pointer', fontSize: '12px', color: 'rgba(26,26,26,0.5)', borderRadius: '6px' }}>Reset</button>
       </div>
 
-      {/* Prospect Legend */}
-      <div style={{ position: 'absolute', top: '12px', left: '12px', background: 'rgba(255,255,255,0.95)', padding: '10px 14px', border: '1px solid rgba(26,26,26,0.08)', fontSize: '11px', borderRadius: '4px', maxWidth: '200px' }}>
+      {/* Prospect Legend — collapsible on mobile */}
+      <div style={{ position: 'absolute', top: '10px', left: '10px', background: 'rgba(255,255,255,0.95)', padding: '8px 12px', border: '1px solid rgba(26,26,26,0.08)', fontSize: '10px', borderRadius: '6px', maxWidth: '180px', zIndex: 5 }}>
         {downline.length > 0 && (
           <>
-            <p style={{ margin: '0 0 6px', color: 'rgba(26,26,26,0.4)', fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Legs</p>
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '10px' }}>
-              {downline.slice(0, 8).map((leg, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <div style={{ width: '8px', height: '8px', borderRadius: '2px', background: LEG_COLORS[i % LEG_COLORS.length] }} />
-                  <span style={{ color: 'rgba(26,26,26,0.5)' }}>{leg.full_name?.split(' ')[0] || `Leg ${i + 1}`}</span>
+            <p style={{ margin: '0 0 5px', color: 'rgba(26,26,26,0.4)', fontSize: '8px', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Legs</p>
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '8px' }}>
+              {downline.slice(0, 6).map((leg, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                  <div style={{ width: '7px', height: '7px', borderRadius: '2px', background: LEG_COLORS[i % LEG_COLORS.length] }} />
+                  <span style={{ color: 'rgba(26,26,26,0.5)', fontSize: '10px' }}>{leg.full_name?.split(' ')[0] || `Leg ${i + 1}`}</span>
                 </div>
               ))}
             </div>
           </>
         )}
-        <p style={{ margin: '0 0 6px', color: 'rgba(26,26,26,0.4)', fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Prospects</p>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <div style={{ width: '24px', height: '14px', background: 'rgba(245,158,11,0.08)', borderRadius: '2px' }} />
+        <p style={{ margin: '0 0 4px', color: 'rgba(26,26,26,0.4)', fontSize: '8px', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Prospects</p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+            <div style={{ width: '20px', height: '12px', background: 'rgba(245,158,11,0.08)', borderRadius: '2px' }} />
             <span style={{ color: 'rgba(26,26,26,0.5)' }}>Looking</span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <div style={{ width: '24px', height: '14px', background: 'rgba(59,130,246,0.08)', borderRadius: '2px', borderBottom: '2px solid #3b82f6' }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+            <div style={{ width: '20px', height: '12px', background: 'rgba(59,130,246,0.08)', borderRadius: '2px', borderBottom: '2px solid #3b82f6' }} />
             <span style={{ color: 'rgba(26,26,26,0.5)' }}>QI Complete</span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <div style={{ width: '24px', height: '14px', background: 'rgba(168,85,247,0.08)', borderRadius: '2px', border: '1.5px dashed #a855f7' }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+            <div style={{ width: '20px', height: '12px', background: 'rgba(168,85,247,0.08)', borderRadius: '2px', border: '1.5px dashed #a855f7' }} />
             <span style={{ color: 'rgba(26,26,26,0.5)' }}>Saw the Plan</span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <div style={{ width: '24px', height: '14px', background: 'white', borderRadius: '2px', border: '1.5px solid rgba(26,26,26,0.15)' }} />
-            <span style={{ color: 'rgba(26,26,26,0.5)' }}>IBO (Registered)</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+            <div style={{ width: '20px', height: '12px', background: 'white', borderRadius: '2px', border: '1.5px solid rgba(26,26,26,0.15)' }} />
+            <span style={{ color: 'rgba(26,26,26,0.5)' }}>IBO</span>
           </div>
         </div>
       </div>
 
       {/* Selected IBO node — actions panel */}
-      {selectedInfo && !selectedInfo.isProspect && (
-        <div style={{ position: 'absolute', bottom: '12px', left: '12px', background: 'white', padding: '12px 16px', border: `1px solid ${selectedInfo.color}40`, maxWidth: '260px', borderRadius: '4px' }}>
-          <p style={{ fontSize: '14px', fontWeight: 500, color: colors.dark, margin: '0 0 4px' }}>{selectedInfo.label}</p>
+      {selectedInfo && !selectedInfo.isProspect && !addingProspect && (
+        <div style={{ ...panelStyle, border: `1px solid ${selectedInfo.color}40` }}>
+          <p style={{ fontSize: '15px', fontWeight: 500, color: colors.dark, margin: '0 0 4px' }}>{selectedInfo.label}</p>
           {selectedInfo.ltdId && <p style={{ fontSize: '11px', color: 'rgba(26,26,26,0.4)', margin: '0 0 2px' }}>LTD #{selectedInfo.ltdId}</p>}
-          {selectedInfo.totalDescendants > 0 && <p style={{ fontSize: '11px', color: selectedInfo.color, margin: '0 0 8px' }}>{selectedInfo.totalDescendants} in leg</p>}
+          {selectedInfo.totalDescendants > 0 && <p style={{ fontSize: '11px', color: selectedInfo.color, margin: '0 0 10px' }}>{selectedInfo.totalDescendants} in leg</p>}
           <button
             onClick={() => { setAddingProspect(selectedInfo.profileId || selectedInfo.id); setSelectedNode(null); }}
-            style={{ ...btnStyle(colors.gold, 'white'), display: 'flex', alignItems: 'center', gap: '4px' }}
+            style={{ ...btnStyle(colors.gold, 'white'), display: 'flex', alignItems: 'center', gap: '6px', width: '100%', justifyContent: 'center' }}
           >
-            <span style={{ fontSize: '14px', fontWeight: 700 }}>+</span> Add Prospect
+            <span style={{ fontSize: '16px', fontWeight: 700 }}>+</span> Add Prospect
           </button>
         </div>
       )}
 
-      {/* Selected PROSPECT node — actions panel */}
-      {selectedInfo && selectedInfo.isProspect && (
-        <div style={{ position: 'absolute', bottom: '12px', left: '12px', background: 'white', padding: '12px 16px', border: `1px solid ${selectedInfo.color}40`, maxWidth: '280px', borderRadius: '4px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-            <p style={{ fontSize: '14px', fontWeight: 500, color: colors.dark, margin: 0 }}>{selectedInfo.label}</p>
+      {/* Selected PROSPECT node — detail panel with vitals */}
+      {selectedInfo && selectedInfo.isProspect && !addingProspect && (
+        <div style={{ ...panelStyle, border: `1px solid ${selectedInfo.color}40` }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+            <p style={{ fontSize: '15px', fontWeight: 500, color: colors.dark, margin: 0 }}>{selectedInfo.label}</p>
             <button onClick={() => deleteProspect(selectedInfo.prospectId)} disabled={saving}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', fontSize: '16px', padding: '2px 6px' }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', fontSize: '18px', padding: '4px 8px', minHeight: '36px' }}
               title="Delete prospect"
             >{'\u2715'}</button>
           </div>
           <p style={{ fontSize: '10px', color: 'rgba(26,26,26,0.4)', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
             Status: {PROSPECT_STATUSES[selectedInfo.prospectStatus]?.label || 'Unknown'}
           </p>
+
+          {/* Vitals display */}
+          {selectedProspect?.vitals && Object.keys(selectedProspect.vitals).length > 0 && !editingVitals && (
+            <div style={{ marginBottom: '10px', padding: '8px 10px', background: 'rgba(26,26,26,0.02)', borderRadius: '4px', border: '1px solid rgba(26,26,26,0.06)' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 12px' }}>
+                {selectedProspect.vitals.age && <VitalRow label="Age" value={selectedProspect.vitals.age} />}
+                {selectedProspect.vitals.relationship && <VitalRow label="Status" value={selectedProspect.vitals.relationship} />}
+                {selectedProspect.vitals.kids !== undefined && <VitalRow label="Kids" value={selectedProspect.vitals.kids} />}
+                {selectedProspect.vitals.city && <VitalRow label="City" value={selectedProspect.vitals.city} />}
+                {selectedProspect.vitals.occupation && <VitalRow label="Work" value={selectedProspect.vitals.occupation} />}
+              </div>
+              {selectedProspect.vitals.nextStep && (
+                <div style={{ marginTop: '6px', paddingTop: '6px', borderTop: '1px solid rgba(26,26,26,0.06)' }}>
+                  <span style={{ fontSize: '10px', color: colors.gold, fontWeight: 600 }}>Next: {selectedProspect.vitals.nextStep}</span>
+                  {selectedProspect.vitals.nextStepDate && (
+                    <span style={{ fontSize: '10px', color: 'rgba(26,26,26,0.4)', marginLeft: '8px' }}>
+                      {new Date(selectedProspect.vitals.nextStepDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Vitals edit form */}
+          {editingVitals && (
+            <div style={{ marginBottom: '10px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+                <div>
+                  <label style={vitalsLabelStyle}>Age</label>
+                  <input type="text" inputMode="numeric" value={editVitalsForm.age || ''} onChange={e => setEditVitalsForm(prev => ({...prev, age: e.target.value}))} placeholder="—" style={smallInputStyle} />
+                </div>
+                <div>
+                  <label style={vitalsLabelStyle}>Relationship</label>
+                  <select value={editVitalsForm.relationship || ''} onChange={e => setEditVitalsForm(prev => ({...prev, relationship: e.target.value}))} style={{ ...smallInputStyle, height: '36px' }}>
+                    <option value="">—</option>
+                    {RELATIONSHIP_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={vitalsLabelStyle}>Kids</label>
+                  <input type="text" inputMode="numeric" value={editVitalsForm.kids ?? ''} onChange={e => setEditVitalsForm(prev => ({...prev, kids: e.target.value}))} placeholder="0" style={smallInputStyle} />
+                </div>
+                <div>
+                  <label style={vitalsLabelStyle}>City</label>
+                  <input type="text" value={editVitalsForm.city || ''} onChange={e => setEditVitalsForm(prev => ({...prev, city: e.target.value}))} placeholder="—" style={smallInputStyle} />
+                </div>
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <label style={vitalsLabelStyle}>Occupation</label>
+                  <input type="text" value={editVitalsForm.occupation || ''} onChange={e => setEditVitalsForm(prev => ({...prev, occupation: e.target.value}))} placeholder="—" style={smallInputStyle} />
+                </div>
+                <div>
+                  <label style={vitalsLabelStyle}>Next Step</label>
+                  <select value={editVitalsForm.nextStep || ''} onChange={e => setEditVitalsForm(prev => ({...prev, nextStep: e.target.value}))} style={{ ...smallInputStyle, height: '36px' }}>
+                    <option value="">—</option>
+                    {NEXT_STEP_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={vitalsLabelStyle}>Date</label>
+                  <input type="date" value={editVitalsForm.nextStepDate || ''} onChange={e => setEditVitalsForm(prev => ({...prev, nextStepDate: e.target.value}))} style={smallInputStyle} />
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '6px' }}>
+                <button onClick={async () => {
+                  await updateProspect(selectedInfo.prospectId, { vitals: editVitalsForm });
+                  setEditingVitals(false);
+                }} disabled={saving} style={{ ...btnStyle(colors.gold, 'white'), flex: 1, textAlign: 'center' }}>
+                  {saving ? 'Saving...' : 'Save'}
+                </button>
+                <button onClick={() => setEditingVitals(false)} style={{ ...btnStyle('rgba(26,26,26,0.04)', 'rgba(26,26,26,0.5)'), flex: 1, textAlign: 'center' }}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Status change buttons */}
           <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginBottom: '8px' }}>
@@ -695,12 +856,29 @@ export default function RadialTree({ tree, onNodeAction }) {
                     selectedInfo.prospectStatus === key ? val.color : 'rgba(26,26,26,0.04)',
                     selectedInfo.prospectStatus === key ? 'white' : 'rgba(26,26,26,0.5)'
                   ),
+                  flex: 1, textAlign: 'center', minWidth: '60px',
                   opacity: selectedInfo.prospectStatus === key ? 1 : (saving ? 0.5 : 0.8),
                 }}
               >
                 {val.short}
               </button>
             ))}
+          </div>
+
+          {/* Action buttons row */}
+          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+            {/* Edit vitals */}
+            {!editingVitals && (
+              <button onClick={() => { setEditVitalsForm(selectedProspect?.vitals || {}); setEditingVitals(true); }}
+                style={{ ...btnStyle('rgba(26,26,26,0.04)', 'rgba(26,26,26,0.6)'), flex: 1, textAlign: 'center' }}>
+                {selectedProspect?.vitals && Object.keys(selectedProspect.vitals).length > 0 ? 'Edit Info' : 'Add Info'}
+              </button>
+            )}
+            {/* Add sub-prospect */}
+            <button onClick={() => { setAddingProspect(selectedInfo.prospectId); setSelectedNode(null); }}
+              style={{ ...btnStyle('rgba(26,26,26,0.04)', 'rgba(26,26,26,0.6)'), flex: 1, textAlign: 'center' }}>
+              + Prospect
+            </button>
           </div>
 
           {/* Convert to IBO */}
@@ -713,7 +891,7 @@ export default function RadialTree({ tree, onNodeAction }) {
                 navigator.clipboard.writeText(link).then(() => alert('Invite link copied!'));
               }
             }}
-            style={{ ...btnStyle(colors.dark, colors.bg), width: '100%', textAlign: 'center' }}
+            style={{ ...btnStyle(colors.dark, colors.bg), width: '100%', textAlign: 'center', marginTop: '6px' }}
           >
             Convert to IBO {'\u2192'} Send Invite
           </button>
@@ -722,7 +900,7 @@ export default function RadialTree({ tree, onNodeAction }) {
 
       {/* Add Prospect Modal */}
       {addingProspect && (
-        <div style={{ position: 'absolute', bottom: '12px', left: '12px', background: 'white', padding: '16px', border: `1px solid rgba(184,149,107,0.3)`, maxWidth: '260px', borderRadius: '4px' }}>
+        <div style={{ ...panelStyle, border: `1px solid rgba(184,149,107,0.3)` }}>
           <p style={{ fontSize: '10px', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.4)', margin: '0 0 10px' }}>New Prospect</p>
           <input
             type="text"
@@ -730,9 +908,10 @@ export default function RadialTree({ tree, onNodeAction }) {
             value={prospectName}
             onChange={(e) => setProspectName(e.target.value)}
             autoFocus
-            style={{ width: '100%', padding: '8px 10px', border: '1px solid rgba(26,26,26,0.15)', outline: 'none', fontSize: '14px', color: colors.dark, boxSizing: 'border-box', marginBottom: '8px' }}
-            onKeyDown={(e) => { if (e.key === 'Enter' && prospectName.trim()) addProspect(prospectName, addingProspect, prospectStatus); }}
+            style={{ ...smallInputStyle, marginBottom: '8px', fontSize: '16px', padding: '10px 12px' }}
+            onKeyDown={(e) => { if (e.key === 'Enter' && prospectName.trim()) addProspect(prospectName, addingProspect, prospectStatus, prospectVitals); }}
           />
+          {/* Status selector */}
           <div style={{ display: 'flex', gap: '4px', marginBottom: '10px' }}>
             {Object.entries(PROSPECT_STATUSES).map(([key, val]) => (
               <button key={key}
@@ -746,16 +925,60 @@ export default function RadialTree({ tree, onNodeAction }) {
               </button>
             ))}
           </div>
+
+          {/* Quick vitals (optional, collapsible) */}
+          <details style={{ marginBottom: '10px' }}>
+            <summary style={{ fontSize: '11px', color: 'rgba(26,26,26,0.4)', cursor: 'pointer', padding: '4px 0', userSelect: 'none' }}>
+              Add details (optional)
+            </summary>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginTop: '8px' }}>
+              <div>
+                <label style={vitalsLabelStyle}>Age</label>
+                <input type="text" inputMode="numeric" value={prospectVitals.age || ''} onChange={e => setProspectVitals(prev => ({...prev, age: e.target.value}))} style={smallInputStyle} />
+              </div>
+              <div>
+                <label style={vitalsLabelStyle}>Relationship</label>
+                <select value={prospectVitals.relationship || ''} onChange={e => setProspectVitals(prev => ({...prev, relationship: e.target.value}))} style={{ ...smallInputStyle, height: '36px' }}>
+                  <option value="">—</option>
+                  {RELATIONSHIP_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={vitalsLabelStyle}>Kids</label>
+                <input type="text" inputMode="numeric" value={prospectVitals.kids ?? ''} onChange={e => setProspectVitals(prev => ({...prev, kids: e.target.value}))} placeholder="0" style={smallInputStyle} />
+              </div>
+              <div>
+                <label style={vitalsLabelStyle}>City</label>
+                <input type="text" value={prospectVitals.city || ''} onChange={e => setProspectVitals(prev => ({...prev, city: e.target.value}))} style={smallInputStyle} />
+              </div>
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label style={vitalsLabelStyle}>Occupation</label>
+                <input type="text" value={prospectVitals.occupation || ''} onChange={e => setProspectVitals(prev => ({...prev, occupation: e.target.value}))} style={smallInputStyle} />
+              </div>
+              <div>
+                <label style={vitalsLabelStyle}>Next Step</label>
+                <select value={prospectVitals.nextStep || ''} onChange={e => setProspectVitals(prev => ({...prev, nextStep: e.target.value}))} style={{ ...smallInputStyle, height: '36px' }}>
+                  <option value="">—</option>
+                  {NEXT_STEP_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={vitalsLabelStyle}>Date</label>
+                <input type="date" value={prospectVitals.nextStepDate || ''} onChange={e => setProspectVitals(prev => ({...prev, nextStepDate: e.target.value}))} style={smallInputStyle} />
+              </div>
+            </div>
+          </details>
+
           <div style={{ display: 'flex', gap: '6px' }}>
             <button
-              onClick={() => { if (prospectName.trim()) addProspect(prospectName, addingProspect, prospectStatus); }}
+              onClick={() => { if (prospectName.trim()) addProspect(prospectName, addingProspect, prospectStatus, prospectVitals); }}
               disabled={!prospectName.trim() || saving}
               style={{ ...btnStyle(colors.gold, 'white'), flex: 1, textAlign: 'center' }}
             >
               {saving ? 'Adding...' : 'Add'}
             </button>
             <button
-              onClick={() => { setAddingProspect(null); setProspectName(''); }}
+              onClick={() => { setAddingProspect(null); setProspectName(''); setProspectVitals({}); }}
               style={{ ...btnStyle('rgba(26,26,26,0.04)', 'rgba(26,26,26,0.5)'), flex: 1, textAlign: 'center' }}
             >
               Cancel
@@ -764,10 +987,20 @@ export default function RadialTree({ tree, onNodeAction }) {
         </div>
       )}
 
-      {/* Instructions */}
-      <div style={{ position: 'absolute', top: '12px', right: '12px', fontSize: '10px', color: 'rgba(26,26,26,0.3)' }}>
-        Scroll to zoom {'\u00b7'} Drag to pan {'\u00b7'} Click node for options
-      </div>
+      {/* Instructions — hide when panel is open on mobile */}
+      {!selectedInfo && !addingProspect && (
+        <div style={{ position: 'absolute', top: '10px', right: '10px', fontSize: '10px', color: 'rgba(26,26,26,0.3)', zIndex: 5 }}>
+          Scroll to zoom {'\u00b7'} Drag to pan {'\u00b7'} Tap node
+        </div>
+      )}
     </div>
   );
 }
+
+// Small helper component for vitals display
+const VitalRow = ({ label, value }) => (
+  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '4px' }}>
+    <span style={{ fontSize: '10px', color: 'rgba(26,26,26,0.4)' }}>{label}</span>
+    <span style={{ fontSize: '11px', color: '#1a1a1a', fontWeight: 500, textAlign: 'right' }}>{value}</span>
+  </div>
+);

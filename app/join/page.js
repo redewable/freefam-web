@@ -178,7 +178,10 @@ export default function JoinPage() {
     <div style={{ minHeight: '100vh', background: colors.bg, fontFamily: 'Inter, system-ui, sans-serif', display: 'flex', flexDirection: 'column' }}>
       <style jsx global>{`
         @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;1,400&display=swap');
-        input:focus-visible { outline: 2px solid ${colors.gold} !important; outline-offset: -1px; }
+        input:focus-visible, select:focus-visible, button:focus-visible { outline: 2px solid ${colors.gold} !important; outline-offset: -1px; }
+        @media (max-width: 400px) {
+          .join-phone-email-grid { grid-template-columns: 1fr !important; }
+        }
       `}</style>
 
       <nav style={{ borderBottom: '1px solid rgba(26,26,26,0.05)', padding: '14px 20px' }}>
@@ -247,7 +250,7 @@ export default function JoinPage() {
             </div>
 
             {/* Phone + Email row */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <div className="join-phone-email-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div>
                 <label style={labelStyle}>Phone <span style={{ color: 'rgba(26,26,26,0.25)', fontStyle: 'italic', textTransform: 'none', letterSpacing: 0 }}>(optional)</span></label>
                 <input

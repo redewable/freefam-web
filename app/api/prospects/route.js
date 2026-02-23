@@ -2,9 +2,10 @@ import { kv } from '@vercel/kv';
 import { createClient } from '@/app/lib/supabase/server';
 import { NextResponse } from 'next/server';
 
-// Prospects stored in KV as: prospects:{userId} -> [{ id, name, status, parentNodeId, createdAt }]
-// parentNodeId = the profile ID of the IBO this prospect is under
+// Prospects stored in KV as: prospects:{userId} -> [{ id, name, status, parentNodeId, vitals, createdAt }]
+// parentNodeId = the profile ID of the IBO this prospect is under, OR another prospect ID (for depth)
 // status: 'looking' | 'qi_complete' | 'saw_plan'
+// vitals: { age, relationship, kids, city, occupation, nextStep, nextStepDate }
 
 async function getAuthUser() {
   const supabase = await createClient();
@@ -39,7 +40,7 @@ export async function POST(request) {
     const user = await getAuthUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { name, parentNodeId, status } = await request.json();
+    const { name, parentNodeId, status, vitals } = await request.json();
     if (!name || !name.trim()) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 });
     }
@@ -47,11 +48,24 @@ export async function POST(request) {
     const validStatuses = ['looking', 'qi_complete', 'saw_plan'];
     const cleanStatus = validStatuses.includes(status) ? status : 'looking';
 
+    // Sanitize vitals
+    const cleanVitals = {};
+    if (vitals) {
+      if (vitals.age) cleanVitals.age = String(vitals.age).trim();
+      if (vitals.relationship) cleanVitals.relationship = String(vitals.relationship).trim();
+      if (vitals.kids !== undefined && vitals.kids !== '') cleanVitals.kids = String(vitals.kids).trim();
+      if (vitals.city) cleanVitals.city = String(vitals.city).trim();
+      if (vitals.occupation) cleanVitals.occupation = String(vitals.occupation).trim();
+      if (vitals.nextStep) cleanVitals.nextStep = String(vitals.nextStep).trim();
+      if (vitals.nextStepDate) cleanVitals.nextStepDate = String(vitals.nextStepDate).trim();
+    }
+
     const prospect = {
       id: `p_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
       name: name.trim(),
       status: cleanStatus,
-      parentNodeId: parentNodeId || user.id, // default to current user
+      parentNodeId: parentNodeId || user.id, // default to current user, can also be another prospect ID
+      vitals: Object.keys(cleanVitals).length > 0 ? cleanVitals : undefined,
       createdAt: new Date().toISOString(),
     };
 
@@ -71,7 +85,7 @@ export async function PATCH(request) {
     const user = await getAuthUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { id, name, status } = await request.json();
+    const { id, name, status, vitals } = await request.json();
     if (!id) return NextResponse.json({ error: 'Prospect ID required' }, { status: 400 });
 
     const validStatuses = ['looking', 'qi_complete', 'saw_plan'];
@@ -81,6 +95,20 @@ export async function PATCH(request) {
 
     if (name !== undefined) prospects[idx].name = name.trim();
     if (status !== undefined && validStatuses.includes(status)) prospects[idx].status = status;
+    if (vitals !== undefined) {
+      const existing = prospects[idx].vitals || {};
+      const merged = { ...existing };
+      if (vitals.age !== undefined) merged.age = vitals.age ? String(vitals.age).trim() : undefined;
+      if (vitals.relationship !== undefined) merged.relationship = vitals.relationship ? String(vitals.relationship).trim() : undefined;
+      if (vitals.kids !== undefined) merged.kids = vitals.kids !== '' ? String(vitals.kids).trim() : undefined;
+      if (vitals.city !== undefined) merged.city = vitals.city ? String(vitals.city).trim() : undefined;
+      if (vitals.occupation !== undefined) merged.occupation = vitals.occupation ? String(vitals.occupation).trim() : undefined;
+      if (vitals.nextStep !== undefined) merged.nextStep = vitals.nextStep ? String(vitals.nextStep).trim() : undefined;
+      if (vitals.nextStepDate !== undefined) merged.nextStepDate = vitals.nextStepDate ? String(vitals.nextStepDate).trim() : undefined;
+      // Clean undefined values
+      Object.keys(merged).forEach(k => { if (merged[k] === undefined) delete merged[k]; });
+      prospects[idx].vitals = Object.keys(merged).length > 0 ? merged : undefined;
+    }
     prospects[idx].updatedAt = new Date().toISOString();
 
     await setUserProspects(user.id, prospects);

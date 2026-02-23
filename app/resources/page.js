@@ -833,7 +833,19 @@ export default function ResourcesDashboard() {
 
   return (
     <div style={{ minHeight: '100vh', background: colors.bg, fontFamily: 'Inter, system-ui, sans-serif' }}>
-      <style jsx global>{`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;1,400&display=swap');`}</style>
+      <style jsx global>{`
+        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;1,400&display=swap');
+        @media (max-width: 480px) {
+          .resource-tab-bar { gap: 0 !important; }
+          .resource-tab-bar button { padding: 12px 10px !important; font-size: 10px !important; gap: 4px !important; }
+          .resource-filter-bar { overflow-x: auto; -webkit-overflow-scrolling: touch; flex-wrap: nowrap !important; scrollbar-width: none; }
+          .resource-filter-bar::-webkit-scrollbar { display: none; }
+          .resource-filter-bar button { flex-shrink: 0; white-space: nowrap; }
+          .resource-header-row { flex-direction: column !important; align-items: flex-start !important; }
+          .resource-header-row h1 { font-size: 24px !important; }
+        }
+        input:focus-visible, select:focus-visible, button:focus-visible { outline: 2px solid #b8956b !important; outline-offset: -1px; }
+      `}</style>
 
       {/* Header */}
       <nav style={{ position: 'sticky', top: 0, zIndex: 40, background: 'rgba(250,250,248,0.95)', backdropFilter: 'blur(12px)', borderBottom: '1px solid rgba(26,26,26,0.05)' }}>
@@ -860,7 +872,7 @@ export default function ResourcesDashboard() {
 
       {/* Tabs */}
       <div style={{ borderBottom: '1px solid rgba(26,26,26,0.05)' }}>
-        <div style={{ maxWidth: '900px', margin: '0 auto', padding: '0 16px', display: 'flex', gap: '0' }}>
+        <div className="resource-tab-bar" style={{ maxWidth: '900px', margin: '0 auto', padding: '0 16px', display: 'flex', gap: '0' }}>
           {tabs.map(t => (
             <button
               key={t.id}
@@ -887,9 +899,9 @@ export default function ResourcesDashboard() {
         {/* LIBRARY TAB */}
         {tab === 'library' && (
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
+            <div className="resource-header-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
               <h1 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: '28px', color: colors.dark, fontWeight: 400, margin: 0 }}>Resource Library</h1>
-              <div style={{ display: 'flex', gap: '6px' }}>
+              <div className="resource-filter-bar" style={{ display: 'flex', gap: '6px' }}>
                 {[{ id: 'all', label: 'All' }, { id: 'document', label: 'Docs' }, { id: 'media', label: 'Media' }, { id: 'video', label: 'Video' }, { id: 'tool', label: 'Tools' }].map(f => (
                   <button
                     key={f.id}

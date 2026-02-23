@@ -780,6 +780,25 @@ export default function LeadershipPage() {
         </div>
       </Modal>
 
+      <style>{`
+        @media (max-width: 640px) {
+          .lead-grid-4 { grid-template-columns: repeat(2, 1fr) !important; }
+          .lead-grid-3 { grid-template-columns: 1fr 1fr !important; }
+          .lead-grid-2 { grid-template-columns: 1fr !important; }
+          .lead-tab-bar { scrollbar-width: none; -ms-overflow-style: none; }
+          .lead-tab-bar::-webkit-scrollbar { display: none; }
+          .lead-tab-bar button, .lead-tab-bar a { padding: 12px 10px !important; font-size: 11px !important; }
+          .lead-modal-body { padding: 16px !important; }
+          .lead-modal-inner { max-width: 100% !important; margin: 0 8px !important; }
+          .lead-meeting-header { flex-direction: column !important; align-items: flex-start !important; gap: 8px !important; }
+          .lead-lineup-grid-4 { grid-template-columns: repeat(2, 1fr) !important; }
+        }
+        @media (max-width: 400px) {
+          .lead-grid-4 { grid-template-columns: 1fr !important; }
+          .lead-grid-3 { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
+
       {/* Header */}
       <header style={{ borderBottom: '1px solid rgba(26,26,26,0.1)', padding: '14px 16px' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -795,7 +814,7 @@ export default function LeadershipPage() {
 
       {/* Tabs */}
       <div style={{ borderBottom: '1px solid rgba(26,26,26,0.1)', padding: '0 16px', overflowX: 'auto' }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex' }}>
+        <div className="lead-tab-bar" style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex' }}>
           {tabs.map(t => t.href ? (
             <a key={t.id} href={t.href}
               style={{ padding: '12px 16px', background: 'none', border: 'none', borderBottom: '2px solid transparent', color: 'rgba(26,26,26,0.4)', fontSize: '12px', fontWeight: 400, cursor: 'pointer', whiteSpace: 'nowrap', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -839,7 +858,7 @@ export default function LeadershipPage() {
                 {/* Check-in Status */}
                 <div style={{ background: 'white', border: '1px solid rgba(26,26,26,0.1)', padding: '20px' }}>
                   <p style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.4)', marginBottom: '14px' }}>Check-In Status</p>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }} className="lead-grid-3">
                     <div style={{ textAlign: 'center' }}>
                       <p style={{ fontSize: '24px', fontWeight: 600, color: colors.dark, margin: 0 }}>{stats.total}</p>
                       <p style={{ fontSize: '9px', color: 'rgba(26,26,26,0.4)', textTransform: 'uppercase' }}>Total</p>
@@ -907,7 +926,7 @@ export default function LeadershipPage() {
           // ═══════════════ CHECK-IN TAB ═══════════════
           ) : tab === 'checkin' ? (
             <>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginBottom: '20px' }}>
+              <div className="lead-grid-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginBottom: '20px' }}>
                 {[{ l: 'Total', v: stats.total, c: colors.dark }, { l: 'Arrived', v: stats.arrived, c: '#22c55e' }, { l: 'Pending', v: stats.pending, c: colors.gold }, { l: 'No Show', v: stats.noShow, c: '#ef4444' }].map((s, i) => (
                   <div key={i} style={{ padding: '12px 6px', background: 'white', border: '1px solid rgba(26,26,26,0.1)', textAlign: 'center' }}>
                     <p style={{ fontSize: '9px', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.5)', marginBottom: '4px' }}>{s.l}</p>
@@ -1162,7 +1181,7 @@ export default function LeadershipPage() {
           ) : tab === 'finances' ? (
             <>
               {/* Financial Summary */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginBottom: '20px' }}>
+              <div className="lead-grid-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginBottom: '20px' }}>
                 <div style={{ padding: '16px', background: 'white', border: '1px solid rgba(34,197,94,0.2)', textAlign: 'center' }}>
                   <p style={{ fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#22c55e', marginBottom: '4px' }}>Revenue</p>
                   <p style={{ fontSize: '24px', fontWeight: 600, color: '#22c55e', margin: 0 }}>${totalRevenue.toFixed(2)}</p>
@@ -1289,7 +1308,7 @@ export default function LeadershipPage() {
                 })()}
 
                 {/* Stats */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginBottom: '16px' }}>
+                <div className="lead-grid-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginBottom: '16px' }}>
                   <div style={{ padding: '14px', background: 'white', border: '1px solid rgba(26,26,26,0.1)', textAlign: 'center' }}>
                     <p style={{ fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.5)', marginBottom: '4px' }}>IBOs</p>
                     <p style={{ fontSize: '24px', fontWeight: 600, color: colors.dark, margin: 0 }}>{dateStats?.ibos || 0}</p>

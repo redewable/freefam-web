@@ -383,7 +383,18 @@ export default function LOSBuilderPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: colors.bg, fontFamily: 'Inter, system-ui, sans-serif' }}>
-      <style jsx global>{`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;1,400&display=swap');`}</style>
+      <style jsx global>{`
+        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;1,400&display=swap');
+        @media (max-width: 768px) {
+          .los-staging-grid { grid-template-columns: 1fr !important; }
+          .los-staging-grid > div:first-child { position: static !important; max-height: 40vh; overflow-y: auto; }
+          .los-toolbar { flex-wrap: wrap; }
+          .los-toolbar input { max-width: 100% !important; flex: 1; min-width: 0; }
+          .los-mode-toggle { flex-wrap: wrap; }
+          .los-mode-toggle button { flex: 1; min-width: 0; padding: 10px 8px !important; font-size: 11px !important; }
+          .los-desktop-hint { display: none !important; }
+        }
+      `}</style>
 
       {/* Nav */}
       <nav style={{ borderBottom: '1px solid rgba(26,26,26,0.08)', padding: '14px 20px', background: 'white' }}>
@@ -421,7 +432,7 @@ export default function LOSBuilderPage() {
           </div>
 
           {/* Mode toggle */}
-          <div style={{ display: 'flex', gap: '4px', marginTop: '16px' }}>
+          <div className="los-mode-toggle" style={{ display: 'flex', gap: '4px', marginTop: '16px' }}>
             <button
               onClick={() => setMode('staging')}
               style={{
@@ -465,7 +476,7 @@ export default function LOSBuilderPage() {
           <div style={{ textAlign: 'center', padding: '60px', color: 'rgba(26,26,26,0.4)' }}>Loading team data...</div>
         ) : mode === 'staging' ? (
           /* ═══ STAGING MODE ═══ */
-          <div style={{ display: 'grid', gridTemplateColumns: '340px 1fr', gap: '20px', alignItems: 'start' }}>
+          <div className="los-staging-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 340px) 1fr', gap: '20px', alignItems: 'start' }}>
             {/* Left: Unplaced pool */}
             <div style={{ position: 'sticky', top: '20px' }}>
               <div style={{ background: 'white', border: '1px solid rgba(26,26,26,0.1)' }}>
@@ -521,7 +532,7 @@ export default function LOSBuilderPage() {
 
             {/* Right: Tree */}
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+              <div className="los-toolbar" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
                 <input
                   type="text"
                   placeholder="Search tree..."
@@ -583,7 +594,7 @@ export default function LOSBuilderPage() {
         ) : (
           /* ═══ FLAT LIST MODE ═══ */
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+            <div className="los-toolbar" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
               <input
                 type="text"
                 placeholder="Search all members..."
@@ -591,7 +602,7 @@ export default function LOSBuilderPage() {
                 onChange={(e) => setSearch(e.target.value)}
                 style={{ ...inputStyle, maxWidth: '320px', fontSize: '13px', padding: '8px 10px' }}
               />
-              <span style={{ fontSize: '12px', color: 'rgba(26,26,26,0.4)' }}>
+              <span className="los-desktop-hint" style={{ fontSize: '12px', color: 'rgba(26,26,26,0.4)' }}>
                 Drag a person onto another to set them as downline
               </span>
             </div>
@@ -678,7 +689,7 @@ export default function LOSBuilderPage() {
           position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex',
           alignItems: 'center', justifyContent: 'center', zIndex: 1000,
         }}>
-          <div style={{ background: 'white', padding: '24px', maxWidth: '400px', width: '90%' }}>
+          <div style={{ background: 'white', padding: '20px', maxWidth: '400px', width: 'calc(100% - 32px)', margin: '0 16px', borderRadius: '6px' }}>
             <h3 style={{ fontSize: '16px', color: colors.dark, margin: '0 0 8px', fontWeight: 500 }}>
               Remove {confirmDelete.full_name}?
             </h3>
