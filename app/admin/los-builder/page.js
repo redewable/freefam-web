@@ -332,7 +332,7 @@ export default function LOSBuilderPage() {
           </button>
 
           {/* Drag handle */}
-          <span style={{ color: 'rgba(26,26,26,0.2)', cursor: 'grab', fontSize: '14px', userSelect: 'none' }}{'\u2261'}</span>
+          <span style={{ color: 'rgba(26,26,26,0.2)', cursor: 'grab', fontSize: '14px', userSelect: 'none' }}>{'\u2261'}</span>
 
           {/* Name + partner */}
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -461,7 +461,7 @@ export default function LOSBuilderPage() {
                     Unplaced ({unplaced.length})
                   </p>
                   {unplaced.length === 0 && (
-                    <span style={{ fontSize: '11px', color: '#22c55e' }}{'\u2713'} All placed</span>
+                    <span style={{ fontSize: '11px', color: '#22c55e' }}>{'\u2713'} All placed</span>
                   )}
                 </div>
 
@@ -600,7 +600,7 @@ export default function LOSBuilderPage() {
                       transition: 'all 0.15s ease',
                     }}
                   >
-                    <span style={{ color: 'rgba(26,26,26,0.2)', cursor: 'grab', fontSize: '14px', userSelect: 'none' }}{'\u2261'}</span>
+                    <span style={{ color: 'rgba(26,26,26,0.2)', cursor: 'grab', fontSize: '14px', userSelect: 'none' }}>{'\u2261'}</span>
 
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
