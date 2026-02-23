@@ -5,21 +5,17 @@ import React from 'react';
 const colors = { bg: '#fafaf8', dark: '#1a1a1a', gold: '#b8956b' };
 
 const items = [
-  "We attend ALL team meetings, seminars, and major events — we are TEAM players",
-  "We are on LTD system — audios daily, books, and CDs flowing",
-  "We show the plan a minimum of 2x per week — that's how we grow",
-  "We maintain 100% personal use of our own products",
-  "We maintain 60%+ verified customer sales",
-  "We communicate through LTD messaging — keeping our team connected",
-  "We are coachable — we seek counsel and apply what we learn",
-  "We are accountable — we own our results and keep our commitments",
-  "We edify our upline, downline, and crossline — we build each other up",
-  "We never pass negative — we protect the culture",
+  { title: "Attend ALL Team ISI Meetings", description: "Be present every single week. Consistency builds culture, and culture builds businesses. Your team watches what you do — not what you say." },
+  { title: "Be on LTD System", description: "Audios daily, books flowing, events on the calendar. The system is your education — plug in and never unplug." },
+  { title: "Show the Plan Minimum 2x Per Week", description: "This is the engine. Nothing moves without consistent plan-showing. Two is the floor, not the ceiling." },
+  { title: "100% Personal Use & 60%+ Verified Customer Sales", description: "Use what you sell. Sell what you use. Maintain a legitimate, product-centered business with real customers." },
+  { title: "Communicate via LTD Messaging", description: "Stay connected through the proper channels. One team, one communication system. This keeps everyone aligned and moving together." },
 ];
 
 const Icons = {
   Back: ({ style }) => <svg style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M15 18l-6-6 6-6" /></svg>,
   Shield: ({ style }) => <svg style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>,
+  Download: ({ style }) => <svg style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>,
 };
 
 export default function NonNegotiablesPage() {
@@ -43,16 +39,23 @@ export default function NonNegotiablesPage() {
           </div>
           <p style={{ fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase', color: colors.gold, marginBottom: '8px' }}>Team Culture</p>
           <h1 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: '32px', fontWeight: 400, color: colors.dark, margin: '0 0 8px' }}>TEAM ISI Non-Negotiables</h1>
-          <p style={{ fontSize: '14px', color: 'rgba(26,26,26,0.5)', margin: 0, maxWidth: '400px', marginLeft: 'auto', marginRight: 'auto' }}>The standards we hold ourselves to — no exceptions, no excuses</p>
+          <p style={{ fontSize: '14px', color: 'rgba(26,26,26,0.5)', margin: '0 0 20px', maxWidth: '400px', marginLeft: 'auto', marginRight: 'auto' }}>The 5 standards we hold ourselves to — no exceptions, no excuses</p>
+          <a href="/team-isi-non-negotiables.pdf" target="_blank" rel="noopener noreferrer"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '10px 20px', background: colors.dark, color: colors.bg, fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase', textDecoration: 'none', border: 'none' }}>
+            <Icons.Download style={{ width: '14px', height: '14px' }} /> Download PDF
+          </a>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
           {items.map((item, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '16px', padding: '20px 16px', borderBottom: i < items.length - 1 ? '1px solid rgba(26,26,26,0.06)' : 'none', background: 'white', borderLeft: '1px solid rgba(26,26,26,0.08)', borderRight: '1px solid rgba(26,26,26,0.08)', borderTop: i === 0 ? '1px solid rgba(26,26,26,0.08)' : 'none' }}>
-              <div style={{ width: '28px', height: '28px', background: 'rgba(184,149,107,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, borderRadius: '50%' }}>
-                <span style={{ fontSize: '11px', fontWeight: 600, color: colors.gold }}>{String(i + 1).padStart(2, '0')}</span>
+            <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '16px', padding: '22px 16px', borderBottom: i < items.length - 1 ? '1px solid rgba(26,26,26,0.06)' : 'none', background: 'white', borderLeft: '1px solid rgba(26,26,26,0.08)', borderRight: '1px solid rgba(26,26,26,0.08)', borderTop: i === 0 ? '1px solid rgba(26,26,26,0.08)' : 'none' }}>
+              <div style={{ width: '32px', height: '32px', background: 'rgba(184,149,107,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, borderRadius: '50%' }}>
+                <span style={{ fontSize: '13px', fontWeight: 700, color: colors.gold }}>{i + 1}</span>
               </div>
-              <p style={{ fontSize: '15px', color: colors.dark, margin: 0, lineHeight: 1.5 }}>{item}</p>
+              <div style={{ flex: 1 }}>
+                <p style={{ fontSize: '15px', fontWeight: 600, color: colors.dark, margin: '0 0 4px' }}>{item.title}</p>
+                <p style={{ fontSize: '13px', color: 'rgba(26,26,26,0.5)', margin: 0, lineHeight: 1.5 }}>{item.description}</p>
+              </div>
             </div>
           ))}
         </div>

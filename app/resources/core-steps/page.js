@@ -6,6 +6,7 @@ const colors = { bg: '#fafaf8', dark: '#1a1a1a', gold: '#b8956b' };
 
 const Icons = {
   Back: ({ style }) => <svg style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M15 18l-6-6 6-6" /></svg>,
+  Download: ({ style }) => <svg style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>,
 };
 
 const groups = [
@@ -74,7 +75,11 @@ export default function CoreStepsPage() {
         <div style={{ textAlign: 'center', marginBottom: '48px' }}>
           <p style={{ fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase', color: colors.gold, marginBottom: '8px' }}>The Blueprint</p>
           <h1 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: '32px', fontWeight: 400, color: colors.dark, margin: '0 0 8px' }}>9 Core Steps</h1>
-          <p style={{ fontSize: '14px', color: 'rgba(26,26,26,0.5)', margin: 0, maxWidth: '440px', marginLeft: 'auto', marginRight: 'auto' }}>Three pillars, nine commitments. Do these consistently and the results will follow.</p>
+          <p style={{ fontSize: '14px', color: 'rgba(26,26,26,0.5)', margin: '0 0 20px', maxWidth: '440px', marginLeft: 'auto', marginRight: 'auto' }}>Three pillars, nine commitments. Do these consistently and the results will follow.</p>
+          <a href="/9-core-steps.pdf" target="_blank" rel="noopener noreferrer"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '10px 20px', background: colors.dark, color: colors.bg, fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase', textDecoration: 'none', border: 'none' }}>
+            <Icons.Download style={{ width: '14px', height: '14px' }} /> Download PDF
+          </a>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>

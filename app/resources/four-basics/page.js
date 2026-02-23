@@ -6,52 +6,61 @@ const colors = { bg: '#fafaf8', dark: '#1a1a1a', gold: '#b8956b' };
 
 const Icons = {
   Back: ({ style }) => <svg style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M15 18l-6-6 6-6" /></svg>,
+  Download: ({ style }) => <svg style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>,
 };
 
 const basics = [
   {
     number: '01',
-    title: 'Show the Plan',
-    subtitle: 'Minimum 2x per week',
-    description: 'This is the engine of your business. Nothing happens until someone sees the plan. The more plans you show, the faster your business grows. Consistency is key — treat it like a job until it pays like a career.',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: '28px', height: '28px', color: colors.gold }}>
-        <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87" /><path d="M16 3.13a4 4 0 010 7.75" />
-      </svg>
-    ),
+    title: 'List',
+    subtitle: 'Build your names list',
+    description: 'Everything starts with people. Write down everyone you know — and keep adding to it. Your list is the lifeblood of your business. The bigger the list, the bigger the opportunity. Don\'t prejudge. Don\'t filter. Just write.',
+    details: [
+      'Write down every name you can think of',
+      'Add new names every single day',
+      'Don\'t prejudge who might be interested',
+      'Categories: friends, family, coworkers, acquaintances, social media connections',
+    ],
+    color: '#b8956b',
   },
   {
     number: '02',
-    title: 'Retail Products',
-    subtitle: '60%+ verified customer sales',
-    description: 'Your business is built on moving products. Personal use establishes your belief, and retailing to customers creates immediate profit and long-term stability. This is what makes your business legitimate and sustainable.',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: '28px', height: '28px', color: colors.gold }}>
-        <circle cx="9" cy="21" r="1" /><circle cx="20" cy="21" r="1" /><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6" />
-      </svg>
-    ),
+    title: 'Connect',
+    subtitle: 'Build genuine relationships',
+    description: 'Before you ever mention the business, connect with people. Be interested in their lives. Ask questions. Build rapport. People do business with people they know, like, and trust. The connection comes before the conversation.',
+    details: [
+      'Reach out with genuine interest — no agenda',
+      'Ask about their life, goals, frustrations',
+      'Find common ground and build trust',
+      'Be a friend first, a business partner second',
+    ],
+    color: '#7a8b6e',
   },
   {
     number: '03',
-    title: 'Use the System',
-    subtitle: 'Audios, books, and events',
-    description: 'The LTD system is your education. Listen to audios daily, read 15+ minutes daily, and attend all functions. The system keeps you sharp, motivated, and connected. It\'s the curriculum for your entrepreneurial degree.',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: '28px', height: '28px', color: colors.gold }}>
-        <path d="M4 19.5A2.5 2.5 0 016.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z" />
-      </svg>
-    ),
+    title: 'Start the Process',
+    subtitle: 'STP — move them through the framework',
+    description: 'Once you\'ve connected, start the process. Follow the framework: Check Interest, Good News Call, PQI, QI1, QI2. You don\'t need to be perfect — you need to be consistent. The system does the heavy lifting. Your job is to get people into the process and keep them moving.',
+    details: [
+      'Minimum 2 QIs per week — that\'s the standard',
+      'Use the system tools and edify your upline',
+      'Follow the framework: CI → GNC → PQI → QI1 → QI2',
+      'Let the process do the convincing — you do the inviting',
+    ],
+    color: '#6e7f8b',
   },
   {
     number: '04',
-    title: 'Be Accountable',
-    subtitle: 'Own your results',
-    description: 'Stay connected to your upline and your team. Be coachable, keep your commitments, and communicate consistently. Accountability is the bridge between goals and results. No one builds this alone.',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: '28px', height: '28px', color: colors.gold }}>
-        <path d="M22 11.08V12a10 10 0 11-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" />
-      </svg>
-    ),
+    title: 'Launch',
+    subtitle: 'Get them started right',
+    description: 'When someone says yes, that\'s just the beginning. A strong launch sets the tone for their entire business. Plug them into the system immediately — audios, books, meetings, and their own names list. The first 48 hours are critical.',
+    details: [
+      'Get them on the system within 48 hours',
+      'Help them build their initial names list',
+      'Introduce them to the team and their upline',
+      'Set expectations and schedule their first QI',
+    ],
+    color: '#8b6e7a',
   },
 ];
 
@@ -73,26 +82,61 @@ export default function FourBasicsPage() {
         <div style={{ textAlign: 'center', marginBottom: '48px' }}>
           <p style={{ fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase', color: colors.gold, marginBottom: '8px' }}>Foundation</p>
           <h1 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: '32px', fontWeight: 400, color: colors.dark, margin: '0 0 8px' }}>The Four Basics</h1>
-          <p style={{ fontSize: '14px', color: 'rgba(26,26,26,0.5)', margin: 0, maxWidth: '400px', marginLeft: 'auto', marginRight: 'auto' }}>Master these four fundamentals and everything else follows</p>
+          <p style={{ fontSize: '14px', color: 'rgba(26,26,26,0.5)', margin: '0 0 20px', maxWidth: '440px', marginLeft: 'auto', marginRight: 'auto' }}>List. Connect. Start the Process. Launch. This is the cycle — repeat it and you will grow.</p>
+          <a href="/four-basics.pdf" target="_blank" rel="noopener noreferrer"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '10px 20px', background: colors.dark, color: colors.bg, fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase', textDecoration: 'none', border: 'none' }}>
+            <Icons.Download style={{ width: '14px', height: '14px' }} /> Download PDF
+          </a>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+        {/* Visual Cycle Indicator */}
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', marginBottom: '40px', flexWrap: 'wrap' }}>
+          {basics.map((b, i) => (
+            <React.Fragment key={i}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', background: b.color + '12', border: `1px solid ${b.color}30` }}>
+                <span style={{ fontSize: '11px', fontWeight: 700, color: b.color }}>{b.number}</span>
+                <span style={{ fontSize: '12px', fontWeight: 600, color: colors.dark }}>{b.title}</span>
+              </div>
+              {i < basics.length - 1 && (
+                <svg viewBox="0 0 24 24" fill="none" stroke={colors.gold} strokeWidth="1.5" style={{ width: '16px', height: '16px', flexShrink: 0 }}><path d="M5 12h14M12 5l7 7-7 7" /></svg>
+              )}
+            </React.Fragment>
+          ))}
+          {/* Cycle arrow back */}
+          <svg viewBox="0 0 24 24" fill="none" stroke={colors.gold} strokeWidth="1.5" style={{ width: '16px', height: '16px', flexShrink: 0 }}><path d="M1 4v6h6" /><path d="M3.51 15a9 9 0 105.64-10.36L1 10" /></svg>
+        </div>
+
+        {/* Cards */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {basics.map((basic, i) => (
-            <div key={i} style={{ padding: '28px 24px', background: 'white', border: '1px solid rgba(26,26,26,0.08)', position: 'relative', overflow: 'hidden' }}>
-              <div style={{ position: 'absolute', top: '0', left: '0', right: '0', height: '3px', background: `linear-gradient(to right, ${colors.gold}, transparent)` }} />
-              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '16px' }}>
-                <div style={{ width: '48px', height: '48px', background: 'rgba(184,149,107,0.08)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  {basic.icon}
+            <div key={i} style={{ background: 'white', border: '1px solid rgba(26,26,26,0.08)', overflow: 'hidden' }}>
+              <div style={{ height: '3px', background: `linear-gradient(to right, ${basic.color}, ${basic.color}40)` }} />
+              <div style={{ padding: '24px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '14px' }}>
+                  <div style={{ width: '40px', height: '40px', background: basic.color + '12', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, borderRadius: '50%' }}>
+                    <span style={{ fontSize: '16px', fontWeight: 700, color: basic.color }}>{basic.number}</span>
+                  </div>
+                  <div>
+                    <h3 style={{ fontSize: '19px', fontWeight: 600, color: colors.dark, margin: '0 0 2px' }}>{basic.title}</h3>
+                    <p style={{ fontSize: '12px', color: basic.color, margin: 0, fontWeight: 500, letterSpacing: '0.02em' }}>{basic.subtitle}</p>
+                  </div>
                 </div>
-                <div>
-                  <span style={{ fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', color: colors.gold }}>{basic.number}</span>
-                  <h3 style={{ fontSize: '17px', fontWeight: 600, color: colors.dark, margin: '2px 0 0' }}>{basic.title}</h3>
+                <p style={{ fontSize: '14px', color: 'rgba(26,26,26,0.55)', margin: '0 0 16px', lineHeight: 1.7 }}>{basic.description}</p>
+                <div style={{ padding: '14px', background: 'rgba(26,26,26,0.02)' }}>
+                  {basic.details.map((detail, j) => (
+                    <div key={j} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', marginBottom: j < basic.details.length - 1 ? '8px' : '0' }}>
+                      <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: basic.color, flexShrink: 0, marginTop: '7px' }} />
+                      <p style={{ fontSize: '13px', color: 'rgba(26,26,26,0.5)', margin: 0, lineHeight: 1.5 }}>{detail}</p>
+                    </div>
+                  ))}
                 </div>
               </div>
-              <p style={{ fontSize: '12px', fontWeight: 500, color: colors.gold, marginBottom: '10px', letterSpacing: '0.02em' }}>{basic.subtitle}</p>
-              <p style={{ fontSize: '14px', color: 'rgba(26,26,26,0.55)', margin: 0, lineHeight: 1.6 }}>{basic.description}</p>
             </div>
           ))}
+        </div>
+
+        <div style={{ marginTop: '32px', padding: '24px', background: 'rgba(184,149,107,0.06)', textAlign: 'center' }}>
+          <p style={{ fontSize: '15px', fontFamily: "'Cormorant Garamond', Georgia, serif", fontStyle: 'italic', color: 'rgba(26,26,26,0.6)', margin: 0, lineHeight: 1.6 }}>This is a cycle, not a checklist. When you launch someone, you go right back to listing. The wheel never stops turning.</p>
         </div>
       </main>
 
