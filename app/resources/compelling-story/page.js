@@ -73,9 +73,8 @@ export default function CompellingStoryPage() {
             <Icons.Mic style={{ width: '24px', height: '24px', color: colors.gold }} />
           </div>
           <p style={{ fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase', color: colors.gold, marginBottom: '8px' }}>Your Story</p>
-          <h1 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: '32px', fontWeight: 400, color: colors.dark, margin: '0 0 8px' }}>Developing Your Compelling Story</h1>
-          <p style={{ fontSize: '14px', color: 'rgba(26,26,26,0.5)', margin: '0 0 20px', maxWidth: '440px', marginLeft: 'auto', marginRight: 'auto' }}>Your story is your most powerful tool. Learn to tell it with clarity, emotion, and purpose.</p>
-          <a href="/compelling-story.pdf" target="_blank" rel="noopener noreferrer"
+          <h1 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: '32px', fontWeight: 400, color: colors.dark, margin: '0 0 20px' }}>Developing Your Compelling Story</h1>
+          <a href="/compelling-story.pdf"
             style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '10px 20px', background: colors.dark, color: colors.bg, fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase', textDecoration: 'none', border: 'none' }}>
             <Icons.Download style={{ width: '14px', height: '14px' }} /> Download PDF
           </a>

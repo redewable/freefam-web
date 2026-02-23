@@ -43,9 +43,8 @@ export default function BooksPage() {
 
         <div style={{ textAlign: 'center', marginBottom: '40px' }}>
           <p style={{ fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase', color: colors.gold, marginBottom: '8px' }}>Freedom Family</p>
-          <h1 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: '32px', fontWeight: 400, color: colors.dark, margin: '0 0 8px' }}>First Year Book List</h1>
-          <p style={{ fontSize: '14px', color: 'rgba(26,26,26,0.5)', margin: '0 0 20px' }}>Essential reads for your journey</p>
-          <a href="/first-year-book-list.pdf" target="_blank" rel="noopener noreferrer"
+          <h1 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: '32px', fontWeight: 400, color: colors.dark, margin: '0 0 20px' }}>First Year Book List</h1>
+          <a href="/first-year-book-list.pdf"
             style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '10px 20px', background: colors.dark, color: colors.bg, fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase', textDecoration: 'none', border: 'none' }}>
             <Icons.Download style={{ width: '14px', height: '14px' }} /> Download PDF
           </a>
@@ -61,7 +60,6 @@ export default function BooksPage() {
                 <p style={{ fontSize: '15px', fontWeight: 500, color: colors.dark, margin: '0 0 3px' }}>{book.title}</p>
                 <p style={{ fontSize: '13px', color: 'rgba(26,26,26,0.5)', margin: 0 }}>{book.author}</p>
               </div>
-              <Icons.Book style={{ width: '16px', height: '16px', color: 'rgba(26,26,26,0.15)', flexShrink: 0, marginTop: '4px' }} />
             </div>
           ))}
         </div>

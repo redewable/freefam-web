@@ -365,9 +365,27 @@ const LOSTree = ({ userId, profile }) => {
           };
           const badge = roleBadge[person.role] || roleBadge.member;
           const displayName = person.partner_name
-            ? `${person.full_name || 'Unnamed'} & ${person.partner_name}`
+            ? (() => {
+                const p1 = (person.full_name || '').trim().split(' ');
+                const p2 = person.partner_name.trim().split(' ');
+                const last1 = p1.length > 1 ? p1[p1.length - 1] : '';
+                const last2 = p2.length > 1 ? p2[p2.length - 1] : '';
+                if (last1 && last2 && last1.toLowerCase() === last2.toLowerCase()) {
+                  return `${p1[0]} & ${p2[0]} ${last1}`;
+                }
+                return `${person.full_name || 'Unnamed'} & ${person.partner_name}`;
+              })()
             : (person.full_name || 'Unnamed');
-          const legCount = person.totalDescendants || 0;
+          // Count total IBOs properly — each person individually (couple = 2)
+          const countPeople = (nodes) => {
+            let c = 0;
+            for (const n of (nodes || [])) {
+              c += n.partner_name ? 2 : 1;
+              if (n.children) c += countPeople(n.children);
+            }
+            return c;
+          };
+          const legCount = countPeople(person.children || []);
 
           return (
             <div key={person.id}>
@@ -807,13 +825,13 @@ export default function ResourcesDashboard() {
 
   // Built-in shared docs that live outside the DB
   const sharedDocs = [
-    { id: '_booklist', title: 'First Year Book List', description: '13 essential reads for your journey', type: 'document', category: 'Shared Documents', url: '/resources/books', isSharedDoc: true },
-    { id: '_nonneg', title: 'TEAM ISI Non-Negotiables', description: 'The 5 standards we hold ourselves to', type: 'document', category: 'Team Culture', url: '/resources/non-negotiables', isSharedDoc: true },
-    { id: '_framework', title: 'The Framework', description: 'CI → GNC → PQI → QI1 → QI2 — the qualifying process', type: 'document', category: 'The Process', url: '/resources/the-framework', isSharedDoc: true },
-    { id: '_qi', title: 'The QI Philosophy', description: '10 principles — 100% success rate', type: 'document', category: 'Mindset', url: '/resources/qi-philosophy', isSharedDoc: true },
-    { id: '_fourbasics', title: 'The Four Basics', description: 'List. Connect. Start the Process. Launch.', type: 'document', category: 'Foundation', url: '/resources/four-basics', isSharedDoc: true },
-    { id: '_story', title: 'Developing Your Compelling Story', description: 'Tell your story with clarity, emotion, and purpose', type: 'document', category: 'Skills', url: '/resources/compelling-story', isSharedDoc: true },
-    { id: '_coresteps', title: '9 Core Steps', description: 'Three pillars, nine commitments — the daily blueprint', type: 'document', category: 'The Blueprint', url: '/resources/core-steps', isSharedDoc: true },
+    { id: '_booklist', title: 'First Year Book List', type: 'document', category: 'Shared Documents', url: '/resources/books', isSharedDoc: true },
+    { id: '_nonneg', title: 'TEAM ISI Non-Negotiables', type: 'document', category: 'Team Culture', url: '/resources/non-negotiables', isSharedDoc: true },
+    { id: '_framework', title: 'The Framework', type: 'document', category: 'The Process', url: '/resources/the-framework', isSharedDoc: true },
+    { id: '_qi', title: 'The QI Philosophy', type: 'document', category: 'Mindset', url: '/resources/qi-philosophy', isSharedDoc: true },
+    { id: '_fourbasics', title: 'The Four Basics', type: 'document', category: 'Foundation', url: '/resources/four-basics', isSharedDoc: true },
+    { id: '_story', title: 'Developing Your Compelling Story', type: 'document', category: 'Skills', url: '/resources/compelling-story', isSharedDoc: true },
+    { id: '_coresteps', title: '9 Core Steps', type: 'document', category: 'The Blueprint', url: '/resources/core-steps', isSharedDoc: true },
   ];
 
   const allItems = [...sharedDocs, ...resources];
@@ -1088,7 +1106,6 @@ export default function ResourcesDashboard() {
         <div style={{ maxWidth: '900px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
             <a href="/" style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.25)', textDecoration: 'none' }}>Home</a>
-            <a href="/bcs" style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.25)', textDecoration: 'none' }}>BCS</a>
           </div>
           <a href="https://www.ltdteam.com" target="_blank" rel="noopener noreferrer" style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.25)', textDecoration: 'none' }}>LTD</a>
         </div>

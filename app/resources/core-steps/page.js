@@ -74,9 +74,8 @@ export default function CoreStepsPage() {
 
         <div style={{ textAlign: 'center', marginBottom: '48px' }}>
           <p style={{ fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase', color: colors.gold, marginBottom: '8px' }}>The Blueprint</p>
-          <h1 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: '32px', fontWeight: 400, color: colors.dark, margin: '0 0 8px' }}>9 Core Steps</h1>
-          <p style={{ fontSize: '14px', color: 'rgba(26,26,26,0.5)', margin: '0 0 20px', maxWidth: '440px', marginLeft: 'auto', marginRight: 'auto' }}>Three pillars, nine commitments. Do these consistently and the results will follow.</p>
-          <a href="/9-core-steps.pdf" target="_blank" rel="noopener noreferrer"
+          <h1 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: '32px', fontWeight: 400, color: colors.dark, margin: '0 0 20px' }}>9 Core Steps</h1>
+          <a href="/9-core-steps.pdf"
             style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '10px 20px', background: colors.dark, color: colors.bg, fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase', textDecoration: 'none', border: 'none' }}>
             <Icons.Download style={{ width: '14px', height: '14px' }} /> Download PDF
           </a>

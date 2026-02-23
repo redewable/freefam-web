@@ -14,6 +14,7 @@ const PROSPECT_STATUSES = {
   looking:     { label: 'Checked Interest', short: 'Looking', border: 'none',   color: '#f59e0b' },
   qi_complete: { label: 'QI Complete',      short: 'QI',      border: 'underline', color: '#3b82f6' },
   saw_plan:    { label: 'Saw the Plan',     short: 'STP',     border: 'dashed', color: '#a855f7' },
+  customer:    { label: 'Customer',         short: 'Cust.',   border: 'none',   color: '#22c55e' },
 };
 
 const RELATIONSHIP_OPTIONS = ['Single', 'Dating', 'Engaged', 'Married', 'Divorced', 'Widowed'];
@@ -151,8 +152,19 @@ export default function RadialTree({ tree, onNodeAction }) {
       return Math.max(NODE_W, totalChildren);
     };
 
-    // Root node
-    const centerLabel = partnerName ? `${userName} & ${partnerName}` : userName;
+    // Root node — combine names: "Talor & Vivian Byington" if same last name, else "Talor Byington & Vivian Smith"
+    const formatCoupleName = (name1, name2) => {
+      if (!name2) return name1;
+      const p1 = name1.trim().split(' ');
+      const p2 = name2.trim().split(' ');
+      const last1 = p1.length > 1 ? p1[p1.length - 1] : '';
+      const last2 = p2.length > 1 ? p2[p2.length - 1] : '';
+      if (last1 && last2 && last1.toLowerCase() === last2.toLowerCase()) {
+        return `${p1[0]} & ${p2[0]} ${last1}`;
+      }
+      return `${name1} & ${name2}`;
+    };
+    const centerLabel = formatCoupleName(userName, partnerName);
     const rootId = tree.user.id || 'root';
     // Compute root's leg/IBO counts — each person counts individually (couple = 2 IBOs)
     const countAllIbos = (nodes) => {
@@ -265,7 +277,7 @@ export default function RadialTree({ tree, onNodeAction }) {
         const cy = parentY + V_GAP + NODE_H;
 
         const displayName = child.partner_name
-          ? `${child.full_name} & ${child.partner_name}`
+          ? formatCoupleName(child.full_name, child.partner_name)
           : (child.full_name || 'Unnamed');
 
         const colorIdx = depth === 1 ? i : legIdx;
@@ -488,8 +500,19 @@ export default function RadialTree({ tree, onNodeAction }) {
         ctx.stroke();
 
         if (!node.isRoot) {
+          const barW = 3 * scale;
+          const barR = Math.min(r, barW);
           ctx.fillStyle = node.color + '60';
-          ctx.fillRect(nx - w/2, ny - h/2, 3 * scale, h);
+          ctx.beginPath();
+          ctx.moveTo(nx - w/2 + barR, ny - h/2);
+          ctx.lineTo(nx - w/2 + barW, ny - h/2);
+          ctx.lineTo(nx - w/2 + barW, ny + h/2);
+          ctx.lineTo(nx - w/2 + barR, ny + h/2);
+          ctx.arcTo(nx - w/2, ny + h/2, nx - w/2, ny + h/2 - barR, barR);
+          ctx.lineTo(nx - w/2, ny - h/2 + barR);
+          ctx.arcTo(nx - w/2, ny - h/2, nx - w/2 + barR, ny - h/2, barR);
+          ctx.closePath();
+          ctx.fill();
         }
 
         const fontSize = Math.max(8, Math.min(12, 11 * scale));
@@ -601,7 +624,9 @@ export default function RadialTree({ tree, onNodeAction }) {
         lastTouchRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
         lastPinchRef.current = null;
       } else if (e.touches.length === 2) {
-        lastTouchRef.current = null;
+        const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+        const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+        lastTouchRef.current = { x: midX, y: midY };
         const dx = e.touches[0].clientX - e.touches[1].clientX;
         const dy = e.touches[0].clientY - e.touches[1].clientY;
         lastPinchRef.current = Math.sqrt(dx * dx + dy * dy);
@@ -616,12 +641,25 @@ export default function RadialTree({ tree, onNodeAction }) {
         const dy = e.touches[0].clientY - lastTouchRef.current.y;
         setTransform(prev => ({ ...prev, x: prev.x + dx, y: prev.y + dy }));
         lastTouchRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-      } else if (e.touches.length === 2 && lastPinchRef.current) {
+      } else if (e.touches.length === 2) {
+        // Simultaneous zoom + pan
+        const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+        const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
         const dx = e.touches[0].clientX - e.touches[1].clientX;
         const dy = e.touches[0].clientY - e.touches[1].clientY;
         const dist = Math.sqrt(dx * dx + dy * dy);
-        const ratio = dist / lastPinchRef.current;
-        setTransform(prev => ({ ...prev, scale: Math.max(0.15, Math.min(3, prev.scale * ratio)) }));
+
+        if (lastTouchRef.current) {
+          const panDx = midX - lastTouchRef.current.x;
+          const panDy = midY - lastTouchRef.current.y;
+          const ratio = lastPinchRef.current ? dist / lastPinchRef.current : 1;
+          setTransform(prev => ({
+            x: prev.x + panDx,
+            y: prev.y + panDy,
+            scale: Math.max(0.15, Math.min(3, prev.scale * ratio)),
+          }));
+        }
+        lastTouchRef.current = { x: midX, y: midY };
         lastPinchRef.current = dist;
       }
     };
@@ -703,7 +741,16 @@ export default function RadialTree({ tree, onNodeAction }) {
         } else {
           ctx.fillStyle = node.isRoot ? 'rgba(184,149,107,0.1)' : 'white'; ctx.fill();
           ctx.strokeStyle = node.isRoot ? 'rgba(184,149,107,0.4)' : 'rgba(26,26,26,0.12)'; ctx.lineWidth = 1; ctx.stroke();
-          if (!node.isRoot) { ctx.fillStyle = node.color+'60'; ctx.fillRect(nx-w/2, ny-h/2, 3, h); }
+          if (!node.isRoot) {
+            ctx.save(); ctx.beginPath();
+            ctx.moveTo(nx-w/2+r,ny-h/2); ctx.lineTo(nx+w/2-r,ny-h/2);
+            ctx.arcTo(nx+w/2,ny-h/2,nx+w/2,ny-h/2+r,r); ctx.lineTo(nx+w/2,ny+h/2-r);
+            ctx.arcTo(nx+w/2,ny+h/2,nx+w/2-r,ny+h/2,r); ctx.lineTo(nx-w/2+r,ny+h/2);
+            ctx.arcTo(nx-w/2,ny+h/2,nx-w/2,ny+h/2-r,r); ctx.lineTo(nx-w/2,ny-h/2+r);
+            ctx.arcTo(nx-w/2,ny-h/2,nx-w/2+r,ny-h/2,r); ctx.closePath(); ctx.clip();
+            ctx.fillStyle = node.color+'60'; ctx.fillRect(nx-w/2, ny-h/2, 3, h);
+            ctx.restore();
+          }
           ctx.font = `${node.isRoot ? '600' : '500'} 11px Inter, system-ui, sans-serif`;
           ctx.fillStyle = colors.dark; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
           let label = node.label;
@@ -896,9 +943,9 @@ export default function RadialTree({ tree, onNodeAction }) {
         <div style={{ ...panelStyle, border: `1px solid ${selectedInfo.color}40` }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
             <p style={{ fontSize: '15px', fontWeight: 500, color: colors.dark, margin: 0 }}>{selectedInfo.label}</p>
-            <button onClick={() => deleteProspect(selectedInfo.prospectId)} disabled={saving}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', fontSize: '18px', padding: '4px 8px', minHeight: '36px' }}
-              title="Delete prospect"
+            <button onClick={() => { setSelectedNode(null); setEditingVitals(false); }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(26,26,26,0.35)', fontSize: '18px', padding: '4px 8px', minHeight: '36px' }}
+              title="Close"
             >{'\u2715'}</button>
           </div>
           <p style={{ fontSize: '10px', color: 'rgba(26,26,26,0.4)', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
@@ -1031,6 +1078,24 @@ export default function RadialTree({ tree, onNodeAction }) {
           >
             Convert to IBO {'\u2192'} Send Invite
           </button>
+
+          {/* Filtered Out / Transition to Customer */}
+          <div style={{ display: 'flex', gap: '6px', marginTop: '6px' }}>
+            <button
+              onClick={() => deleteProspect(selectedInfo.prospectId)}
+              disabled={saving}
+              style={{ flex: 1, padding: '8px 10px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '11px', fontWeight: 600, color: '#ef4444', letterSpacing: '0.03em', textAlign: 'center', opacity: saving ? 0.5 : 1 }}
+            >
+              Filtered Out
+            </button>
+            <button
+              onClick={() => updateProspect(selectedInfo.prospectId, { status: 'customer' })}
+              disabled={saving}
+              style={{ flex: 1, padding: '8px 10px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '11px', fontWeight: 600, color: '#3b82f6', letterSpacing: '0.03em', textAlign: 'center', opacity: saving ? 0.5 : 1 }}
+            >
+              Transition to Customer
+            </button>
+          </div>
         </div>
       )}
 
