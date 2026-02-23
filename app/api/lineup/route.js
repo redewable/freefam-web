@@ -2,7 +2,7 @@ import { kv } from '@vercel/kv';
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 
-// Normalize segment labels (e.g. strip "/ Book of the Month" from BSM)
+// Normalize segment labels (strip unwanted text from saved lineups)
 const normalizeSegments = (lineup) => {
   if (!lineup || !lineup.segments) return lineup;
   return {
@@ -10,6 +10,13 @@ const normalizeSegments = (lineup) => {
     segments: lineup.segments.map(seg => {
       if (seg.key === 'bsm' && seg.label && seg.label.toLowerCase().includes('book of the month')) {
         return { ...seg, label: 'BSM' };
+      }
+      if (seg.key === 'host') {
+        // Strip MC references, normalize to just "Host"
+        const lower = (seg.label || '').toLowerCase();
+        if (lower.includes('mc') || lower.includes('welcome')) {
+          return { ...seg, label: 'Host' };
+        }
       }
       return seg;
     }),
@@ -73,10 +80,16 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Date required' }, { status: 400 });
     }
 
-    // Normalize BSM label on save
+    // Normalize segment labels on save
     const cleanSegments = (segments || []).map(seg => {
       if (seg.key === 'bsm' && seg.label && seg.label.toLowerCase().includes('book of the month')) {
         return { ...seg, label: 'BSM' };
+      }
+      if (seg.key === 'host') {
+        const lower = (seg.label || '').toLowerCase();
+        if (lower.includes('mc') || lower.includes('welcome')) {
+          return { ...seg, label: 'Host' };
+        }
       }
       return seg;
     });

@@ -96,7 +96,7 @@ function LineupContent() {
           {/* Info Session */}
           <p style={{ fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', color: colors.gold, margin: '0 0 6px', fontWeight: 600 }}>Info Session · 7:30 – 8:30 PM</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '14px', fontSize: '13px' }}>
-            <div style={{ display: 'flex', gap: '12px' }}><span style={{ color: 'rgba(26,26,26,0.4)', minWidth: '62px', fontVariantNumeric: 'tabular-nums' }}>7:30 PM</span><span style={{ color: colors.dark }}>Welcome / Ice Breaker</span></div>
+            <div style={{ display: 'flex', gap: '12px' }}><span style={{ color: 'rgba(26,26,26,0.4)', minWidth: '62px', fontVariantNumeric: 'tabular-nums' }}>7:30 PM</span><span style={{ color: colors.dark }}>Host / Ice Breaker</span></div>
             <div style={{ display: 'flex', gap: '12px' }}><span style={{ color: 'rgba(26,26,26,0.4)', minWidth: '62px', fontVariantNumeric: 'tabular-nums' }}>7:32 PM</span><span style={{ color: colors.dark }}>The Plan</span></div>
             <div style={{ display: 'flex', gap: '12px' }}><span style={{ color: 'rgba(26,26,26,0.4)', minWidth: '62px', fontVariantNumeric: 'tabular-nums' }}>8:25 PM</span><span style={{ color: colors.dark }}>Next Steps</span></div>
             <div style={{ display: 'flex', gap: '12px', color: 'rgba(26,26,26,0.35)', fontStyle: 'italic' }}><span style={{ minWidth: '62px', fontVariantNumeric: 'tabular-nums' }}>8:30 PM</span><span>Break — guest follow-up</span></div>

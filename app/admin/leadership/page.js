@@ -30,7 +30,7 @@ const formatDateShort = (d) => new Date(d + 'T12:00:00-06:00').toLocaleDateStrin
 
 const DEFAULT_SEGMENTS = [
   // Info Session (7:30 - 8:30)
-  { key: 'host', label: 'Welcome / Host', speaker: '', topic: '', time: '7:30 PM', duration: '2 min', section: 'info' },
+  { key: 'host', label: 'Host', speaker: '', topic: '', time: '7:30 PM', duration: '2 min', section: 'info' },
   { key: 'plan', label: 'The Plan', speaker: '', topic: '', time: '7:32 PM', duration: '53 min', section: 'info' },
   { key: 'nextsteps', label: 'Next Steps', speaker: '', topic: '', time: '8:25 PM', duration: '5 min', section: 'info' },
   // Training (8:45 - 10:00)
@@ -45,7 +45,7 @@ const MEETING_FLOW = [
   { time: '6:30 PM', label: 'Round Table Arrives', desc: 'Room setup begins. Doors remain closed.', section: 'prep' },
   { time: '7:00 PM', label: 'IBOs Arrive / Lineup Huddle', desc: 'Doors closed. IBOs greet guests in lobby. Quick alignment, announcements, prayer.', section: 'prep' },
   { time: '7:15 PM', label: 'Doors Open', desc: 'Guests arrive. IBOs position for warm greetings.', section: 'prep' },
-  { time: '7:30 PM', label: 'Welcome', desc: 'Ice breaker, set expectations.', section: 'info' },
+  { time: '7:30 PM', label: 'Host', desc: 'Ice breaker, set expectations.', section: 'info' },
   { time: '7:32 PM', label: 'The Plan', desc: 'LTD-approved plan presentation.', section: 'info' },
   { time: '8:25 PM', label: 'Next Steps', desc: 'Follow-up info, how to get started.', section: 'info' },
   { time: '8:30 PM', label: 'Info Session Concludes', desc: '15-min break for guest follow-up and transition.', section: 'break' },
