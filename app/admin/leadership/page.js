@@ -799,7 +799,7 @@ export default function LeadershipPage() {
           {tabs.map(t => t.href ? (
             <a key={t.id} href={t.href}
               style={{ padding: '12px 16px', background: 'none', border: 'none', borderBottom: '2px solid transparent', color: 'rgba(26,26,26,0.4)', fontSize: '12px', fontWeight: 400, cursor: 'pointer', whiteSpace: 'nowrap', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              {t.label} <span style={{ fontSize: '10px' }}>\u2197</span>
+              {t.label} <span style={{ fontSize: '10px' }}>{'\u2197'}</span>
             </a>
           ) : (
             <button key={t.id} onClick={() => { setTab(t.id); setSelectedDate(null); setEditingLineup(null); }}

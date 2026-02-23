@@ -337,7 +337,7 @@ export default function LOSBuilderPage() {
           </button>
 
           {/* Drag handle */}
-          <span style={{ color: 'rgba(26,26,26,0.2)', cursor: 'grab', fontSize: '14px', userSelect: 'none' }}>\u2261</span>
+          <span style={{ color: 'rgba(26,26,26,0.2)', cursor: 'grab', fontSize: '14px', userSelect: 'none' }}{'\u2261'}</span>
 
           {/* Name + partner */}
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -393,7 +393,7 @@ export default function LOSBuilderPage() {
         <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
             <a href="/admin/leadership" style={{ fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase', color: colors.dark, textDecoration: 'none' }}>
-              \u2190 Leadership Portal
+              {'\u2190'} Leadership Portal
             </a>
           </div>
           <span style={{ fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', color: colors.gold }}>LOS Builder</span>
@@ -434,7 +434,7 @@ export default function LOSBuilderPage() {
                 color: mode === 'staging' ? colors.bg : 'rgba(26,26,26,0.5)',
               }}
             >
-              Staging \u2192 Tree
+              Staging {'\u2192'} Tree
             </button>
             <button
               onClick={() => setMode('flat')}
@@ -466,7 +466,7 @@ export default function LOSBuilderPage() {
                     Unplaced ({unplaced.length})
                   </p>
                   {unplaced.length === 0 && (
-                    <span style={{ fontSize: '11px', color: '#22c55e' }}>\u2713 All placed</span>
+                    <span style={{ fontSize: '11px', color: '#22c55e' }}{'\u2713'} All placed</span>
                   )}
                 </div>
 
@@ -605,7 +605,7 @@ export default function LOSBuilderPage() {
                       transition: 'all 0.15s ease',
                     }}
                   >
-                    <span style={{ color: 'rgba(26,26,26,0.2)', cursor: 'grab', fontSize: '14px', userSelect: 'none' }}>\u2261</span>
+                    <span style={{ color: 'rgba(26,26,26,0.2)', cursor: 'grab', fontSize: '14px', userSelect: 'none' }}{'\u2261'}</span>
 
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -646,7 +646,7 @@ export default function LOSBuilderPage() {
                         color: 'rgba(239,68,68,0.5)', padding: '4px 8px', fontSize: '11px',
                       }}
                     >
-                      \u2715
+                      {'\u2715'}
                     </button>
                   </div>
                 );

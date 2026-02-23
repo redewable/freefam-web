@@ -337,7 +337,7 @@ export default function RadialTree({ tree }) {
         <button onClick={() => setTransform(prev => ({ ...prev, scale: Math.min(3, prev.scale * 1.2) }))}
           style={{ width: '32px', height: '32px', background: 'white', border: '1px solid rgba(26,26,26,0.15)', cursor: 'pointer', fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: colors.dark }}>+</button>
         <button onClick={() => setTransform(prev => ({ ...prev, scale: Math.max(0.2, prev.scale * 0.8) }))}
-          style={{ width: '32px', height: '32px', background: 'white', border: '1px solid rgba(26,26,26,0.15)', cursor: 'pointer', fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: colors.dark }}>\u2212</button>
+          style={{ width: '32px', height: '32px', background: 'white', border: '1px solid rgba(26,26,26,0.15)', cursor: 'pointer', fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: colors.dark }}>{'\u2212'}</button>
         <button onClick={resetView}
           style={{ height: '32px', padding: '0 10px', background: 'white', border: '1px solid rgba(26,26,26,0.15)', cursor: 'pointer', fontSize: '11px', color: 'rgba(26,26,26,0.5)' }}>Reset</button>
       </div>
@@ -366,7 +366,7 @@ export default function RadialTree({ tree }) {
 
       {/* Instructions */}
       <div style={{ position: 'absolute', top: '12px', right: '12px', fontSize: '10px', color: 'rgba(26,26,26,0.3)' }}>
-        Scroll to zoom \u00b7 Drag to pan \u00b7 Click a node for details
+        Scroll to zoom {'\u00b7'} Drag to pan {'\u00b7'} Click a node for details
       </div>
     </div>
   );
