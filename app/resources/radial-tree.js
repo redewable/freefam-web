@@ -154,10 +154,13 @@ export default function RadialTree({ tree, onNodeAction }) {
     // Root node
     const centerLabel = partnerName ? `${userName} & ${partnerName}` : userName;
     const rootId = tree.user.id || 'root';
-    // Compute root's leg/IBO counts
+    // Compute root's leg/IBO counts — each person counts individually (couple = 2 IBOs)
     const countAllIbos = (nodes) => {
       let c = 0;
-      for (const n of (nodes || [])) { c += 1; if (n.children) c += countAllIbos(n.children); }
+      for (const n of (nodes || [])) {
+        c += n.partner_name ? 2 : 1;
+        if (n.children) c += countAllIbos(n.children);
+      }
       return c;
     };
     const rootLegs = downline.length;
@@ -269,11 +272,14 @@ export default function RadialTree({ tree, onNodeAction }) {
         const nodeColor = LEG_COLORS[colorIdx % LEG_COLORS.length];
         const nodeId = child.id || `node-${nodes.length}`;
 
-        // Compute legs (direct children), total IBOs (all descendants), and prospect count
+        // Compute legs (direct children), total IBOs (all descendants) — each person counts individually
         const directLegs = (child.children || []).length;
         const countIbos = (nodes) => {
           let c = 0;
-          for (const n of (nodes || [])) { c += 1; if (n.children) c += countIbos(n.children); }
+          for (const n of (nodes || [])) {
+            c += n.partner_name ? 2 : 1;
+            if (n.children) c += countIbos(n.children);
+          }
           return c;
         };
         const totalIbos = countIbos(child.children);
@@ -494,34 +500,38 @@ export default function RadialTree({ tree, onNodeAction }) {
 
         let label = node.label;
         const maxWidth = w - 12 * scale;
-        // Use initials when name is too wide
+        // Progressive abbreviation: full name → first names → initials
         if (ctx.measureText(label).width > maxWidth && !node.isRoot) {
           const parts = label.split(' & ');
-          const toInitials = (name) => name.split(' ').map(w => w[0]).join('').toUpperCase();
           if (parts.length === 2) {
-            label = `${toInitials(parts[0])} & ${toInitials(parts[1])}`;
+            // Try first names: "William + Alex"
+            const fn1 = parts[0].split(' ')[0];
+            const fn2 = parts[1].split(' ')[0];
+            label = `${fn1} + ${fn2}`;
+            if (ctx.measureText(label).width > maxWidth) {
+              // Try initials: "W+A"
+              label = `${fn1[0]}+${fn2[0]}`;
+            }
           } else {
-            label = toInitials(label);
+            // Single person: first name only
+            label = label.split(' ')[0];
           }
         }
         while (ctx.measureText(label).width > maxWidth && label.length > 3) {
           label = label.slice(0, -4) + '...';
         }
-        const hasTeamInfo = node.legCount > 0 || node.iboCount > 0;
-        ctx.fillText(label, nx, ny - (hasTeamInfo && scale > 0.5 ? 7 * scale : 0));
-
-        if (scale > 0.5 && hasTeamInfo) {
+        const displayLegs = includeProspectsInCount ? node.legCount + (prospects.filter(p => p.parentNodeId === node.id).length) : node.legCount;
+        const displayIbos = includeProspectsInCount ? node.iboCount + node.prospectCount : node.iboCount;
+        const hasCount = displayLegs > 0 || displayIbos > 0;
+        ctx.fillText(label, nx, ny - (hasCount && scale > 0.5 ? 7 * scale : 0));
+        if (scale > 0.5 && hasCount) {
           ctx.font = `${Math.max(7, 9 * scale)}px Inter, system-ui, sans-serif`;
           ctx.fillStyle = 'rgba(26,26,26,0.35)';
-          let countText = `${node.legCount}/${node.iboCount}`;
-          if (includeProspectsInCount && node.prospectCount > 0) {
-            countText += ` +${node.prospectCount}p`;
-          }
-          ctx.fillText(countText, nx, ny + 8 * scale);
+          ctx.fillText(`${displayLegs}/${displayIbos}`, nx, ny + 8 * scale);
         }
       }
     }
-  }, [layoutNodes, layoutEdges, transform, hoveredNode, selectedNode, includeProspectsInCount]);
+  }, [layoutNodes, layoutEdges, transform, hoveredNode, selectedNode, includeProspectsInCount, fullscreen, prospects]);
 
   // Interaction handlers
   const handleMouseDown = (e) => {
@@ -576,33 +586,57 @@ export default function RadialTree({ tree, onNodeAction }) {
     setEditingVitals(false);
   };
 
-  // Touch
+  // Touch — use non-passive listeners so preventDefault works for pinch-zoom
   const lastTouchRef = useRef(null);
   const lastPinchRef = useRef(null);
-  const handleTouchStart = (e) => {
-    if (e.touches.length === 1) lastTouchRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-    else if (e.touches.length === 2) {
-      const dx = e.touches[0].clientX - e.touches[1].clientX;
-      const dy = e.touches[0].clientY - e.touches[1].clientY;
-      lastPinchRef.current = Math.sqrt(dx * dx + dy * dy);
-    }
-  };
-  const handleTouchMove = (e) => {
-    e.preventDefault();
-    if (e.touches.length === 1 && lastTouchRef.current) {
-      const dx = e.touches[0].clientX - lastTouchRef.current.x;
-      const dy = e.touches[0].clientY - lastTouchRef.current.y;
-      setTransform(prev => ({ ...prev, x: prev.x + dx, y: prev.y + dy }));
-      lastTouchRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-    } else if (e.touches.length === 2 && lastPinchRef.current) {
-      const dx = e.touches[0].clientX - e.touches[1].clientX;
-      const dy = e.touches[0].clientY - e.touches[1].clientY;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      setTransform(prev => ({ ...prev, scale: Math.max(0.15, Math.min(3, prev.scale * (dist / lastPinchRef.current))) }));
-      lastPinchRef.current = dist;
-    }
-  };
-  const handleTouchEnd = () => { lastTouchRef.current = null; lastPinchRef.current = null; };
+  const transformRef = useRef(transform);
+  transformRef.current = transform;
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const onTouchStart = (e) => {
+      if (e.touches.length === 1) {
+        lastTouchRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        lastPinchRef.current = null;
+      } else if (e.touches.length === 2) {
+        lastTouchRef.current = null;
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        lastPinchRef.current = Math.sqrt(dx * dx + dy * dy);
+      }
+    };
+
+    const onTouchMove = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.touches.length === 1 && lastTouchRef.current) {
+        const dx = e.touches[0].clientX - lastTouchRef.current.x;
+        const dy = e.touches[0].clientY - lastTouchRef.current.y;
+        setTransform(prev => ({ ...prev, x: prev.x + dx, y: prev.y + dy }));
+        lastTouchRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      } else if (e.touches.length === 2 && lastPinchRef.current) {
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const ratio = dist / lastPinchRef.current;
+        setTransform(prev => ({ ...prev, scale: Math.max(0.15, Math.min(3, prev.scale * ratio)) }));
+        lastPinchRef.current = dist;
+      }
+    };
+
+    const onTouchEnd = () => { lastTouchRef.current = null; lastPinchRef.current = null; };
+
+    canvas.addEventListener('touchstart', onTouchStart, { passive: false });
+    canvas.addEventListener('touchmove', onTouchMove, { passive: false });
+    canvas.addEventListener('touchend', onTouchEnd);
+    return () => {
+      canvas.removeEventListener('touchstart', onTouchStart);
+      canvas.removeEventListener('touchmove', onTouchMove);
+      canvas.removeEventListener('touchend', onTouchEnd);
+    };
+  }, []);
 
   const resetView = () => setTransform({ x: 0, y: 0, scale: 1 });
 
@@ -673,11 +707,15 @@ export default function RadialTree({ tree, onNodeAction }) {
           ctx.font = `${node.isRoot ? '600' : '500'} 11px Inter, system-ui, sans-serif`;
           ctx.fillStyle = colors.dark; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
           let label = node.label;
-          // Use initials if too wide
+          // Progressive abbreviation
           if (ctx.measureText(label).width > w - 12 && !node.isRoot) {
             const parts = label.split(' & ');
-            const toInit = (name) => name.split(' ').map(w => w[0]).join('').toUpperCase();
-            label = parts.length === 2 ? `${toInit(parts[0])} & ${toInit(parts[1])}` : toInit(label);
+            if (parts.length === 2) {
+              const fn1 = parts[0].split(' ')[0];
+              const fn2 = parts[1].split(' ')[0];
+              label = `${fn1} + ${fn2}`;
+              if (ctx.measureText(label).width > w - 12) label = `${fn1[0]}+${fn2[0]}`;
+            } else { label = label.split(' ')[0]; }
           }
           while (ctx.measureText(label).width > w-12 && label.length > 3) label = label.slice(0,-4)+'...';
           const hasInfo = node.legCount > 0 || node.iboCount > 0;
@@ -706,14 +744,15 @@ export default function RadialTree({ tree, onNodeAction }) {
 
   const selectedInfo = selectedNode ? layoutNodes.find(n => n.id === selectedNode) : null;
 
-  // Mobile-first panel styles
+  // Mobile-first panel styles — positioned above the control buttons
   const panelStyle = {
-    position: 'absolute', bottom: '12px', left: '12px', right: '12px',
+    position: 'absolute', bottom: '64px', left: '12px', right: '12px',
     background: 'white', padding: '14px 16px',
     maxWidth: '320px', borderRadius: '6px',
     boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-    maxHeight: '50vh', overflowY: 'auto',
+    maxHeight: '45vh', overflowY: 'auto',
     WebkitOverflowScrolling: 'touch',
+    zIndex: 8,
   };
 
   const btnStyle = (bg, fg) => ({
@@ -750,7 +789,6 @@ export default function RadialTree({ tree, onNodeAction }) {
         onMouseDown={handleMouseDown} onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}
         onWheel={handleWheel} onClick={handleClick}
-        onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}
         style={{ width: '100%', height: '100%', touchAction: 'none' }}
       />
 
