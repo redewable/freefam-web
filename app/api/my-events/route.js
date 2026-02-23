@@ -5,7 +5,7 @@ import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { getPartnerLtdId } from '@/app/lib/partner';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY) : null;
 
 // Service-role client
 function getServiceClient() {
@@ -24,6 +24,7 @@ function getServiceClient() {
 // GET - Fetch user's events
 export async function GET(request) {
   try {
+    if (!stripe) return NextResponse.json({ error: 'Stripe not configured' }, { status: 503 });
     const { searchParams } = new URL(request.url);
     const overrideLtdId = searchParams.get('ltdId'); // Leadership override
 

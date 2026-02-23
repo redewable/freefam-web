@@ -153,142 +153,18 @@ const InviteModal = ({ isOpen, onClose }) => {
 // ═══════════════ LOS TREE COMPONENT ═══════════════
 const LOSTree = ({ userId, profile }) => {
   const [tree, setTree] = useState(null);
-  const [attendance, setAttendance] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [showAttendance, setShowAttendance] = useState(false);
   const [losView, setLosView] = useState('list'); // 'list' | 'radial'
 
   useEffect(() => {
-    Promise.all([
-      fetch('/api/los').then(r => r.json()),
-      fetch('/api/los/attendance').then(r => r.json()).catch(() => ({ records: [] })),
-    ]).then(([treeData, attendanceData]) => {
+    fetch('/api/los').then(r => r.json()).then(treeData => {
       setTree(treeData);
-      setAttendance(attendanceData);
       setLoading(false);
     }).catch(() => setLoading(false));
   }, [userId]);
 
   if (loading) return <p style={{ color: 'rgba(26,26,26,0.4)', fontSize: '14px' }}>Loading LOS...</p>;
   if (!tree || !tree.user) return <p style={{ color: 'rgba(26,26,26,0.4)', fontSize: '14px' }}>No LOS data available.</p>;
-
-  // Gather all LOS member LTD IDs for attendance matching
-  const getAllLosMembers = (downline) => {
-    const members = [];
-    const walk = (nodes) => {
-      for (const n of nodes) {
-        members.push({ name: n.full_name, ltd_id: n.ltd_id, partner_name: n.partner_name, partner_ltd_id: n.partner_ltd_id });
-        if (n.children) walk(n.children);
-      }
-    };
-    walk(downline || []);
-    return members;
-  };
-
-  // Attendance Dashboard sub-component
-  const AttendanceDashboard = ({ attendance, tree }) => {
-    const [expandedMeeting, setExpandedMeeting] = useState({});
-    const records = attendance?.records || [];
-    const losMembers = getAllLosMembers(tree.downline);
-
-    // Group records by actual meeting date
-    const byDate = {};
-    for (const rec of records) {
-      const dateKey = rec.meeting_date || rec.date;
-      if (!dateKey) continue;
-      if (!byDate[dateKey]) byDate[dateKey] = [];
-      byDate[dateKey].push(rec);
-    }
-
-    // Sort meeting dates newest first
-    const meetingDates = Object.keys(byDate).sort((a, b) => new Date(b) - new Date(a));
-
-    if (meetingDates.length === 0) return null;
-
-    return (
-      <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-        <p style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.35)', marginBottom: '4px' }}>Meeting Attendance</p>
-        {meetingDates.map(dateKey => {
-          const meetingRecords = byDate[dateKey];
-          const isExpanded = expandedMeeting[dateKey];
-
-          // Build set of LTD IDs that attended this meeting
-          const attendedLtdIds = new Set(meetingRecords.map(r => r.ltd_id));
-
-          // Cross-reference with LOS — couples count as one unit
-          const present = [];
-          const missing = [];
-          for (const m of losMembers) {
-            const wasPresent = attendedLtdIds.has(m.ltd_id) || (m.partner_ltd_id && attendedLtdIds.has(m.partner_ltd_id));
-            const displayName = m.partner_name ? `${m.name} & ${m.partner_name}` : m.name;
-            if (wasPresent) {
-              present.push(displayName);
-            } else {
-              missing.push(displayName);
-            }
-          }
-
-          const totalAttended = meetingRecords.length;
-          const meetingLabel = new Date(dateKey + 'T12:00:00-06:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'America/Chicago' });
-
-          return (
-            <div key={dateKey} style={{ background: 'white', border: '1px solid rgba(26,26,26,0.08)' }}>
-              <button
-                onClick={() => setExpandedMeeting(prev => ({ ...prev, [dateKey]: !prev[dateKey] }))}
-                style={{
-                  width: '100%', padding: '12px 16px', background: 'none', border: 'none', cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <span style={{ fontSize: '13px', fontWeight: 500, color: colors.dark }}>{meetingLabel}</span>
-                  {present.length > 0 && (
-                    <span style={{ fontSize: '10px', padding: '2px 8px', background: 'rgba(34,197,94,0.1)', color: '#22c55e', borderRadius: '2px' }}>
-                      {present.length} present
-                    </span>
-                  )}
-                  {missing.length > 0 && (
-                    <span style={{ fontSize: '10px', padding: '2px 8px', background: 'rgba(239,68,68,0.06)', color: '#ef4444', borderRadius: '2px' }}>
-                      {missing.length} missing
-                    </span>
-                  )}
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '18px', fontWeight: 700, color: colors.dark }}>{totalAttended}</span>
-                  <span style={{ fontSize: '11px', color: 'rgba(26,26,26,0.3)' }}>total</span>
-                  <Icons.ChevronDown style={{ width: '14px', height: '14px', color: 'rgba(26,26,26,0.3)', transform: isExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
-                </div>
-              </button>
-              {isExpanded && (
-                <div style={{ padding: '0 16px 16px', borderTop: '1px solid rgba(26,26,26,0.06)' }}>
-                  {present.length > 0 && (
-                    <div style={{ marginTop: '12px' }}>
-                      <p style={{ fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#22c55e', marginBottom: '6px', fontWeight: 600 }}>Present from LOS ({present.length})</p>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                        {present.map((name, i) => (
-                          <span key={i} style={{ fontSize: '11px', padding: '3px 8px', background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.15)', color: colors.dark }}>{name}</span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {missing.length > 0 && (
-                    <div style={{ marginTop: '12px' }}>
-                      <p style={{ fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#ef4444', marginBottom: '6px', fontWeight: 600 }}>Missing from LOS ({missing.length})</p>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                        {missing.map((name, i) => (
-                          <span key={i} style={{ fontSize: '11px', padding: '3px 8px', background: 'rgba(239,68,68,0.04)', border: '1px solid rgba(239,68,68,0.12)', color: 'rgba(26,26,26,0.5)' }}>{name}</span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    );
-  };
 
   const PersonCard = ({ person, isCurrentUser, isSponsor }) => {
     const roleBadge = {
@@ -297,9 +173,6 @@ const LOSTree = ({ userId, profile }) => {
       member: { bg: 'rgba(26,26,26,0.06)', color: 'rgba(26,26,26,0.5)', label: 'Member' },
     };
     const badge = roleBadge[person.role] || roleBadge.member;
-
-    // Find attendance for this person
-    const personAttendance = attendance?.records?.filter(r => r.ltd_id === person.ltd_id) || [];
 
     return (
       <div style={{
@@ -319,36 +192,15 @@ const LOSTree = ({ userId, profile }) => {
               {isSponsor && <span style={{ fontSize: '11px', color: 'rgba(26,26,26,0.35)' }}>Your Sponsor</span>}
             </div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            {person.direct_downline_count > 0 && (
-              <span style={{ fontSize: '12px', color: 'rgba(26,26,26,0.4)' }}>{person.direct_downline_count} downline</span>
-            )}
-            {showAttendance && personAttendance.length > 0 && (
-              <span style={{ fontSize: '11px', padding: '2px 8px', background: 'rgba(34,197,94,0.1)', color: '#22c55e', borderRadius: '2px' }}>
-                {personAttendance.length} event{personAttendance.length !== 1 ? 's' : ''}
-              </span>
-            )}
-          </div>
+          {person.direct_downline_count > 0 && (
+            <span style={{ fontSize: '12px', color: 'rgba(26,26,26,0.4)' }}>{person.direct_downline_count} downline</span>
+          )}
         </div>
-        {/* Attendance detail */}
-        {showAttendance && personAttendance.length > 0 && (
-          <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid rgba(26,26,26,0.06)' }}>
-            {personAttendance.map((rec, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 0' }}>
-                <span style={{ fontSize: '11px', color: 'rgba(26,26,26,0.5)' }}>{rec.event_source === 'bcs' ? 'BCS' : 'Info Session'}</span>
-                <span style={{ fontSize: '11px', color: 'rgba(26,26,26,0.35)' }}>{new Date(rec.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-                <span style={{ fontSize: '10px', padding: '1px 6px', background: rec.checked_in ? 'rgba(34,197,94,0.1)' : 'rgba(26,26,26,0.04)', color: rec.checked_in ? '#22c55e' : 'rgba(26,26,26,0.35)', borderRadius: '2px' }}>
-                  {rec.checked_in ? 'Attended' : 'Registered'}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
     );
   };
 
-  const DownlineTree = ({ people, showAttendance, attendance, depth }) => {
+  const DownlineTree = ({ people, depth }) => {
     const [expanded, setExpanded] = useState({});
     const toggle = (id) => setExpanded(prev => ({ ...prev, [id]: !prev[id] }));
 
@@ -357,7 +209,6 @@ const LOSTree = ({ userId, profile }) => {
         {people.map(person => {
           const hasChildren = person.children && person.children.length > 0;
           const isExpanded = expanded[person.id];
-          const personAttendance = attendance?.records?.filter(r => r.ltd_id === person.ltd_id || (person.partner_ltd_id && r.ltd_id === person.partner_ltd_id)) || [];
           const roleBadge = {
             admin: { bg: 'rgba(184,149,107,0.15)', color: colors.gold, label: 'Admin' },
             sponsor: { bg: 'rgba(59,130,246,0.1)', color: '#3b82f6', label: 'Sponsor' },
@@ -426,14 +277,9 @@ const LOSTree = ({ userId, profile }) => {
                     )}
                   </div>
                 </div>
-                {showAttendance && personAttendance.length > 0 && (
-                  <span style={{ fontSize: '10px', padding: '2px 6px', background: 'rgba(34,197,94,0.1)', color: '#22c55e', borderRadius: '2px', flexShrink: 0 }}>
-                    {personAttendance.length}
-                  </span>
-                )}
               </div>
               {hasChildren && isExpanded && (
-                <DownlineTree people={person.children} showAttendance={showAttendance} attendance={attendance} depth={depth + 1} />
+                <DownlineTree people={person.children} depth={depth + 1} />
               )}
             </div>
           );
@@ -550,29 +396,10 @@ const LOSTree = ({ userId, profile }) => {
           <p style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.35)', marginBottom: '8px' }}>
             Your Team — {tree.downline.length} leg{tree.downline.length !== 1 ? 's' : ''}
           </p>
-          <DownlineTree people={tree.downline} showAttendance={showAttendance} attendance={attendance} depth={0} />
+          <DownlineTree people={tree.downline} depth={0} />
         </div>
       )}
 
-      {/* Attendance Section — below the tree */}
-      {attendance?.records?.length > 0 && (
-        <div style={{ marginTop: '8px' }}>
-          <button onClick={() => setShowAttendance(!showAttendance)} style={{
-            display: 'flex', alignItems: 'center', gap: '8px',
-            padding: '10px 16px', background: showAttendance ? 'rgba(184,149,107,0.08)' : 'white',
-            border: showAttendance ? `1px solid rgba(184,149,107,0.25)` : '1px solid rgba(26,26,26,0.1)',
-            cursor: 'pointer', fontSize: '12px', color: showAttendance ? colors.gold : 'rgba(26,26,26,0.5)',
-            width: '100%', justifyContent: 'space-between',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Icons.Calendar style={{ width: '14px', height: '14px' }} />
-              {showAttendance ? 'Hide Attendance' : 'Show Team Attendance'}
-            </div>
-            <Icons.ChevronDown style={{ width: '14px', height: '14px', transform: showAttendance ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
-          </button>
-          {showAttendance && <AttendanceDashboard attendance={attendance} tree={tree} />}
-        </div>
-      )}
       </>}
     </div>
   );
@@ -618,23 +445,28 @@ const GatedPreview = ({ title, description, previewItems }) => (
 // ═══════════════ MY EVENTS TAB ═══════════════
 const MyEventsTab = ({ profile }) => {
   const [events, setEvents] = useState([]);
+  const [attendance, setAttendance] = useState(null);
+  const [losTree, setLosTree] = useState(null);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState('');
 
   useEffect(() => {
-    fetch('/api/my-events')
-      .then(r => {
+    Promise.all([
+      fetch('/api/my-events').then(r => {
         if (!r.ok) throw new Error(r.status === 401 ? 'Please sign in again.' : 'Could not load events.');
         return r.json();
-      })
-      .then(data => {
-        setEvents(data.events || []);
-        setLoading(false);
-      })
-      .catch((err) => {
-        setFetchError(err.message || 'Unable to load events. Please try again later.');
-        setLoading(false);
-      });
+      }),
+      fetch('/api/los/attendance').then(r => r.json()).catch(() => ({ records: [] })),
+      fetch('/api/los').then(r => r.json()).catch(() => null),
+    ]).then(([eventsData, attendanceData, losData]) => {
+      setEvents(eventsData.events || []);
+      setAttendance(attendanceData);
+      setLosTree(losData);
+      setLoading(false);
+    }).catch((err) => {
+      setFetchError(err.message || 'Unable to load events. Please try again later.');
+      setLoading(false);
+    });
   }, []);
 
   if (loading) return <p style={{ color: 'rgba(26,26,26,0.4)', fontSize: '14px' }}>Loading events...</p>;
@@ -733,6 +565,142 @@ const MyEventsTab = ({ profile }) => {
           </div>
         </div>
       )}
+
+      {/* Team Meeting Attendance */}
+      {(() => {
+        const records = attendance?.records || [];
+        if (records.length === 0 || !losTree?.downline) return null;
+
+        // Gather all LOS members for cross-reference
+        const getAllLosMembers = (downline) => {
+          const members = [];
+          const walk = (nodes) => {
+            for (const n of nodes) {
+              members.push({ name: n.full_name, ltd_id: n.ltd_id, partner_name: n.partner_name, partner_ltd_id: n.partner_ltd_id });
+              if (n.children) walk(n.children);
+            }
+          };
+          walk(downline || []);
+          return members;
+        };
+
+        const losMembers = getAllLosMembers(losTree.downline);
+
+        // Shared-last-name couple format
+        const formatCoupleName = (name1, name2) => {
+          if (!name2) return name1;
+          const p1 = (name1 || '').trim().split(' ');
+          const p2 = name2.trim().split(' ');
+          const last1 = p1.length > 1 ? p1[p1.length - 1] : '';
+          const last2 = p2.length > 1 ? p2[p2.length - 1] : '';
+          if (last1 && last2 && last1.toLowerCase() === last2.toLowerCase()) {
+            return `${p1[0]} & ${p2[0]} ${last1}`;
+          }
+          return `${name1} & ${name2}`;
+        };
+
+        // Group records by meeting date
+        const byDate = {};
+        for (const rec of records) {
+          const dateKey = rec.meeting_date || rec.date;
+          if (!dateKey) continue;
+          if (!byDate[dateKey]) byDate[dateKey] = [];
+          byDate[dateKey].push(rec);
+        }
+        const meetingDates = Object.keys(byDate).sort((a, b) => new Date(b) - new Date(a));
+        if (meetingDates.length === 0) return null;
+
+        return <AttendanceDashboard meetingDates={meetingDates} byDate={byDate} losMembers={losMembers} formatCoupleName={formatCoupleName} />;
+      })()}
+    </div>
+  );
+};
+
+// Attendance Dashboard — rendered inside My Events
+const AttendanceDashboard = ({ meetingDates, byDate, losMembers, formatCoupleName }) => {
+  const [expandedMeeting, setExpandedMeeting] = useState({});
+
+  return (
+    <div style={{ marginTop: '32px' }}>
+      <p style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.35)', marginBottom: '8px' }}>Team Meeting Attendance</p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+        {meetingDates.map(dateKey => {
+          const meetingRecords = byDate[dateKey];
+          const isExpanded = expandedMeeting[dateKey];
+
+          const attendedLtdIds = new Set(meetingRecords.map(r => r.ltd_id));
+
+          const present = [];
+          const missing = [];
+          for (const m of losMembers) {
+            const wasPresent = attendedLtdIds.has(m.ltd_id) || (m.partner_ltd_id && attendedLtdIds.has(m.partner_ltd_id));
+            const displayName = formatCoupleName(m.name, m.partner_name);
+            if (wasPresent) {
+              present.push(displayName);
+            } else {
+              missing.push(displayName);
+            }
+          }
+
+          const totalAttended = meetingRecords.length;
+          const meetingLabel = new Date(dateKey + 'T12:00:00-06:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'America/Chicago' });
+
+          return (
+            <div key={dateKey} style={{ background: 'white', border: '1px solid rgba(26,26,26,0.08)' }}>
+              <button
+                onClick={() => setExpandedMeeting(prev => ({ ...prev, [dateKey]: !prev[dateKey] }))}
+                style={{
+                  width: '100%', padding: '12px 16px', background: 'none', border: 'none', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <span style={{ fontSize: '13px', fontWeight: 500, color: colors.dark }}>{meetingLabel}</span>
+                  {present.length > 0 && (
+                    <span style={{ fontSize: '10px', padding: '2px 8px', background: 'rgba(34,197,94,0.1)', color: '#22c55e', borderRadius: '2px' }}>
+                      {present.length} present
+                    </span>
+                  )}
+                  {missing.length > 0 && (
+                    <span style={{ fontSize: '10px', padding: '2px 8px', background: 'rgba(239,68,68,0.06)', color: '#ef4444', borderRadius: '2px' }}>
+                      {missing.length} missing
+                    </span>
+                  )}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '18px', fontWeight: 700, color: colors.dark }}>{totalAttended}</span>
+                  <span style={{ fontSize: '11px', color: 'rgba(26,26,26,0.3)' }}>total</span>
+                  <Icons.ChevronDown style={{ width: '14px', height: '14px', color: 'rgba(26,26,26,0.3)', transform: isExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+                </div>
+              </button>
+              {isExpanded && (
+                <div style={{ padding: '0 16px 16px', borderTop: '1px solid rgba(26,26,26,0.06)' }}>
+                  {present.length > 0 && (
+                    <div style={{ marginTop: '12px' }}>
+                      <p style={{ fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#22c55e', marginBottom: '6px', fontWeight: 600 }}>Present from LOS ({present.length})</p>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                        {present.map((name, i) => (
+                          <span key={i} style={{ fontSize: '11px', padding: '3px 8px', background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.15)', color: colors.dark }}>{name}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {missing.length > 0 && (
+                    <div style={{ marginTop: '12px' }}>
+                      <p style={{ fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#ef4444', marginBottom: '6px', fontWeight: 600 }}>Missing from LOS ({missing.length})</p>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                        {missing.map((name, i) => (
+                          <span key={i} style={{ fontSize: '11px', padding: '3px 8px', background: 'rgba(239,68,68,0.04)', border: '1px solid rgba(239,68,68,0.12)', color: 'rgba(26,26,26,0.5)' }}>{name}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 };

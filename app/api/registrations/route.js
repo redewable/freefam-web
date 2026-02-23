@@ -2,7 +2,7 @@ import Stripe from 'stripe';
 import { kv } from '@vercel/kv';
 import { NextResponse } from 'next/server';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY) : null;
 
 // Use CST (America/Chicago) for all date calculations
 const getCSTDate = () => {
@@ -29,6 +29,7 @@ const getWeekKey = () => {
 
 export async function GET(request) {
   try {
+    if (!stripe) return NextResponse.json({ error: 'Stripe not configured' }, { status: 503 });
     const { searchParams } = new URL(request.url);
     const filter = searchParams.get('filter') || 'all';
 

@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY) : null;
 
 // GET - Fetch receipt for a Stripe session
 export async function GET(request) {
   try {
+    if (!stripe) return NextResponse.json({ error: 'Stripe not configured' }, { status: 503 });
     const { searchParams } = new URL(request.url);
     const sessionId = searchParams.get('session_id');
 

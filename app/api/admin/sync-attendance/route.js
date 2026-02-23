@@ -21,7 +21,8 @@ export async function POST() {
       return NextResponse.json({ error: 'Admin only' }, { status: 403 });
     }
 
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+    const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY) : null;
+    if (!stripe) return NextResponse.json({ error: 'Stripe not configured' }, { status: 503 });
 
     // 1. Build a map of Stripe session IDs → ltdId from Stripe
     const stripeMap = new Map(); // sessionId -> { ltdId, name }
