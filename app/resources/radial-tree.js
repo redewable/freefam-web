@@ -17,7 +17,7 @@ const PROSPECT_STATUSES = {
 };
 
 const RELATIONSHIP_OPTIONS = ['Single', 'Dating', 'Engaged', 'Married', 'Divorced', 'Widowed'];
-const NEXT_STEP_OPTIONS = ['Follow Up', 'QI Meeting', 'Show the Plan', 'Second Look', 'Register', 'Grand Opening', 'Conference', 'Other'];
+const NEXT_STEP_OPTIONS = ['Check Interest', 'Good News Call', 'PQI', 'QI1', 'QI2', '1st Look', 'Follow Up 1', '2nd Look', 'Follow Up 2', 'Final Review', 'GSM', 'Grand Opening'];
 
 export default function RadialTree({ tree, onNodeAction }) {
   const canvasRef = useRef(null);
@@ -38,6 +38,9 @@ export default function RadialTree({ tree, onNodeAction }) {
   // Editing vitals on selected prospect
   const [editingVitals, setEditingVitals] = useState(false);
   const [editVitalsForm, setEditVitalsForm] = useState({});
+  const [legendOpen, setLegendOpen] = useState(true);
+  const [fullscreen, setFullscreen] = useState(false);
+  const [includeProspectsInCount, setIncludeProspectsInCount] = useState(false);
   const nodesRef = useRef([]);
 
   if (!tree || !tree.user) return null;
@@ -151,12 +154,33 @@ export default function RadialTree({ tree, onNodeAction }) {
     // Root node
     const centerLabel = partnerName ? `${userName} & ${partnerName}` : userName;
     const rootId = tree.user.id || 'root';
+    // Compute root's leg/IBO counts
+    const countAllIbos = (nodes) => {
+      let c = 0;
+      for (const n of (nodes || [])) { c += 1; if (n.children) c += countAllIbos(n.children); }
+      return c;
+    };
+    const rootLegs = downline.length;
+    const rootIbos = countAllIbos(downline);
+    const countAllProspects = (nodeId) => {
+      const direct = prospects.filter(p => p.parentNodeId === nodeId);
+      let count = direct.length;
+      const countSub = (pid) => {
+        const subs = prospects.filter(p => p.parentNodeId === pid);
+        count += subs.length;
+        subs.forEach(sp => countSub(sp.id));
+      };
+      direct.forEach(p => countSub(p.id));
+      return count;
+    };
+    const rootProspectCount = countAllProspects(rootId);
     const rootNode = {
       id: rootId, x: 0, y: 0,
-      label: centerLabel, ltdId: tree.user.ltd_id,
+      label: centerLabel,
       w: NODE_W + 30, h: NODE_H + 10,
       color: colors.gold, isRoot: true, depth: 0,
       profileId: rootId,
+      legCount: rootLegs, iboCount: rootIbos, prospectCount: rootProspectCount,
     };
     nodes.push(rootNode);
 
@@ -245,11 +269,34 @@ export default function RadialTree({ tree, onNodeAction }) {
         const nodeColor = LEG_COLORS[colorIdx % LEG_COLORS.length];
         const nodeId = child.id || `node-${nodes.length}`;
 
+        // Compute legs (direct children), total IBOs (all descendants), and prospect count
+        const directLegs = (child.children || []).length;
+        const countIbos = (nodes) => {
+          let c = 0;
+          for (const n of (nodes || [])) { c += 1; if (n.children) c += countIbos(n.children); }
+          return c;
+        };
+        const totalIbos = countIbos(child.children);
+        // Count all prospects under this IBO (recursively)
+        const countProspectsUnder = (nodeId) => {
+          const direct = getProspectsUnder(nodeId);
+          let count = direct.length;
+          const countSubProspects = (pid) => {
+            const subs = getProspectsUnder(pid);
+            count += subs.length;
+            subs.forEach(sp => countSubProspects(sp.id));
+          };
+          direct.forEach(p => countSubProspects(p.id));
+          return count;
+        };
+        const prospectCount = countProspectsUnder(nodeId);
+
         nodes.push({
           id: nodeId, x: cx, y: cy,
-          label: displayName, ltdId: child.ltd_id,
+          label: displayName,
           w: NODE_W, h: NODE_H, color: nodeColor,
           depth, totalDescendants: child.totalDescendants || 0,
+          legCount: directLegs, iboCount: totalIbos, prospectCount,
           role: child.role, profileId: nodeId,
         });
 
@@ -403,17 +450,14 @@ export default function RadialTree({ tree, onNodeAction }) {
         }
         ctx.fillText(label, nx + 4 * scale, ny);
 
-        // Vitals hint: small icon if has vitals
+        // Vitals hint: show next step as small text inside the node bottom area
         const pd = node.prospectData;
-        if (pd?.vitals && Object.keys(pd.vitals).length > 0 && scale > 0.5) {
-          ctx.font = `${Math.max(6, 7 * scale)}px Inter, system-ui, sans-serif`;
-          ctx.fillStyle = 'rgba(26,26,26,0.25)';
-          const hints = [];
-          if (pd.vitals.city) hints.push(pd.vitals.city);
-          if (pd.vitals.nextStep) hints.push(pd.vitals.nextStep);
-          if (hints.length > 0) {
-            const hintText = hints.join(' \u00b7 ');
-            ctx.fillText(hintText, nx + 4 * scale, ny + h/2 + 8 * scale);
+        if (pd?.vitals && scale > 0.5) {
+          const nextStep = pd.vitals.nextStep;
+          if (nextStep) {
+            ctx.font = `${Math.max(5, 6.5 * scale)}px Inter, system-ui, sans-serif`;
+            ctx.fillStyle = 'rgba(26,26,26,0.3)';
+            ctx.fillText(nextStep, nx + 4 * scale, ny + h/2 - 4 * scale);
           }
         }
 
@@ -450,22 +494,34 @@ export default function RadialTree({ tree, onNodeAction }) {
 
         let label = node.label;
         const maxWidth = w - 12 * scale;
+        // Use initials when name is too wide
+        if (ctx.measureText(label).width > maxWidth && !node.isRoot) {
+          const parts = label.split(' & ');
+          const toInitials = (name) => name.split(' ').map(w => w[0]).join('').toUpperCase();
+          if (parts.length === 2) {
+            label = `${toInitials(parts[0])} & ${toInitials(parts[1])}`;
+          } else {
+            label = toInitials(label);
+          }
+        }
         while (ctx.measureText(label).width > maxWidth && label.length > 3) {
           label = label.slice(0, -4) + '...';
         }
-        ctx.fillText(label, nx, ny - (node.ltdId && scale > 0.5 ? 7 * scale : 0));
+        const hasTeamInfo = node.legCount > 0 || node.iboCount > 0;
+        ctx.fillText(label, nx, ny - (hasTeamInfo && scale > 0.5 ? 7 * scale : 0));
 
-        if (scale > 0.5) {
+        if (scale > 0.5 && hasTeamInfo) {
           ctx.font = `${Math.max(7, 9 * scale)}px Inter, system-ui, sans-serif`;
           ctx.fillStyle = 'rgba(26,26,26,0.35)';
-          const sub = [];
-          if (node.ltdId) sub.push(`#${node.ltdId}`);
-          if (node.totalDescendants > 0) sub.push(`${node.totalDescendants} in leg`);
-          if (sub.length > 0) ctx.fillText(sub.join(' \u00b7 '), nx, ny + 8 * scale);
+          let countText = `${node.legCount}/${node.iboCount}`;
+          if (includeProspectsInCount && node.prospectCount > 0) {
+            countText += ` +${node.prospectCount}p`;
+          }
+          ctx.fillText(countText, nx, ny + 8 * scale);
         }
       }
     }
-  }, [layoutNodes, layoutEdges, transform, hoveredNode, selectedNode]);
+  }, [layoutNodes, layoutEdges, transform, hoveredNode, selectedNode, includeProspectsInCount]);
 
   // Interaction handlers
   const handleMouseDown = (e) => {
@@ -617,13 +673,19 @@ export default function RadialTree({ tree, onNodeAction }) {
           ctx.font = `${node.isRoot ? '600' : '500'} 11px Inter, system-ui, sans-serif`;
           ctx.fillStyle = colors.dark; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
           let label = node.label;
+          // Use initials if too wide
+          if (ctx.measureText(label).width > w - 12 && !node.isRoot) {
+            const parts = label.split(' & ');
+            const toInit = (name) => name.split(' ').map(w => w[0]).join('').toUpperCase();
+            label = parts.length === 2 ? `${toInit(parts[0])} & ${toInit(parts[1])}` : toInit(label);
+          }
           while (ctx.measureText(label).width > w-12 && label.length > 3) label = label.slice(0,-4)+'...';
-          ctx.fillText(label, nx, ny - (node.ltdId ? 7 : 0));
-          ctx.font = '9px Inter, system-ui, sans-serif'; ctx.fillStyle = 'rgba(26,26,26,0.35)';
-          const sub = [];
-          if (node.ltdId) sub.push(`#${node.ltdId}`);
-          if (node.totalDescendants > 0) sub.push(`${node.totalDescendants} in leg`);
-          if (sub.length > 0) ctx.fillText(sub.join(' \u00b7 '), nx, ny + 8);
+          const hasInfo = node.legCount > 0 || node.iboCount > 0;
+          ctx.fillText(label, nx, ny - (hasInfo ? 7 : 0));
+          if (hasInfo) {
+            ctx.font = '9px Inter, system-ui, sans-serif'; ctx.fillStyle = 'rgba(26,26,26,0.35)';
+            ctx.fillText(`${node.legCount}/${node.iboCount}`, nx, ny + 8);
+          }
         }
       }
       ctx.font = '500 10px Inter, system-ui, sans-serif'; ctx.fillStyle = 'rgba(26,26,26,0.2)';
@@ -633,7 +695,7 @@ export default function RadialTree({ tree, onNodeAction }) {
       const blob = await new Promise(resolve => offCanvas.toBlob(resolve, 'image/png'));
       const file = new File([blob], 'freedom-family-los.png', { type: 'image/png' });
       if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], title: 'My LOS Tree' });
+        await navigator.share({ files: [file], title: 'My LOS Drawing' });
       } else {
         const url = URL.createObjectURL(blob); const a = document.createElement('a');
         a.href = url; a.download = 'freedom-family-los.png'; a.click(); URL.revokeObjectURL(url);
@@ -678,7 +740,11 @@ export default function RadialTree({ tree, onNodeAction }) {
   const selectedProspect = selectedInfo?.isProspect ? prospects.find(p => p.id === selectedInfo.prospectId) : null;
 
   return (
-    <div ref={containerRef} style={{ position: 'relative', width: '100%', height: 'min(75vh, 600px)', minHeight: '350px', background: colors.bg, border: '1px solid rgba(26,26,26,0.08)', overflow: 'hidden', borderRadius: '6px' }}>
+    <div ref={containerRef} style={{
+      position: fullscreen ? 'fixed' : 'relative',
+      ...(fullscreen ? { inset: 0, zIndex: 999, borderRadius: 0 } : { width: '100%', height: 'min(75vh, 600px)', minHeight: '350px', borderRadius: '6px' }),
+      background: colors.bg, border: fullscreen ? 'none' : '1px solid rgba(26,26,26,0.08)', overflow: 'hidden',
+    }}>
       <canvas
         ref={canvasRef}
         onMouseDown={handleMouseDown} onMouseMove={handleMouseMove}
@@ -690,7 +756,21 @@ export default function RadialTree({ tree, onNodeAction }) {
 
       {/* Controls — mobile-friendly sizing */}
       <div style={{ position: 'absolute', bottom: '12px', right: '12px', display: 'flex', gap: '4px', zIndex: 10 }}>
-        <button onClick={handleShare} disabled={sharing} aria-label="Share tree"
+        {/* Prospect toggle */}
+        <button onClick={() => setIncludeProspectsInCount(prev => !prev)} aria-label="Toggle prospect count"
+          title={includeProspectsInCount ? 'Hide prospects in count' : 'Include prospects in count'}
+          style={{ height: '44px', padding: '0 10px', background: includeProspectsInCount ? 'rgba(184,149,107,0.12)' : 'white', border: `1px solid ${includeProspectsInCount ? 'rgba(184,149,107,0.3)' : 'rgba(26,26,26,0.15)'}`, cursor: 'pointer', fontSize: '10px', color: includeProspectsInCount ? colors.gold : 'rgba(26,26,26,0.4)', borderRadius: '6px', letterSpacing: '0.03em' }}>
+          +P
+        </button>
+        <button onClick={() => setFullscreen(prev => !prev)} aria-label={fullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+          style={{ width: '44px', height: '44px', background: fullscreen ? 'rgba(184,149,107,0.12)' : 'white', border: `1px solid ${fullscreen ? 'rgba(184,149,107,0.3)' : 'rgba(26,26,26,0.15)'}`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '6px' }}>
+          {fullscreen ? (
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={colors.dark} strokeWidth="2"><path d="M8 3v3a2 2 0 01-2 2H3M21 8h-3a2 2 0 01-2-2V3M3 16h3a2 2 0 012 2v3M16 21v-3a2 2 0 012-2h3" /></svg>
+          ) : (
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={colors.dark} strokeWidth="2"><path d="M8 3H5a2 2 0 00-2 2v3M21 8V5a2 2 0 00-2-2h-3M3 16v3a2 2 0 002 2h3M16 21h3a2 2 0 002-2v-3" /></svg>
+          )}
+        </button>
+        <button onClick={handleShare} disabled={sharing} aria-label="Share drawing"
           style={{ width: '44px', height: '44px', background: sharing ? 'rgba(184,149,107,0.15)' : 'white', border: `1px solid ${sharing ? 'rgba(184,149,107,0.3)' : 'rgba(26,26,26,0.15)'}`, cursor: sharing ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '6px' }}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={sharing ? colors.gold : colors.dark} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" />
@@ -704,48 +784,64 @@ export default function RadialTree({ tree, onNodeAction }) {
           style={{ height: '44px', padding: '0 14px', background: 'white', border: '1px solid rgba(26,26,26,0.15)', cursor: 'pointer', fontSize: '12px', color: 'rgba(26,26,26,0.5)', borderRadius: '6px' }}>Reset</button>
       </div>
 
-      {/* Prospect Legend — collapsible on mobile */}
-      <div style={{ position: 'absolute', top: '10px', left: '10px', background: 'rgba(255,255,255,0.95)', padding: '8px 12px', border: '1px solid rgba(26,26,26,0.08)', fontSize: '10px', borderRadius: '6px', maxWidth: '180px', zIndex: 5 }}>
-        {downline.length > 0 && (
-          <>
-            <p style={{ margin: '0 0 5px', color: 'rgba(26,26,26,0.4)', fontSize: '8px', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Legs</p>
-            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '8px' }}>
-              {downline.slice(0, 6).map((leg, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-                  <div style={{ width: '7px', height: '7px', borderRadius: '2px', background: LEG_COLORS[i % LEG_COLORS.length] }} />
-                  <span style={{ color: 'rgba(26,26,26,0.5)', fontSize: '10px' }}>{leg.full_name?.split(' ')[0] || `Leg ${i + 1}`}</span>
+      {/* Legend — collapsible */}
+      <div style={{ position: 'absolute', top: '10px', left: '10px', background: 'rgba(255,255,255,0.95)', border: '1px solid rgba(26,26,26,0.08)', fontSize: '10px', borderRadius: '6px', maxWidth: '180px', zIndex: 5, overflow: 'hidden' }}>
+        <button onClick={() => setLegendOpen(!legendOpen)} style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%',
+          padding: '6px 10px', background: 'none', border: 'none', cursor: 'pointer', gap: '6px',
+        }}>
+          <span style={{ fontSize: '8px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.4)' }}>Legend</span>
+          <span style={{ fontSize: '10px', color: 'rgba(26,26,26,0.3)', transform: legendOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', lineHeight: 1 }}>{'\u25BE'}</span>
+        </button>
+        {legendOpen && (
+          <div style={{ padding: '0 10px 8px' }}>
+            {downline.length > 0 && (
+              <>
+                <p style={{ margin: '0 0 4px', color: 'rgba(26,26,26,0.4)', fontSize: '8px', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Legs</p>
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '6px' }}>
+                  {downline.slice(0, 6).map((leg, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                      <div style={{ width: '7px', height: '7px', borderRadius: '2px', background: LEG_COLORS[i % LEG_COLORS.length] }} />
+                      <span style={{ color: 'rgba(26,26,26,0.5)', fontSize: '10px' }}>{leg.full_name?.split(' ')[0] || `Leg ${i + 1}`}</span>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              </>
+            )}
+            <p style={{ margin: '0 0 3px', color: 'rgba(26,26,26,0.4)', fontSize: '8px', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Prospects</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <div style={{ width: '20px', height: '12px', background: 'rgba(245,158,11,0.08)', borderRadius: '2px' }} />
+                <span style={{ color: 'rgba(26,26,26,0.5)' }}>Looking</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <div style={{ width: '20px', height: '12px', background: 'rgba(59,130,246,0.08)', borderRadius: '2px', borderBottom: '2px solid #3b82f6' }} />
+                <span style={{ color: 'rgba(26,26,26,0.5)' }}>QI Complete</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <div style={{ width: '20px', height: '12px', background: 'rgba(168,85,247,0.08)', borderRadius: '2px', border: '1.5px dashed #a855f7' }} />
+                <span style={{ color: 'rgba(26,26,26,0.5)' }}>Saw the Plan</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <div style={{ width: '20px', height: '12px', background: 'white', borderRadius: '2px', border: '1.5px solid rgba(26,26,26,0.15)' }} />
+                <span style={{ color: 'rgba(26,26,26,0.5)' }}>IBO</span>
+              </div>
             </div>
-          </>
+            <p style={{ margin: '6px 0 2px', color: 'rgba(26,26,26,0.4)', fontSize: '8px', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Counts</p>
+            <span style={{ color: 'rgba(26,26,26,0.5)', fontSize: '9px' }}>legs / IBOs</span>
+          </div>
         )}
-        <p style={{ margin: '0 0 4px', color: 'rgba(26,26,26,0.4)', fontSize: '8px', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Prospects</p>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-            <div style={{ width: '20px', height: '12px', background: 'rgba(245,158,11,0.08)', borderRadius: '2px' }} />
-            <span style={{ color: 'rgba(26,26,26,0.5)' }}>Looking</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-            <div style={{ width: '20px', height: '12px', background: 'rgba(59,130,246,0.08)', borderRadius: '2px', borderBottom: '2px solid #3b82f6' }} />
-            <span style={{ color: 'rgba(26,26,26,0.5)' }}>QI Complete</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-            <div style={{ width: '20px', height: '12px', background: 'rgba(168,85,247,0.08)', borderRadius: '2px', border: '1.5px dashed #a855f7' }} />
-            <span style={{ color: 'rgba(26,26,26,0.5)' }}>Saw the Plan</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-            <div style={{ width: '20px', height: '12px', background: 'white', borderRadius: '2px', border: '1.5px solid rgba(26,26,26,0.15)' }} />
-            <span style={{ color: 'rgba(26,26,26,0.5)' }}>IBO</span>
-          </div>
-        </div>
       </div>
 
       {/* Selected IBO node — actions panel */}
       {selectedInfo && !selectedInfo.isProspect && !addingProspect && (
         <div style={{ ...panelStyle, border: `1px solid ${selectedInfo.color}40` }}>
           <p style={{ fontSize: '15px', fontWeight: 500, color: colors.dark, margin: '0 0 4px' }}>{selectedInfo.label}</p>
-          {selectedInfo.ltdId && <p style={{ fontSize: '11px', color: 'rgba(26,26,26,0.4)', margin: '0 0 2px' }}>LTD #{selectedInfo.ltdId}</p>}
-          {selectedInfo.totalDescendants > 0 && <p style={{ fontSize: '11px', color: selectedInfo.color, margin: '0 0 10px' }}>{selectedInfo.totalDescendants} in leg</p>}
+          {(selectedInfo.legCount > 0 || selectedInfo.iboCount > 0) && (
+            <p style={{ fontSize: '11px', color: selectedInfo.color, margin: '0 0 10px' }}>
+              {selectedInfo.legCount} leg{selectedInfo.legCount !== 1 ? 's' : ''}, {selectedInfo.iboCount} IBO{selectedInfo.iboCount !== 1 ? 's' : ''}
+            </p>
+          )}
           <button
             onClick={() => { setAddingProspect(selectedInfo.profileId || selectedInfo.id); setSelectedNode(null); }}
             style={{ ...btnStyle(colors.gold, 'white'), display: 'flex', alignItems: 'center', gap: '6px', width: '100%', justifyContent: 'center' }}

@@ -401,10 +401,11 @@ const LOSTree = ({ userId, profile }) => {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                     <span style={{ fontSize: '10px', padding: '1px 6px', background: badge.bg, color: badge.color, borderRadius: '2px' }}>{badge.label}</span>
                     {person.ltd_id && <span style={{ fontSize: '10px', color: 'rgba(26,26,26,0.3)' }}>#{person.ltd_id}</span>}
-                    {legCount > 0 && (
-                      <span style={{ fontSize: '10px', color: colors.gold, fontWeight: 600 }}>{legCount} in leg</span>
+                    {(hasChildren || legCount > 0) && (
+                      <span style={{ fontSize: '10px', color: colors.gold, fontWeight: 600 }}>
+                        {person.children?.length || 0}/{legCount}
+                      </span>
                     )}
-                    {hasChildren && legCount === 0 && <span style={{ fontSize: '10px', color: 'rgba(26,26,26,0.3)' }}>{person.children.length} direct</span>}
                   </div>
                 </div>
                 {showAttendance && personAttendance.length > 0 && (
@@ -451,13 +452,13 @@ const LOSTree = ({ userId, profile }) => {
           background: losView === 'radial' ? colors.dark : 'rgba(26,26,26,0.06)',
           color: losView === 'radial' ? colors.bg : 'rgba(26,26,26,0.5)',
         }}>
-          <span style={{ marginRight: '6px' }}>{'\u25B3'}</span>Tree View
+          <span style={{ marginRight: '6px' }}>{'\u25B3'}</span>Drawing
         </button>
       </div>
 
-      {/* Pyramid Tree View */}
+      {/* Drawing View */}
       {losView === 'radial' && (
-        <Suspense fallback={<p style={{ color: 'rgba(26,26,26,0.4)', fontSize: '14px' }}>Loading tree view...</p>}>
+        <Suspense fallback={<p style={{ color: 'rgba(26,26,26,0.4)', fontSize: '14px' }}>Loading drawing...</p>}>
           <RadialTree tree={tree} />
         </Suspense>
       )}

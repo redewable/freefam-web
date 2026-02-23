@@ -79,6 +79,7 @@ export default function BuilderTreeView({ tree, rootProfile, profiles }) {
           label: displayName, ltdId: child.ltd_id,
           w: NODE_W, h: NODE_H, color: nodeColor,
           depth, totalDescendants: child.totalDescendants || 0,
+          directLegs: (child.children || []).length,
         });
         edges.push({ from: parentId, to: nodeId, color: nodeColor });
 
@@ -181,15 +182,13 @@ export default function BuilderTreeView({ tree, rootProfile, profiles }) {
       while (ctx.measureText(label).width > maxWidth && label.length > 3) {
         label = label.slice(0, -4) + '...';
       }
-      ctx.fillText(label, nx, ny - (node.ltdId && scale > 0.5 ? 7 * scale : 0));
+      ctx.fillText(label, nx, ny - (node.totalDescendants > 0 && scale > 0.5 ? 7 * scale : 0));
 
-      if (scale > 0.5) {
+      if (scale > 0.5 && node.totalDescendants > 0) {
         ctx.font = `${Math.max(7, 9 * scale)}px Inter, system-ui, sans-serif`;
         ctx.fillStyle = 'rgba(26,26,26,0.35)';
-        const sub = [];
-        if (node.ltdId) sub.push(`#${node.ltdId}`);
-        if (node.totalDescendants > 0) sub.push(`${node.totalDescendants} in leg`);
-        if (sub.length > 0) ctx.fillText(sub.join(' \u00b7 '), nx, ny + 8 * scale);
+        const legCount = node.directLegs || 0;
+        ctx.fillText(`${legCount}/${node.totalDescendants}`, nx, ny + 8 * scale);
       }
     }
   }, [layoutNodes, layoutEdges, transform, hoveredNode, selectedNode]);
@@ -330,13 +329,12 @@ export default function BuilderTreeView({ tree, rootProfile, profiles }) {
         ctx.fillStyle = colors.dark; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         let label = node.label;
         while (ctx.measureText(label).width > w - 12 && label.length > 3) label = label.slice(0,-4) + '...';
-        ctx.fillText(label, nx, ny - (node.ltdId ? 7 : 0));
-        ctx.font = '9px Inter, system-ui, sans-serif';
-        ctx.fillStyle = 'rgba(26,26,26,0.35)';
-        const sub = [];
-        if (node.ltdId) sub.push(`#${node.ltdId}`);
-        if (node.totalDescendants > 0) sub.push(`${node.totalDescendants} in leg`);
-        if (sub.length > 0) ctx.fillText(sub.join(' \u00b7 '), nx, ny + 8);
+        ctx.fillText(label, nx, ny - (node.totalDescendants > 0 ? 7 : 0));
+        if (node.totalDescendants > 0) {
+          ctx.font = '9px Inter, system-ui, sans-serif';
+          ctx.fillStyle = 'rgba(26,26,26,0.35)';
+          ctx.fillText(`${node.directLegs || 0}/${node.totalDescendants}`, nx, ny + 8);
+        }
       }
       ctx.font = '500 10px Inter, system-ui, sans-serif';
       ctx.fillStyle = 'rgba(26,26,26,0.2)'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
@@ -345,7 +343,7 @@ export default function BuilderTreeView({ tree, rootProfile, profiles }) {
       const blob = await new Promise(resolve => offCanvas.toBlob(resolve, 'image/png'));
       const file = new File([blob], 'freedom-family-los.png', { type: 'image/png' });
       if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], title: 'LOS Tree' });
+        await navigator.share({ files: [file], title: 'LOS Drawing' });
       } else {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a'); a.href = url; a.download = 'freedom-family-los.png'; a.click();
@@ -403,8 +401,11 @@ export default function BuilderTreeView({ tree, rootProfile, profiles }) {
       {selectedInfo && (
         <div style={{ position: 'absolute', bottom: '12px', left: '12px', background: 'white', padding: '12px 16px', border: `1px solid ${selectedInfo.color}40`, maxWidth: '220px' }}>
           <p style={{ fontSize: '14px', fontWeight: 500, color: colors.dark, margin: '0 0 4px' }}>{selectedInfo.label}</p>
-          {selectedInfo.ltdId && <p style={{ fontSize: '11px', color: 'rgba(26,26,26,0.4)', margin: '0 0 2px' }}>LTD #{selectedInfo.ltdId}</p>}
-          {selectedInfo.totalDescendants > 0 && <p style={{ fontSize: '11px', color: selectedInfo.color, margin: 0 }}>{selectedInfo.totalDescendants} in leg</p>}
+          {selectedInfo.totalDescendants > 0 && (
+            <p style={{ fontSize: '11px', color: selectedInfo.color, margin: 0 }}>
+              {selectedInfo.directLegs || 0} leg{(selectedInfo.directLegs || 0) !== 1 ? 's' : ''}, {selectedInfo.totalDescendants} IBO{selectedInfo.totalDescendants !== 1 ? 's' : ''}
+            </p>
+          )}
         </div>
       )}
 

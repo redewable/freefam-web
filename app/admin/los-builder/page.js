@@ -348,7 +348,7 @@ export default function LOSBuilderPage() {
               <span style={{ fontSize: '11px', color: 'rgba(26,26,26,0.35)', fontVariantNumeric: 'tabular-nums' }}>{node.ltd_id}</span>
               {hasChildren && (
                 <span style={{ fontSize: '10px', color: 'rgba(26,26,26,0.3)', background: 'rgba(26,26,26,0.04)', padding: '1px 5px' }}>
-                  {node.totalDescendants} in leg
+                  {(node.children || []).length}/{node.totalDescendants}
                 </span>
               )}
             </div>
@@ -464,7 +464,7 @@ export default function LOSBuilderPage() {
                 color: mode === 'tree' ? colors.bg : 'rgba(26,26,26,0.5)',
               }}
             >
-              {'\u25B3'} Tree View
+              {'\u25B3'} Drawing
             </button>
           </div>
         </div>
@@ -585,9 +585,9 @@ export default function LOSBuilderPage() {
           </div>
         ) : (
           mode === 'tree' ? (
-          /* ═══ TREE VIEW MODE ═══ */
+          /* ═══ DRAWING MODE ═══ */
           <div>
-            <Suspense fallback={<p style={{ color: 'rgba(26,26,26,0.4)', fontSize: '14px', textAlign: 'center', padding: '40px' }}>Loading tree view...</p>}>
+            <Suspense fallback={<p style={{ color: 'rgba(26,26,26,0.4)', fontSize: '14px', textAlign: 'center', padding: '40px' }}>Loading drawing...</p>}>
               <BuilderTreeView tree={tree} rootProfile={profiles.find(p => p.id === rootUserId)} profiles={profiles} />
             </Suspense>
           </div>
