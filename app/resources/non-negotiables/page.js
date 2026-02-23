@@ -5,11 +5,11 @@ import React from 'react';
 const colors = { bg: '#fafaf8', dark: '#1a1a1a', gold: '#b8956b' };
 
 const items = [
-  { title: "Attend ALL Team ISI Meetings", description: "Be present every single week. Consistency builds culture, and culture builds businesses. Your team watches what you do — not what you say." },
-  { title: "Be on LTD System", description: "Audios daily, books flowing, events on the calendar. The system is your education — plug in and never unplug." },
-  { title: "Show the Plan Minimum 2x Per Week", description: "This is the engine. Nothing moves without consistent plan-showing. Two is the floor, not the ceiling." },
-  { title: "100% Personal Use & 60%+ Verified Customer Sales", description: "Use what you sell. Sell what you use. Maintain a legitimate, product-centered business with real customers." },
-  { title: "Communicate via LTD Messaging", description: "Stay connected through the proper channels. One team, one communication system. This keeps everyone aligned and moving together." },
+  { title: "2 Machines — Volume / Sponsoring", description: "Your business runs on two machines: volume (moving product) and sponsoring (bringing in new people). Both must be running at all times. One without the other won't build a sustainable business." },
+  { title: "3–5 Registrations Per Month", description: "2+ QIs per week gets you here. Consistent plan-showing leads to consistent registrations. This is the benchmark that keeps your business growing month over month." },
+  { title: "3 Knobs — Enough Work / Right Work / Right People", description: "If results aren't coming, check the 3 knobs. Are you doing enough work? Are you doing the right work? Are you working with the right people? Adjust until the output matches the vision." },
+  { title: "Business Intent — Does Your Prospect Bring a List to the Table?", description: "A prospect with real business intent shows up ready to go. Do they have a list? Are they coachable? Are they serious? Intent is the filter — don't build with people who aren't all in." },
+  { title: "Starter Stack — Launch With Strength", description: "When someone joins, launch them with strength. A starter stack sets the tone: products in hand, system plugged in, and momentum from day one. A weak start leads to a weak business." },
 ];
 
 const Icons = {
