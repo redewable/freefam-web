@@ -569,22 +569,27 @@ const MyEventsTab = ({ profile }) => {
       {/* Team Meeting Attendance */}
       {(() => {
         const records = attendance?.records || [];
-        if (records.length === 0 || !losTree?.downline) return null;
+        if (records.length === 0 || !losTree) return null;
 
-        // Gather all LOS members for cross-reference
-        const getAllLosMembers = (downline) => {
-          const members = [];
-          const walk = (nodes) => {
-            for (const n of nodes) {
-              members.push({ name: n.full_name, ltd_id: n.ltd_id, partner_name: n.partner_name, partner_ltd_id: n.partner_ltd_id });
-              if (n.children) walk(n.children);
-            }
-          };
-          walk(downline || []);
-          return members;
+        // Gather ALL team members — you + partner + full downline
+        const allMembers = [];
+        // Include current user + partner
+        if (losTree.user) {
+          allMembers.push({
+            name: losTree.user.full_name,
+            ltd_id: losTree.user.ltd_id,
+            partner_name: losTree.partner?.full_name || null,
+            partner_ltd_id: losTree.partner?.ltd_id || null,
+          });
+        }
+        // Include all downline
+        const walkDownline = (nodes) => {
+          for (const n of (nodes || [])) {
+            allMembers.push({ name: n.full_name, ltd_id: n.ltd_id, partner_name: n.partner_name, partner_ltd_id: n.partner_ltd_id });
+            if (n.children) walkDownline(n.children);
+          }
         };
-
-        const losMembers = getAllLosMembers(losTree.downline);
+        walkDownline(losTree.downline);
 
         // Shared-last-name couple format
         const formatCoupleName = (name1, name2) => {
@@ -610,7 +615,7 @@ const MyEventsTab = ({ profile }) => {
         const meetingDates = Object.keys(byDate).sort((a, b) => new Date(b) - new Date(a));
         if (meetingDates.length === 0) return null;
 
-        return <AttendanceDashboard meetingDates={meetingDates} byDate={byDate} losMembers={losMembers} formatCoupleName={formatCoupleName} />;
+        return <AttendanceDashboard meetingDates={meetingDates} byDate={byDate} losMembers={allMembers} formatCoupleName={formatCoupleName} />;
       })()}
     </div>
   );
@@ -619,6 +624,7 @@ const MyEventsTab = ({ profile }) => {
 // Attendance Dashboard — rendered inside My Events
 const AttendanceDashboard = ({ meetingDates, byDate, losMembers, formatCoupleName }) => {
   const [expandedMeeting, setExpandedMeeting] = useState({});
+  const totalTeam = losMembers.length;
 
   return (
     <div style={{ marginTop: '32px' }}>
@@ -642,8 +648,8 @@ const AttendanceDashboard = ({ meetingDates, byDate, losMembers, formatCoupleNam
             }
           }
 
-          const totalAttended = meetingRecords.length;
           const meetingLabel = new Date(dateKey + 'T12:00:00-06:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'America/Chicago' });
+          const pct = totalTeam > 0 ? Math.round((present.length / totalTeam) * 100) : 0;
 
           return (
             <div key={dateKey} style={{ background: 'white', border: '1px solid rgba(26,26,26,0.08)' }}>
@@ -654,22 +660,14 @@ const AttendanceDashboard = ({ meetingDates, byDate, losMembers, formatCoupleNam
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px',
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                   <span style={{ fontSize: '13px', fontWeight: 500, color: colors.dark }}>{meetingLabel}</span>
-                  {present.length > 0 && (
-                    <span style={{ fontSize: '10px', padding: '2px 8px', background: 'rgba(34,197,94,0.1)', color: '#22c55e', borderRadius: '2px' }}>
-                      {present.length} present
-                    </span>
-                  )}
-                  {missing.length > 0 && (
-                    <span style={{ fontSize: '10px', padding: '2px 8px', background: 'rgba(239,68,68,0.06)', color: '#ef4444', borderRadius: '2px' }}>
-                      {missing.length} missing
-                    </span>
-                  )}
+                  <span style={{ fontSize: '11px', fontWeight: 600, color: pct === 100 ? '#22c55e' : pct >= 50 ? colors.gold : '#ef4444' }}>
+                    {present.length} of {totalTeam} attended
+                  </span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '18px', fontWeight: 700, color: colors.dark }}>{totalAttended}</span>
-                  <span style={{ fontSize: '11px', color: 'rgba(26,26,26,0.3)' }}>total</span>
+                  <span style={{ fontSize: '16px', fontWeight: 700, color: pct === 100 ? '#22c55e' : pct >= 50 ? colors.dark : '#ef4444' }}>{pct}%</span>
                   <Icons.ChevronDown style={{ width: '14px', height: '14px', color: 'rgba(26,26,26,0.3)', transform: isExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
                 </div>
               </button>
@@ -677,7 +675,7 @@ const AttendanceDashboard = ({ meetingDates, byDate, losMembers, formatCoupleNam
                 <div style={{ padding: '0 16px 16px', borderTop: '1px solid rgba(26,26,26,0.06)' }}>
                   {present.length > 0 && (
                     <div style={{ marginTop: '12px' }}>
-                      <p style={{ fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#22c55e', marginBottom: '6px', fontWeight: 600 }}>Present from LOS ({present.length})</p>
+                      <p style={{ fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#22c55e', marginBottom: '6px', fontWeight: 600 }}>Attended ({present.length})</p>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
                         {present.map((name, i) => (
                           <span key={i} style={{ fontSize: '11px', padding: '3px 8px', background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.15)', color: colors.dark }}>{name}</span>
@@ -687,7 +685,7 @@ const AttendanceDashboard = ({ meetingDates, byDate, losMembers, formatCoupleNam
                   )}
                   {missing.length > 0 && (
                     <div style={{ marginTop: '12px' }}>
-                      <p style={{ fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#ef4444', marginBottom: '6px', fontWeight: 600 }}>Missing from LOS ({missing.length})</p>
+                      <p style={{ fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#ef4444', marginBottom: '6px', fontWeight: 600 }}>Missing ({missing.length})</p>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
                         {missing.map((name, i) => (
                           <span key={i} style={{ fontSize: '11px', padding: '3px 8px', background: 'rgba(239,68,68,0.04)', border: '1px solid rgba(239,68,68,0.12)', color: 'rgba(26,26,26,0.5)' }}>{name}</span>
