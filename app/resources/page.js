@@ -600,18 +600,35 @@ const GatedPreview = ({ title, description, previewItems }) => (
 const MyEventsTab = ({ profile }) => {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState('');
 
   useEffect(() => {
     fetch('/api/my-events')
-      .then(r => r.json())
+      .then(r => {
+        if (!r.ok) throw new Error(r.status === 401 ? 'Please sign in again.' : 'Could not load events.');
+        return r.json();
+      })
       .then(data => {
         setEvents(data.events || []);
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch((err) => {
+        setFetchError(err.message || 'Unable to load events. Please try again later.');
+        setLoading(false);
+      });
   }, []);
 
   if (loading) return <p style={{ color: 'rgba(26,26,26,0.4)', fontSize: '14px' }}>Loading events...</p>;
+
+  if (fetchError) return (
+    <div style={{ textAlign: 'center', padding: '60px 20px' }}>
+      <p style={{ color: '#ef4444', fontSize: '14px', marginBottom: '8px' }}>{fetchError}</p>
+      <button onClick={() => { setFetchError(''); setLoading(true); window.location.reload(); }}
+        style={{ padding: '8px 16px', background: colors.dark, color: colors.bg, border: 'none', cursor: 'pointer', fontSize: '11px', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+        Try Again
+      </button>
+    </div>
+  );
 
   const formatDate = (d) => new Date(d).toLocaleDateString('en-US', {
     weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', timeZone: 'America/Chicago',
@@ -624,7 +641,8 @@ const MyEventsTab = ({ profile }) => {
       {events.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '60px 20px' }}>
           <Icons.Calendar style={{ width: '32px', height: '32px', color: 'rgba(26,26,26,0.15)', margin: '0 auto 16px' }} />
-          <p style={{ color: 'rgba(26,26,26,0.4)', fontSize: '14px' }}>No events yet. Your ticket purchases will appear here.</p>
+          <p style={{ color: 'rgba(26,26,26,0.4)', fontSize: '14px', marginBottom: '4px' }}>No events yet.</p>
+          <p style={{ color: 'rgba(26,26,26,0.3)', fontSize: '12px' }}>Your ticket purchases will appear here once synced with your LTD ID.</p>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>

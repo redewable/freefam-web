@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { kv } from '@vercel/kv';
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
+import { getPartnerLtdId } from '@/app/lib/partner';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -140,9 +141,4 @@ export async function GET(request) {
   }
 }
 
-function getPartnerLtdId(ltdId) {
-  if (!ltdId) return null;
-  const s = ltdId.toString();
-  if (s.endsWith('2') && s.length > 1) return s.slice(0, -1);
-  return s + '2';
-}
+// Partner LTD ID logic imported from @/app/lib/partner

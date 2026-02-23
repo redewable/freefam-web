@@ -1,16 +1,6 @@
 import { createClient } from '@/app/lib/supabase/server';
+import { getPartnerLtdId } from '@/app/lib/partner';
 import { NextResponse } from 'next/server';
-
-// Partner logic: LTD ID 6076043 <-> 60760432
-// If ID ends with '2' and has more than 1 digit, partner is ID without trailing '2'
-// Otherwise partner is ID + '2'
-function getPartnerLtdId(ltdId) {
-  if (!ltdId) return null;
-  if (ltdId.endsWith('2') && ltdId.length > 1) {
-    return ltdId.slice(0, -1);
-  }
-  return ltdId + '2';
-}
 
 export async function GET() {
   try {

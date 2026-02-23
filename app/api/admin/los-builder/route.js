@@ -1,4 +1,5 @@
 import { createServerClient } from '@supabase/ssr';
+import { getPartnerLtdId } from '@/app/lib/partner';
 import { NextResponse } from 'next/server';
 
 function getServiceClient() {
@@ -159,10 +160,4 @@ async function checkCircular(supabase, userId, newSponsorId) {
   return false;
 }
 
-// Partner LTD ID logic
-function getPartnerLtdId(ltdId) {
-  if (!ltdId) return null;
-  const s = ltdId.toString();
-  if (s.endsWith('2') && s.length > 1) return s.slice(0, -1);
-  return s + '2';
-}
+// Partner LTD ID logic imported from @/app/lib/partner

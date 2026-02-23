@@ -1,5 +1,6 @@
 import { kv } from '@vercel/kv';
 import { createClient } from '@/app/lib/supabase/server';
+import { getPartnerLtdId } from '@/app/lib/partner';
 import { NextResponse } from 'next/server';
 
 // Attendance API — pulls from ACTUAL meeting history records and cross-references with LOS
@@ -8,13 +9,6 @@ export async function GET() {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-    // Partner logic: LTD ID 6076043 <-> 60760432
-    function getPartnerLtdId(ltdId) {
-      if (!ltdId) return null;
-      if (ltdId.endsWith('2') && ltdId.length > 1) return ltdId.slice(0, -1);
-      return ltdId + '2';
-    }
 
     // Get current user's profile
     const { data: profile } = await supabase.from('profiles').select('ltd_id, role, sponsor_id').eq('id', user.id).single();

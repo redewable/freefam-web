@@ -314,7 +314,7 @@ export default function RadialTree({ tree }) {
   const selectedInfo = selectedNode ? layoutNodes.find(n => n.id === selectedNode) : null;
 
   return (
-    <div ref={containerRef} style={{ position: 'relative', width: '100%', height: '70vh', minHeight: '400px', background: colors.bg, border: '1px solid rgba(26,26,26,0.08)', overflow: 'hidden' }}>
+    <div ref={containerRef} style={{ position: 'relative', width: '100%', height: 'min(70vh, 600px)', minHeight: '350px', background: colors.bg, border: '1px solid rgba(26,26,26,0.08)', overflow: 'hidden', borderRadius: '4px' }}>
       <canvas
         ref={canvasRef}
         onMouseDown={handleMouseDown}
@@ -332,11 +332,14 @@ export default function RadialTree({ tree }) {
       {/* Controls */}
       <div style={{ position: 'absolute', bottom: '12px', right: '12px', display: 'flex', gap: '4px' }}>
         <button onClick={() => setTransform(prev => ({ ...prev, scale: Math.min(3, prev.scale * 1.2) }))}
-          style={{ width: '32px', height: '32px', background: 'white', border: '1px solid rgba(26,26,26,0.15)', cursor: 'pointer', fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: colors.dark }}>+</button>
+          aria-label="Zoom in"
+          style={{ width: '40px', height: '40px', background: 'white', border: '1px solid rgba(26,26,26,0.15)', cursor: 'pointer', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: colors.dark, borderRadius: '4px' }}>+</button>
         <button onClick={() => setTransform(prev => ({ ...prev, scale: Math.max(0.15, prev.scale * 0.8) }))}
-          style={{ width: '32px', height: '32px', background: 'white', border: '1px solid rgba(26,26,26,0.15)', cursor: 'pointer', fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: colors.dark }}>{'\u2212'}</button>
+          aria-label="Zoom out"
+          style={{ width: '40px', height: '40px', background: 'white', border: '1px solid rgba(26,26,26,0.15)', cursor: 'pointer', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: colors.dark, borderRadius: '4px' }}>{'\u2212'}</button>
         <button onClick={resetView}
-          style={{ height: '32px', padding: '0 10px', background: 'white', border: '1px solid rgba(26,26,26,0.15)', cursor: 'pointer', fontSize: '11px', color: 'rgba(26,26,26,0.5)' }}>Reset</button>
+          aria-label="Reset view"
+          style={{ height: '40px', padding: '0 12px', background: 'white', border: '1px solid rgba(26,26,26,0.15)', cursor: 'pointer', fontSize: '11px', color: 'rgba(26,26,26,0.5)', borderRadius: '4px' }}>Reset</button>
       </div>
 
       {/* Legend */}

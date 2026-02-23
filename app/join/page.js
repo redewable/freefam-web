@@ -26,7 +26,10 @@ export default function JoinPage() {
       const res = await fetch(`/api/auth/join?ltdId=${ltdId}`);
       const data = await res.json();
       setLtdAvailable(data.available);
-    } catch { setLtdAvailable(null); }
+    } catch {
+      setLtdAvailable(null);
+      setError('Could not verify LTD ID. Please try again.');
+    }
     setCheckingLtd(false);
   }, []);
 
@@ -173,7 +176,10 @@ export default function JoinPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: colors.bg, fontFamily: 'Inter, system-ui, sans-serif', display: 'flex', flexDirection: 'column' }}>
-      <style jsx global>{`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;1,400&display=swap');`}</style>
+      <style jsx global>{`
+        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;1,400&display=swap');
+        input:focus-visible { outline: 2px solid ${colors.gold} !important; outline-offset: -1px; }
+      `}</style>
 
       <nav style={{ borderBottom: '1px solid rgba(26,26,26,0.05)', padding: '14px 20px' }}>
         <div style={{ maxWidth: '480px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -243,7 +249,7 @@ export default function JoinPage() {
             {/* Phone + Email row */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div>
-                <label style={labelStyle}>Phone</label>
+                <label style={labelStyle}>Phone <span style={{ color: 'rgba(26,26,26,0.25)', fontStyle: 'italic', textTransform: 'none', letterSpacing: 0 }}>(optional)</span></label>
                 <input
                   type="tel"
                   value={form.phone}
@@ -254,7 +260,7 @@ export default function JoinPage() {
                 />
               </div>
               <div>
-                <label style={labelStyle}>Email</label>
+                <label style={labelStyle}>Email <span style={{ color: 'rgba(26,26,26,0.25)', fontStyle: 'italic', textTransform: 'none', letterSpacing: 0 }}>(optional)</span></label>
                 <input
                   type="email"
                   value={form.email}
@@ -278,6 +284,9 @@ export default function JoinPage() {
                 required
                 autoComplete="new-password"
               />
+              {form.password && form.password.length < 6 && (
+                <p style={{ color: '#f97316', fontSize: '11px', margin: '4px 0 0' }}>{6 - form.password.length} more character{6 - form.password.length !== 1 ? 's' : ''} needed</p>
+              )}
             </div>
 
             {/* Confirm Password */}

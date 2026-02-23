@@ -2,16 +2,9 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createClient } from '@/app/lib/supabase/client';
+import { getPartnerLtdId } from '@/app/lib/partner';
 
 const colors = { bg: '#fafaf8', dark: '#1a1a1a', gold: '#b8956b' };
-
-// Partner LTD ID logic
-function getPartnerLtdId(ltdId) {
-  if (!ltdId) return null;
-  const s = ltdId.toString();
-  if (s.endsWith('2') && s.length > 1) return s.slice(0, -1);
-  return s + '2';
-}
 
 // Merge partner pairs
 function mergePartners(profiles) {
@@ -132,7 +125,9 @@ export default function LOSBuilderPage() {
             setRootUserId(user.id);
           }
         }
-      } catch (e) {}
+      } catch (e) {
+        console.error('LOS Builder auth check failed:', e);
+      }
       setAuthChecking(false);
     };
     check();
