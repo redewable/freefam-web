@@ -1,7 +1,9 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { createClient } from '@/app/lib/supabase/client';
+
+const RadialTree = lazy(() => import('./radial-tree'));
 
 const colors = { bg: '#fafaf8', dark: '#1a1a1a', gold: '#b8956b' };
 
@@ -154,6 +156,7 @@ const LOSTree = ({ userId, profile }) => {
   const [attendance, setAttendance] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showAttendance, setShowAttendance] = useState(false);
+  const [losView, setLosView] = useState('list'); // 'list' | 'radial'
 
   useEffect(() => {
     Promise.all([
@@ -432,6 +435,35 @@ const LOSTree = ({ userId, profile }) => {
 
   return (
     <div>
+      {/* View Toggle */}
+      <div style={{ display: 'flex', gap: '4px', marginBottom: '16px' }}>
+        <button onClick={() => setLosView('list')} style={{
+          padding: '8px 14px', fontSize: '11px', letterSpacing: '0.05em', textTransform: 'uppercase',
+          border: 'none', cursor: 'pointer',
+          background: losView === 'list' ? colors.dark : 'rgba(26,26,26,0.06)',
+          color: losView === 'list' ? colors.bg : 'rgba(26,26,26,0.5)',
+        }}>
+          <span style={{ marginRight: '6px' }}>{'\u2630'}</span>List
+        </button>
+        <button onClick={() => setLosView('radial')} style={{
+          padding: '8px 14px', fontSize: '11px', letterSpacing: '0.05em', textTransform: 'uppercase',
+          border: 'none', cursor: 'pointer',
+          background: losView === 'radial' ? colors.dark : 'rgba(26,26,26,0.06)',
+          color: losView === 'radial' ? colors.bg : 'rgba(26,26,26,0.5)',
+        }}>
+          <span style={{ marginRight: '6px' }}>{'\u25C9'}</span>Mind Map
+        </button>
+      </div>
+
+      {/* Radial Mind Map View */}
+      {losView === 'radial' && (
+        <Suspense fallback={<p style={{ color: 'rgba(26,26,26,0.4)', fontSize: '14px' }}>Loading mind map...</p>}>
+          <RadialTree tree={tree} />
+        </Suspense>
+      )}
+
+      {/* List View */}
+      {losView === 'list' && <>
       {/* Upline — compact display */}
       {tree.upline && tree.upline.length > 0 && (
         <div style={{ marginBottom: '16px' }}>
@@ -522,6 +554,7 @@ const LOSTree = ({ userId, profile }) => {
           {showAttendance && <AttendanceDashboard attendance={attendance} tree={tree} />}
         </div>
       )}
+      </>}
     </div>
   );
 };
