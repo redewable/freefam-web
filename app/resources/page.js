@@ -559,6 +559,110 @@ const LOSTree = ({ userId, profile }) => {
   );
 };
 
+// ═══════════════ MY EVENTS TAB ═══════════════
+const MyEventsTab = ({ profile }) => {
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/my-events')
+      .then(r => r.json())
+      .then(data => {
+        setEvents(data.events || []);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
+
+  if (loading) return <p style={{ color: 'rgba(26,26,26,0.4)', fontSize: '14px' }}>Loading events...</p>;
+
+  const formatDate = (d) => new Date(d).toLocaleDateString('en-US', {
+    weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', timeZone: 'America/Chicago',
+  });
+
+  return (
+    <div>
+      <h1 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: '28px', color: colors.dark, fontWeight: 400, margin: '0 0 24px' }}>My Events</h1>
+
+      {events.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '60px 20px' }}>
+          <Icons.Calendar style={{ width: '32px', height: '32px', color: 'rgba(26,26,26,0.15)', margin: '0 auto 16px' }} />
+          <p style={{ color: 'rgba(26,26,26,0.4)', fontSize: '14px' }}>No events yet. Your ticket purchases will appear here.</p>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {events.map(evt => (
+            <div key={evt.id} style={{
+              padding: '16px 20px', background: 'white',
+              border: '1px solid rgba(26,26,26,0.08)',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                    <p style={{ fontSize: '14px', fontWeight: 500, color: colors.dark, margin: 0 }}>
+                      {evt.source === 'bcs' ? 'Business Coaching Session' : 'Info Session / Training'}
+                    </p>
+                    {evt.attended && (
+                      <span style={{ fontSize: '10px', padding: '2px 8px', background: 'rgba(34,197,94,0.1)', color: '#22c55e', fontWeight: 500 }}>
+                        Attended
+                      </span>
+                    )}
+                    {!evt.attended && (
+                      <span style={{ fontSize: '10px', padding: '2px 8px', background: 'rgba(26,26,26,0.04)', color: 'rgba(26,26,26,0.4)' }}>
+                        Registered
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '12px', color: 'rgba(26,26,26,0.45)' }}>{formatDate(evt.date)}</span>
+                    <span style={{ fontSize: '11px', padding: '2px 6px', background: evt.priceType === 'monthly' ? 'rgba(184,149,107,0.12)' : 'rgba(26,26,26,0.04)', color: evt.priceType === 'monthly' ? colors.gold : 'rgba(26,26,26,0.45)' }}>
+                      {evt.priceType === 'monthly' ? 'Monthly' : 'Weekly'}
+                    </span>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
+                  <span style={{ fontSize: '18px', fontWeight: 500, color: colors.dark, fontVariantNumeric: 'tabular-nums' }}>${evt.amount}</span>
+                  <a
+                    href={`/receipt?session_id=${evt.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      padding: '6px 12px', fontSize: '11px',
+                      color: colors.gold, border: `1px solid rgba(184,149,107,0.3)`,
+                      textDecoration: 'none', letterSpacing: '0.05em',
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    Receipt
+                  </a>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Summary */}
+      {events.length > 0 && (
+        <div style={{ marginTop: '20px', padding: '16px 20px', background: 'rgba(184,149,107,0.04)', border: '1px solid rgba(184,149,107,0.15)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+            <div>
+              <p style={{ fontSize: '12px', color: 'rgba(26,26,26,0.4)', margin: '0 0 2px' }}>{events.length} total event{events.length !== 1 ? 's' : ''}</p>
+              <p style={{ fontSize: '12px', color: 'rgba(26,26,26,0.4)', margin: 0 }}>{events.filter(e => e.attended).length} attended</p>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <p style={{ fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.35)', margin: '0 0 2px' }}>Total Spent</p>
+              <p style={{ fontSize: '20px', fontWeight: 500, color: colors.dark, margin: 0, fontVariantNumeric: 'tabular-nums' }}>
+                ${events.reduce((sum, e) => sum + parseFloat(e.amount || 0), 0).toFixed(2)}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ═══════════════ MAIN DASHBOARD ═══════════════
 export default function ResourcesDashboard() {
   const [user, setUser] = useState(null);
@@ -632,6 +736,7 @@ export default function ResourcesDashboard() {
   const tabs = [
     { id: 'library', label: 'Library', icon: Icons.Book },
     { id: 'los', label: 'My LOS', icon: Icons.Users },
+    { id: 'events', label: 'My Events', icon: Icons.Calendar },
     { id: 'activity', label: 'Activity', icon: Icons.Clock },
   ];
 
@@ -840,6 +945,11 @@ export default function ResourcesDashboard() {
             </div>
             <LOSTree userId={user?.id} profile={profile} />
           </div>
+        )}
+
+        {/* MY EVENTS TAB */}
+        {tab === 'events' && (
+          <MyEventsTab profile={profile} />
         )}
 
         {/* ACTIVITY TAB */}
