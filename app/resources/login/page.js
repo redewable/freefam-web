@@ -126,7 +126,7 @@ export default function LoginPage() {
           </div>
 
           <p style={{ textAlign: 'center', marginTop: '24px', fontSize: '13px', color: 'rgba(26,26,26,0.4)' }}>
-            Have an invite? <a href="/resources/signup" style={{ color: colors.gold, textDecoration: 'none', borderBottom: '1px solid rgba(184,149,107,0.4)' }}>Create account</a>
+            Need an account? <a href="/join" style={{ color: colors.gold, textDecoration: 'none', borderBottom: '1px solid rgba(184,149,107,0.4)' }}>Join here</a>
           </p>
         </form>
       </div>
