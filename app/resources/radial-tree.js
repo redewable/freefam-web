@@ -501,7 +501,7 @@ export default function RadialTree({ tree, onNodeAction }) {
         let label = node.label;
         const maxWidth = w - 12 * scale;
         // Progressive abbreviation: full name → first names → initials
-        if (ctx.measureText(label).width > maxWidth && !node.isRoot) {
+        if (ctx.measureText(label).width > maxWidth) {
           const parts = label.split(' & ');
           if (parts.length === 2) {
             // Try first names: "William + Alex"
@@ -526,7 +526,7 @@ export default function RadialTree({ tree, onNodeAction }) {
         ctx.fillText(label, nx, ny - (hasCount && scale > 0.5 ? 7 * scale : 0));
         if (scale > 0.5 && hasCount) {
           ctx.font = `${Math.max(7, 9 * scale)}px Inter, system-ui, sans-serif`;
-          ctx.fillStyle = 'rgba(26,26,26,0.35)';
+          ctx.fillStyle = includeProspectsInCount ? colors.gold : 'rgba(26,26,26,0.35)';
           ctx.fillText(`${displayLegs}/${displayIbos}`, nx, ny + 8 * scale);
         }
       }
@@ -708,7 +708,7 @@ export default function RadialTree({ tree, onNodeAction }) {
           ctx.fillStyle = colors.dark; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
           let label = node.label;
           // Progressive abbreviation
-          if (ctx.measureText(label).width > w - 12 && !node.isRoot) {
+          if (ctx.measureText(label).width > w - 12) {
             const parts = label.split(' & ');
             if (parts.length === 2) {
               const fn1 = parts[0].split(' ')[0];
@@ -721,8 +721,10 @@ export default function RadialTree({ tree, onNodeAction }) {
           const hasInfo = node.legCount > 0 || node.iboCount > 0;
           ctx.fillText(label, nx, ny - (hasInfo ? 7 : 0));
           if (hasInfo) {
-            ctx.font = '9px Inter, system-ui, sans-serif'; ctx.fillStyle = 'rgba(26,26,26,0.35)';
-            ctx.fillText(`${node.legCount}/${node.iboCount}`, nx, ny + 8);
+            ctx.font = '9px Inter, system-ui, sans-serif'; ctx.fillStyle = includeProspectsInCount ? colors.gold : 'rgba(26,26,26,0.35)';
+            const shareDLegs = includeProspectsInCount ? node.legCount + (prospects.filter(p => p.parentNodeId === node.id).length) : node.legCount;
+            const shareDIbos = includeProspectsInCount ? node.iboCount + node.prospectCount : node.iboCount;
+            ctx.fillText(`${shareDLegs}/${shareDIbos}`, nx, ny + 8);
           }
         }
       }
