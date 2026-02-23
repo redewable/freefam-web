@@ -1,8 +1,10 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
 import { createClient } from '@/app/lib/supabase/client';
 import { getPartnerLtdId } from '@/app/lib/partner';
+
+const BuilderTreeView = lazy(() => import('./builder-tree'));
 
 const colors = { bg: '#fafaf8', dark: '#1a1a1a', gold: '#b8956b' };
 
@@ -442,6 +444,17 @@ export default function LOSBuilderPage() {
             >
               Flat List
             </button>
+            <button
+              onClick={() => setMode('tree')}
+              style={{
+                padding: '8px 16px', fontSize: '12px', letterSpacing: '0.05em',
+                textTransform: 'uppercase', border: 'none', cursor: 'pointer',
+                background: mode === 'tree' ? colors.dark : 'rgba(26,26,26,0.06)',
+                color: mode === 'tree' ? colors.bg : 'rgba(26,26,26,0.5)',
+              }}
+            >
+              {'\u25B3'} Tree View
+            </button>
           </div>
         </div>
       </div>
@@ -560,6 +573,14 @@ export default function LOSBuilderPage() {
             </div>
           </div>
         ) : (
+          mode === 'tree' ? (
+          /* ═══ TREE VIEW MODE ═══ */
+          <div>
+            <Suspense fallback={<p style={{ color: 'rgba(26,26,26,0.4)', fontSize: '14px', textAlign: 'center', padding: '40px' }}>Loading tree view...</p>}>
+              <BuilderTreeView tree={tree} rootProfile={profiles.find(p => p.id === rootUserId)} profiles={profiles} />
+            </Suspense>
+          </div>
+        ) : (
           /* ═══ FLAT LIST MODE ═══ */
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
@@ -648,7 +669,7 @@ export default function LOSBuilderPage() {
               })}
             </div>
           </div>
-        )}
+        ))}
       </div>
 
       {/* Delete confirmation modal */}
