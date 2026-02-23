@@ -447,6 +447,7 @@ const MyEventsTab = ({ profile }) => {
   const [events, setEvents] = useState([]);
   const [attendance, setAttendance] = useState(null);
   const [losTree, setLosTree] = useState(null);
+  const [zoomLink, setZoomLink] = useState('');
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState('');
 
@@ -458,10 +459,12 @@ const MyEventsTab = ({ profile }) => {
       }),
       fetch('/api/los/attendance').then(r => r.json()).catch(() => ({ records: [] })),
       fetch('/api/los').then(r => r.json()).catch(() => null),
-    ]).then(([eventsData, attendanceData, losData]) => {
+      fetch('/api/webcast').then(r => r.json()).catch(() => ({ link: null })),
+    ]).then(([eventsData, attendanceData, losData, webcastData]) => {
       setEvents(eventsData.events || []);
       setAttendance(attendanceData);
       setLosTree(losData);
+      setZoomLink(webcastData.link || '');
       setLoading(false);
     }).catch((err) => {
       setFetchError(err.message || 'Unable to load events. Please try again later.');
@@ -506,14 +509,17 @@ const MyEventsTab = ({ profile }) => {
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                     <p style={{ fontSize: '14px', fontWeight: 500, color: colors.dark, margin: 0 }}>
-                      {evt.source === 'bcs' ? 'Business Coaching Session' : 'Info Session / Training'}
+                      {evt.source === 'webcast' ? 'BCS Webcast' : evt.source === 'bcs' ? 'Business Coaching Session' : 'Info Session / Training'}
                     </p>
-                    {evt.attended && (
+                    {evt.source === 'webcast' ? (
+                      <span style={{ fontSize: '10px', padding: '2px 8px', background: 'rgba(59,130,246,0.1)', color: '#3b82f6', fontWeight: 500 }}>
+                        Webcast
+                      </span>
+                    ) : evt.attended ? (
                       <span style={{ fontSize: '10px', padding: '2px 8px', background: 'rgba(34,197,94,0.1)', color: '#22c55e', fontWeight: 500 }}>
                         Attended
                       </span>
-                    )}
-                    {!evt.attended && (
+                    ) : (
                       <span style={{ fontSize: '10px', padding: '2px 8px', background: 'rgba(26,26,26,0.04)', color: 'rgba(26,26,26,0.4)' }}>
                         Registered
                       </span>
@@ -521,10 +527,17 @@ const MyEventsTab = ({ profile }) => {
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
                     <span style={{ fontSize: '12px', color: 'rgba(26,26,26,0.45)' }}>{formatDate(evt.date)}</span>
-                    <span style={{ fontSize: '11px', padding: '2px 6px', background: evt.priceType === 'monthly' ? 'rgba(184,149,107,0.12)' : 'rgba(26,26,26,0.04)', color: evt.priceType === 'monthly' ? colors.gold : 'rgba(26,26,26,0.45)' }}>
-                      {evt.priceType === 'monthly' ? 'Monthly' : 'Weekly'}
+                    <span style={{ fontSize: '11px', padding: '2px 6px', background: evt.priceType === 'monthly' ? 'rgba(184,149,107,0.12)' : evt.priceType === 'webcast' ? 'rgba(59,130,246,0.08)' : 'rgba(26,26,26,0.04)', color: evt.priceType === 'monthly' ? colors.gold : evt.priceType === 'webcast' ? '#3b82f6' : 'rgba(26,26,26,0.45)' }}>
+                      {evt.priceType === 'monthly' ? 'Monthly' : evt.priceType === 'webcast' ? 'Webcast' : 'Weekly'}
                     </span>
                   </div>
+                  {evt.source === 'webcast' && zoomLink && (
+                    <a href={zoomLink} target="_blank" rel="noopener noreferrer"
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '8px', fontSize: '11px', letterSpacing: '0.05em', textTransform: 'uppercase', color: '#3b82f6', textDecoration: 'none', fontWeight: 600 }}>
+                      <svg style={{ width: '14px', height: '14px' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><polygon points="23 7 16 12 23 17 23 7" /><rect x="1" y="5" width="15" height="14" rx="2" /></svg>
+                      Join Zoom
+                    </a>
+                  )}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
                   <span style={{ fontSize: '18px', fontWeight: 500, color: colors.dark, fontVariantNumeric: 'tabular-nums' }}>${evt.amount}</span>

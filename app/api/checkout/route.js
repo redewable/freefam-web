@@ -10,13 +10,22 @@ export async function POST(request) {
     const { priceType, customerEmail, customerName, ltdId, uplinePlatinum, source } = body;
 
     // Select the correct price ID
-    const priceId = priceType === 'monthly' 
-      ? process.env.STRIPE_PRICE_MONTHLY 
-      : process.env.STRIPE_PRICE_SINGLE;
+    let priceId;
+    if (priceType === 'monthly') {
+      priceId = process.env.STRIPE_PRICE_MONTHLY;
+    } else if (priceType === 'webcast') {
+      priceId = process.env.STRIPE_PRICE_WEBCAST;
+    } else {
+      priceId = process.env.STRIPE_PRICE_SINGLE;
+    }
 
     // Determine return URL based on source
     const origin = request.headers.get('origin');
-    const returnPath = source === 'bcs' ? '/bcs' : '';
+    const isWebcast = priceType === 'webcast';
+    const returnPath = source === 'bcs' || isWebcast ? '/bcs' : '';
+    const successParams = isWebcast
+      ? `success=true&webcast=true&session_id={CHECKOUT_SESSION_ID}`
+      : `success=true&session_id={CHECKOUT_SESSION_ID}`;
 
     // Create Checkout Session
     const session = await stripe.checkout.sessions.create({
@@ -34,9 +43,9 @@ export async function POST(request) {
         ltdId,
         uplinePlatinum,
         priceType,
-        source: source || 'main',
+        source: isWebcast ? 'webcast' : (source || 'main'),
       },
-      success_url: `${origin}${returnPath}?success=true&session_id={CHECKOUT_SESSION_ID}`,
+      success_url: `${origin}${returnPath}?${successParams}`,
       cancel_url: `${origin}${returnPath}?canceled=true`,
     });
 

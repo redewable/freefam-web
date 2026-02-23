@@ -81,12 +81,19 @@ const RegistrationModal = ({ isOpen, onClose, ticketType, setTicketType }) => {
     e.preventDefault();
     setProcessing(true);
 
-    if (ticketType === 'ibo') {
+    if (ticketType === 'ibo' || ticketType === 'webcast') {
       try {
         const res = await fetch('/api/checkout', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ priceType: 'single', customerEmail: form.email, customerName: `${form.firstName} ${form.lastName}`, ltdId: form.ltdId, uplinePlatinum: form.uplinePlatinum, source: 'bcs' }),
+          body: JSON.stringify({
+            priceType: ticketType === 'webcast' ? 'webcast' : 'single',
+            customerEmail: form.email,
+            customerName: `${form.firstName} ${form.lastName}`,
+            ltdId: form.ltdId,
+            uplinePlatinum: form.uplinePlatinum,
+            source: ticketType === 'webcast' ? 'webcast' : 'bcs',
+          }),
         });
         const data = await res.json();
         if (data.url) window.location.href = data.url;
@@ -112,6 +119,7 @@ const RegistrationModal = ({ isOpen, onClose, ticketType, setTicketType }) => {
     { id: 'guest', label: 'Guest', sub: 'First-time visitor', price: 'Free' },
     { id: 'apprentice', label: 'Apprentice', sub: 'First-year IBO', price: 'Free' },
     { id: 'ibo', label: 'Business Owner', sub: 'Active IBO', price: '$12' },
+    { id: 'webcast', label: 'Webcast', sub: 'Watch live via Zoom', price: '$5' },
   ];
 
   const label = { fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.4)', display: 'block', marginBottom: '4px' };
@@ -148,7 +156,7 @@ const RegistrationModal = ({ isOpen, onClose, ticketType, setTicketType }) => {
           ) : (
             <form onSubmit={submit} style={{ padding: '24px 28px' }}>
               <button type="button" onClick={() => { setStep(1); setTicketType(''); }} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: 'rgba(26,26,26,0.4)', background: 'none', border: 'none', cursor: 'pointer', marginBottom: '12px' }}><Icons.ArrowLeft style={{ width: '12px', height: '12px' }} /> Back</button>
-              <p style={{ color: colors.gold, fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '6px' }}>{ticketType === 'guest' ? 'Guest' : ticketType === 'apprentice' ? 'Apprentice' : 'Business Owner'}</p>
+              <p style={{ color: colors.gold, fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '6px' }}>{ticketType === 'guest' ? 'Guest' : ticketType === 'apprentice' ? 'Apprentice' : ticketType === 'webcast' ? 'Webcast' : 'Business Owner'}</p>
               <h2 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: '22px', color: colors.dark, marginBottom: '16px' }}>Your Details</h2>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px' }}>
@@ -171,7 +179,7 @@ const RegistrationModal = ({ isOpen, onClose, ticketType, setTicketType }) => {
                     </div>
                   </>
                 )}
-                {(ticketType === 'apprentice' || ticketType === 'ibo') && (
+                {(ticketType === 'apprentice' || ticketType === 'ibo' || ticketType === 'webcast') && (
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px' }}>
                     <div><label style={label}>LTD ID</label><input type="text" value={form.ltdId} onChange={(e) => setForm({ ...form, ltdId: e.target.value })} style={input} required /></div>
                     <div><label style={label}>Upline Platinum</label><input type="text" value={form.uplinePlatinum} onChange={(e) => setForm({ ...form, uplinePlatinum: e.target.value })} style={input} required /></div>
@@ -198,7 +206,7 @@ const RegistrationModal = ({ isOpen, onClose, ticketType, setTicketType }) => {
                 </div>
                 <button type="submit" disabled={processing || !form.agreed || !form.signature}
                   style={{ width: '100%', padding: '14px', background: processing || !form.agreed || !form.signature ? 'rgba(26,26,26,0.2)' : colors.dark, color: processing || !form.agreed || !form.signature ? 'rgba(26,26,26,0.4)' : colors.bg, fontSize: '12px', letterSpacing: '0.1em', textTransform: 'uppercase', border: 'none', cursor: processing || !form.agreed || !form.signature ? 'not-allowed' : 'pointer', marginTop: '4px' }}>
-                  {processing ? 'Processing...' : ticketType === 'ibo' ? 'Continue — $12' : 'Complete Registration'}
+                  {processing ? 'Processing...' : ticketType === 'ibo' ? 'Continue — $12' : ticketType === 'webcast' ? 'Continue — $5' : 'Complete Registration'}
                 </button>
               </div>
             </form>
@@ -227,6 +235,8 @@ export default function BCSFreedomTeam() {
   const [modalOpen, setModalOpen] = useState(false);
   const [ticketType, setTicketType] = useState('');
   const [toast, setToast] = useState({ visible: false, message: '' });
+  const [webcastSuccess, setWebcastSuccess] = useState(false);
+  const [zoomLink, setZoomLink] = useState('');
 
   const shareGuestLink = () => {
     const url = `${window.location.origin}/guest`;
@@ -237,7 +247,17 @@ export default function BCSFreedomTeam() {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
-      if (params.get('success') === 'true') { setToast({ visible: true, message: 'Payment successful!' }); window.history.replaceState({}, '', window.location.pathname); }
+      if (params.get('success') === 'true' && params.get('webcast') === 'true') {
+        setWebcastSuccess(true);
+        // Fetch Zoom link
+        fetch('/api/webcast').then(r => r.json()).then(data => {
+          if (data.link) setZoomLink(data.link);
+        }).catch(() => {});
+        window.history.replaceState({}, '', window.location.pathname);
+      } else if (params.get('success') === 'true') {
+        setToast({ visible: true, message: 'Payment successful!' });
+        window.history.replaceState({}, '', window.location.pathname);
+      }
       if (params.get('canceled') === 'true') { setToast({ visible: true, message: 'Payment canceled' }); window.history.replaceState({}, '', window.location.pathname); }
     }
   }, []);
@@ -289,6 +309,12 @@ export default function BCSFreedomTeam() {
             <button onClick={() => setModalOpen(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '12px 20px', background: colors.dark, color: colors.bg, fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase', border: 'none', cursor: 'pointer' }}>Register Now<Icons.ArrowRight style={{ width: '12px', height: '12px' }} /></button>
             <button onClick={shareGuestLink} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '12px 20px', background: 'transparent', color: colors.dark, fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase', border: '1px solid rgba(26,26,26,0.2)', cursor: 'pointer' }}><Icons.Share style={{ width: '12px', height: '12px' }} />Share Guest Link</button>
           </div>
+          <p style={{ marginTop: '16px', fontSize: '12px', color: 'rgba(26,26,26,0.35)' }}>
+            Unable to attend in person?{' '}
+            <button onClick={() => { setTicketType('webcast'); setModalOpen(true); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px', color: colors.gold, textDecoration: 'underline', padding: 0 }}>
+              Watch via webcast
+            </button>
+          </p>
         </div>
       </section>
 
@@ -301,6 +327,45 @@ export default function BCSFreedomTeam() {
           </div>
         </div>
       </footer>
+
+      {/* Webcast Success Overlay */}
+      {webcastSuccess && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div style={{ position: 'absolute', inset: 0, background: 'rgba(26,26,26,0.6)', backdropFilter: 'blur(8px)' }} onClick={() => setWebcastSuccess(false)} />
+          <div style={{ position: 'relative', width: '100%', maxWidth: '420px', background: colors.bg, textAlign: 'center' }}>
+            <div style={{ height: '2px', background: `linear-gradient(to right, transparent, ${colors.gold}, transparent)` }} />
+            <div style={{ padding: '40px 28px' }}>
+              <div style={{ width: '48px', height: '48px', margin: '0 auto 16px', borderRadius: '50%', border: `1px solid ${colors.gold}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Icons.Check style={{ width: '24px', height: '24px', color: colors.gold }} />
+              </div>
+              <p style={{ color: colors.gold, fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '8px' }}>Webcast Confirmed</p>
+              <h3 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: '24px', color: colors.dark, marginBottom: '16px' }}>You&#39;re In!</h3>
+              <p style={{ fontSize: '13px', color: 'rgba(26,26,26,0.5)', marginBottom: '24px', lineHeight: 1.6 }}>
+                Your webcast ticket has been confirmed. Join the live broadcast via Zoom at the scheduled time.
+              </p>
+              {zoomLink ? (
+                <a href={zoomLink} target="_blank" rel="noopener noreferrer"
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '10px', padding: '14px 28px',
+                    background: colors.dark, color: colors.bg, fontSize: '11px', letterSpacing: '0.15em',
+                    textTransform: 'uppercase', border: 'none', textDecoration: 'none', cursor: 'pointer',
+                  }}>
+                  Join Zoom Meeting
+                  <Icons.ArrowRight style={{ width: '14px', height: '14px' }} />
+                </a>
+              ) : (
+                <p style={{ fontSize: '12px', color: 'rgba(26,26,26,0.4)', fontStyle: 'italic' }}>
+                  Zoom link will be available shortly before the event.
+                </p>
+              )}
+              <p style={{ marginTop: '20px', fontSize: '11px', color: 'rgba(26,26,26,0.3)' }}>
+                The Zoom link will also appear in your <a href="/resources" style={{ color: colors.gold, textDecoration: 'none' }}>My Events</a> page.
+              </p>
+              <button onClick={() => setWebcastSuccess(false)} style={{ marginTop: '16px', fontSize: '12px', color: 'rgba(26,26,26,0.4)', background: 'none', border: 'none', cursor: 'pointer' }}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <RegistrationModal isOpen={modalOpen} onClose={() => setModalOpen(false)} ticketType={ticketType} setTicketType={setTicketType} />
       <Toast message={toast.message} isVisible={toast.visible} onClose={() => setToast({ visible: false, message: '' })} />
