@@ -808,6 +808,11 @@ export default function ResourcesDashboard() {
   // Built-in shared docs that live outside the DB
   const sharedDocs = [
     { id: '_booklist', title: 'First Year Book List', description: '13 essential reads for your journey', type: 'document', category: 'Shared Documents', url: '/resources/books', isSharedDoc: true },
+    { id: '_nonneg', title: 'TEAM ISI Non-Negotiables', description: 'The standards we hold ourselves to', type: 'document', category: 'Team Culture', url: '/resources/non-negotiables', isSharedDoc: true },
+    { id: '_qi', title: 'The QI Philosophy', description: 'From curiosity to commitment — the qualifying process', type: 'document', category: 'The Process', url: '/resources/qi-philosophy', isSharedDoc: true },
+    { id: '_fourbasics', title: 'The Four Basics', description: 'Master these fundamentals and everything else follows', type: 'document', category: 'Foundation', url: '/resources/four-basics', isSharedDoc: true },
+    { id: '_story', title: 'Developing Your Compelling Story', description: 'Tell your story with clarity, emotion, and purpose', type: 'document', category: 'Skills', url: '/resources/compelling-story', isSharedDoc: true },
+    { id: '_coresteps', title: '9 Core Steps', description: 'Three pillars, nine commitments — the daily blueprint', type: 'document', category: 'The Blueprint', url: '/resources/core-steps', isSharedDoc: true },
   ];
 
   const allItems = [...sharedDocs, ...resources];
