@@ -559,6 +559,43 @@ const LOSTree = ({ userId, profile }) => {
   );
 };
 
+// ═══════════════ GATED PREVIEW ═══════════════
+const GatedPreview = ({ title, description, previewItems }) => (
+  <div>
+    <h1 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: '28px', color: colors.dark, fontWeight: 400, margin: '0 0 24px' }}>{title}</h1>
+    <div style={{ textAlign: 'center', padding: '40px 20px', background: 'rgba(184,149,107,0.04)', border: '1px dashed rgba(184,149,107,0.3)' }}>
+      <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(184,149,107,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={colors.gold} strokeWidth="1.5">
+          <rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0110 0v4" />
+        </svg>
+      </div>
+      <p style={{ fontSize: '16px', fontWeight: 500, color: colors.dark, marginBottom: '8px' }}>Setting Up Your Account</p>
+      <p style={{ fontSize: '14px', color: 'rgba(26,26,26,0.5)', maxWidth: '360px', margin: '0 auto 24px', lineHeight: 1.6 }}>
+        {description}
+      </p>
+      <p style={{ fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase', color: colors.gold, marginBottom: '20px' }}>Preview of what you will see</p>
+    </div>
+
+    {/* Preview mockup */}
+    <div style={{ marginTop: '16px', opacity: 0.45, pointerEvents: 'none', filter: 'blur(1px)' }}>
+      {previewItems.map((item, i) => (
+        <div key={i} style={{
+          padding: '14px 16px', marginBottom: '4px',
+          background: 'white', border: '1px solid rgba(26,26,26,0.06)',
+          display: 'flex', alignItems: 'center', gap: '12px',
+        }}>
+          <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(26,26,26,0.06)', flexShrink: 0 }} />
+          <div style={{ flex: 1 }}>
+            <div style={{ height: '12px', width: item.w1 || '140px', background: 'rgba(26,26,26,0.1)', marginBottom: '6px' }} />
+            <div style={{ height: '10px', width: item.w2 || '80px', background: 'rgba(26,26,26,0.05)' }} />
+          </div>
+          <div style={{ height: '10px', width: '50px', background: 'rgba(26,26,26,0.05)' }} />
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
 // ═══════════════ MY EVENTS TAB ═══════════════
 const MyEventsTab = ({ profile }) => {
   const [events, setEvents] = useState([]);
@@ -732,6 +769,7 @@ export default function ResourcesDashboard() {
   );
 
   const isAdminOrSponsor = profile?.role === 'admin' || profile?.role === 'sponsor';
+  const isPlaced = !!(profile?.sponsor_id) || profile?.role === 'admin';
 
   const tabs = [
     { id: 'library', label: 'Library', icon: Icons.Book },
@@ -928,28 +966,54 @@ export default function ResourcesDashboard() {
 
         {/* LOS TAB */}
         {tab === 'los' && (
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
-              <h1 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: '28px', color: colors.dark, fontWeight: 400, margin: 0 }}>Line of Sponsorship</h1>
-              {isAdminOrSponsor && (
-                <button onClick={() => setInviteOpen(true)} style={{
-                  display: 'flex', alignItems: 'center', gap: '8px',
-                  padding: '10px 18px', background: colors.dark, color: colors.bg,
-                  border: 'none', fontSize: '11px', letterSpacing: '0.08em',
-                  textTransform: 'uppercase', cursor: 'pointer',
-                }}>
-                  <Icons.Plus style={{ width: '14px', height: '14px' }} />
-                  Invite Member
-                </button>
-              )}
+          isPlaced ? (
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
+                <h1 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: '28px', color: colors.dark, fontWeight: 400, margin: 0 }}>Line of Sponsorship</h1>
+                {isAdminOrSponsor && (
+                  <button onClick={() => setInviteOpen(true)} style={{
+                    display: 'flex', alignItems: 'center', gap: '8px',
+                    padding: '10px 18px', background: colors.dark, color: colors.bg,
+                    border: 'none', fontSize: '11px', letterSpacing: '0.08em',
+                    textTransform: 'uppercase', cursor: 'pointer',
+                  }}>
+                    <Icons.Plus style={{ width: '14px', height: '14px' }} />
+                    Invite Member
+                  </button>
+                )}
+              </div>
+              <LOSTree userId={user?.id} profile={profile} />
             </div>
-            <LOSTree userId={user?.id} profile={profile} />
-          </div>
+          ) : (
+            <GatedPreview
+              title="Line of Sponsorship"
+              description="Your leadership team is setting up the organization tree. Once you are placed in the LOS, you will see your full upline, downline, and team structure here."
+              previewItems={[
+                { w1: '160px', w2: '90px' },
+                { w1: '130px', w2: '70px' },
+                { w1: '140px', w2: '100px' },
+                { w1: '110px', w2: '60px' },
+                { w1: '150px', w2: '85px' },
+              ]}
+            />
+          )
         )}
 
         {/* MY EVENTS TAB */}
         {tab === 'events' && (
-          <MyEventsTab profile={profile} />
+          isPlaced ? (
+            <MyEventsTab profile={profile} />
+          ) : (
+            <GatedPreview
+              title="My Events"
+              description="Once your account is linked with your ticket purchases, you will see your complete event history, attendance records, and downloadable receipts here."
+              previewItems={[
+                { w1: '180px', w2: '60px' },
+                { w1: '170px', w2: '75px' },
+                { w1: '160px', w2: '55px' },
+              ]}
+            />
+          )
         )}
 
         {/* ACTIVITY TAB */}
