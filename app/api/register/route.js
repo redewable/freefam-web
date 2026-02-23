@@ -19,11 +19,13 @@ export async function POST(request) {
     const id = `free_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const timestamp = new Date().toISOString();
 
+    const isWebcast = type === 'webcast-guest' || type === 'webcast-apprentice';
+
     const registration = {
       id,
       name: `${firstName} ${lastName}`,
       email,
-      type, // 'guest' or 'apprentice'
+      type,
       invitedBy: invitedBy || '',
       visitNumber: visitNumber || '',
       ltdId: ltdId || '',
@@ -34,16 +36,20 @@ export async function POST(request) {
 
     // Store with key pattern that can be found with kv.keys()
     const key = `registration:${id}`;
-    console.log('Saving registration with key:', key);
-    console.log('Registration data:', JSON.stringify(registration));
-    
     await kv.set(key, registration);
-    
-    // Verify it was saved
-    const saved = await kv.get(key);
-    console.log('Verified save:', saved ? 'success' : 'FAILED');
 
-    return NextResponse.json({ success: true, id, saved: !!saved });
+    // For webcast registrations, also create an access token so they can retrieve the Zoom link later
+    let webcastToken = null;
+    if (isWebcast) {
+      webcastToken = `wc_${Date.now()}_${Math.random().toString(36).substr(2, 12)}`;
+      await kv.set(`webcast-token:${webcastToken}`, { email, name: `${firstName} ${lastName}`, type, createdAt: timestamp });
+      // Also index by email for email-based lookup
+      const existing = await kv.get(`webcast-email:${email.toLowerCase().trim()}`) || [];
+      existing.push(webcastToken);
+      await kv.set(`webcast-email:${email.toLowerCase().trim()}`, existing);
+    }
+
+    return NextResponse.json({ success: true, id, webcastToken });
   } catch (error) {
     console.error('Registration error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
