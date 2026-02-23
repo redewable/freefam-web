@@ -451,13 +451,13 @@ const LOSTree = ({ userId, profile }) => {
           background: losView === 'radial' ? colors.dark : 'rgba(26,26,26,0.06)',
           color: losView === 'radial' ? colors.bg : 'rgba(26,26,26,0.5)',
         }}>
-          <span style={{ marginRight: '6px' }}>{'\u25C9'}</span>Mind Map
+          <span style={{ marginRight: '6px' }}>{'\u25B3'}</span>Tree View
         </button>
       </div>
 
-      {/* Radial Mind Map View */}
+      {/* Pyramid Tree View */}
       {losView === 'radial' && (
-        <Suspense fallback={<p style={{ color: 'rgba(26,26,26,0.4)', fontSize: '14px' }}>Loading mind map...</p>}>
+        <Suspense fallback={<p style={{ color: 'rgba(26,26,26,0.4)', fontSize: '14px' }}>Loading tree view...</p>}>
           <RadialTree tree={tree} />
         </Suspense>
       )}

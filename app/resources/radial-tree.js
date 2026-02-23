@@ -4,7 +4,6 @@ import React, { useRef, useEffect, useState, useCallback } from 'react';
 
 const colors = { bg: '#fafaf8', dark: '#1a1a1a', gold: '#b8956b' };
 
-// Leg colors for first-generation branches
 const LEG_COLORS = [
   '#b8956b', '#3b82f6', '#22c55e', '#a855f7', '#f97316',
   '#ec4899', '#14b8a6', '#ef4444', '#6366f1', '#84cc16',
@@ -26,78 +25,89 @@ export default function RadialTree({ tree }) {
   const userName = tree.user.full_name || 'You';
   const partnerName = tree.partner?.full_name || null;
 
-  // Layout calculation
+  // Top-down pyramid layout
   const layoutTree = useCallback(() => {
     const nodes = [];
     const edges = [];
 
-    // Center node (you)
+    const NODE_W = 120;
+    const NODE_H = 50;
+    const H_GAP = 20;
+    const V_GAP = 70;
+
+    // Calculate subtree widths bottom-up
+    const getSubtreeWidth = (children) => {
+      if (!children || children.length === 0) return NODE_W;
+      let total = 0;
+      for (const c of children) {
+        total += getSubtreeWidth(c.children);
+      }
+      return Math.max(NODE_W, total + H_GAP * (children.length - 1));
+    };
+
+    // Root node
     const centerLabel = partnerName ? `${userName} & ${partnerName}` : userName;
-    nodes.push({
+    const rootNode = {
       id: 'root',
       x: 0, y: 0,
       label: centerLabel,
       ltdId: tree.user.ltd_id,
-      radius: 40,
+      w: NODE_W + 30,
+      h: NODE_H + 10,
       color: colors.gold,
       isRoot: true,
       depth: 0,
-    });
+    };
+    nodes.push(rootNode);
 
-    // Layout downline radially
-    const layoutChildren = (children, parentId, parentX, parentY, startAngle, endAngle, depth, legColorIdx) => {
-      if (!children || children.length === 0 || depth > 6) return;
+    const totalTreeWidth = getSubtreeWidth(downline);
 
-      const angleSpan = endAngle - startAngle;
-      const anglePerChild = angleSpan / Math.max(children.length, 1);
-      const baseRadius = 100 + depth * 80;
+    // Recursive placement
+    const placeChildren = (children, parentId, parentX, parentY, startX, availableWidth, depth, legIdx) => {
+      if (!children || children.length === 0 || depth > 8) return;
+
+      const childWidths = children.map(c => getSubtreeWidth(c.children));
+      const totalNeeded = childWidths.reduce((a, b) => a + b, 0) + H_GAP * (children.length - 1);
+      let cursorX = startX + (availableWidth - totalNeeded) / 2;
 
       children.forEach((child, i) => {
-        const angle = startAngle + anglePerChild * (i + 0.5);
-        const x = parentX + Math.cos(angle) * baseRadius;
-        const y = parentY + Math.sin(angle) * baseRadius;
+        const subtreeW = childWidths[i];
+        const cx = cursorX + subtreeW / 2;
+        const cy = parentY + V_GAP + NODE_H;
 
         const displayName = child.partner_name
           ? `${child.full_name} & ${child.partner_name}`
           : (child.full_name || 'Unnamed');
 
-        const legColor = depth === 1 ? LEG_COLORS[legColorIdx % LEG_COLORS.length] : LEG_COLORS[legColorIdx % LEG_COLORS.length];
-        const nodeRadius = Math.max(20, 35 - depth * 3);
+        const colorIdx = depth === 1 ? i : legIdx;
+        const nodeColor = LEG_COLORS[colorIdx % LEG_COLORS.length];
 
         const nodeId = child.id || `node-${nodes.length}`;
         nodes.push({
           id: nodeId,
-          x, y,
+          x: cx, y: cy,
           label: displayName,
           ltdId: child.ltd_id,
-          radius: nodeRadius,
-          color: legColor,
+          w: NODE_W,
+          h: NODE_H,
+          color: nodeColor,
           depth,
           totalDescendants: child.totalDescendants || 0,
           role: child.role,
         });
 
-        edges.push({
-          from: parentId,
-          to: nodeId,
-          color: legColor,
-        });
+        edges.push({ from: parentId, to: nodeId, color: nodeColor });
 
         // Recurse
         if (child.children && child.children.length > 0) {
-          const childAngleSpan = anglePerChild * 0.85;
-          const childStart = angle - childAngleSpan / 2;
-          const childEnd = angle + childAngleSpan / 2;
-          layoutChildren(child.children, nodeId, x, y, childStart, childEnd, depth + 1, legColorIdx);
+          placeChildren(child.children, nodeId, cx, cy, cursorX, subtreeW, depth + 1, colorIdx);
         }
+
+        cursorX += subtreeW + H_GAP;
       });
     };
 
-    if (downline.length > 0) {
-      const fullCircle = Math.PI * 2;
-      const startAngle = -Math.PI / 2; // Start from top
-      layoutChildren(downline, 'root', 0, 0, startAngle, startAngle + fullCircle, 1, 0);
-    }
+    placeChildren(downline, 'root', 0, 0, -totalTreeWidth / 2, totalTreeWidth, 1, 0);
 
     return { nodes, edges };
   }, [tree, downline, userName, partnerName]);
@@ -121,36 +131,30 @@ export default function RadialTree({ tree }) {
     ctx.scale(dpr, dpr);
 
     const cx = rect.width / 2 + transform.x;
-    const cy = rect.height / 2 + transform.y;
+    const cy = 60 + transform.y;
     const scale = transform.scale;
 
     // Clear
     ctx.fillStyle = colors.bg;
     ctx.fillRect(0, 0, rect.width, rect.height);
 
-    // Draw edges
-    ctx.lineWidth = 1.5 * scale;
+    // Draw edges (curved connectors)
     for (const edge of layoutEdges) {
       const fromNode = layoutNodes.find(n => n.id === edge.from);
       const toNode = layoutNodes.find(n => n.id === edge.to);
       if (!fromNode || !toNode) continue;
 
       const fx = cx + fromNode.x * scale;
-      const fy = cy + fromNode.y * scale;
+      const fy = cy + (fromNode.y + fromNode.h / 2) * scale;
       const tx = cx + toNode.x * scale;
-      const ty = cy + toNode.y * scale;
+      const ty = cy + (toNode.y - toNode.h / 2) * scale;
+      const midY = (fy + ty) / 2;
 
       ctx.beginPath();
-      ctx.strokeStyle = edge.color + '40';
+      ctx.strokeStyle = edge.color + '50';
+      ctx.lineWidth = 1.5 * scale;
       ctx.moveTo(fx, fy);
-      // Curved line
-      const midX = (fx + tx) / 2;
-      const midY = (fy + ty) / 2;
-      const dx = tx - fx;
-      const dy = ty - fy;
-      const perpX = -dy * 0.1;
-      const perpY = dx * 0.1;
-      ctx.quadraticCurveTo(midX + perpX, midY + perpY, tx, ty);
+      ctx.bezierCurveTo(fx, midY, tx, midY, tx, ty);
       ctx.stroke();
     }
 
@@ -159,55 +163,68 @@ export default function RadialTree({ tree }) {
     for (const node of layoutNodes) {
       const nx = cx + node.x * scale;
       const ny = cy + node.y * scale;
-      const r = node.radius * scale;
+      const w = node.w * scale;
+      const h = node.h * scale;
 
-      // Store for hit testing
-      nodesRef.current.push({ ...node, screenX: nx, screenY: ny, screenRadius: r });
+      nodesRef.current.push({ ...node, screenX: nx, screenY: ny, screenW: w, screenH: h });
 
       const isHovered = hoveredNode === node.id;
       const isSelected = selectedNode === node.id;
+      const highlight = isHovered || isSelected;
 
-      // Circle
+      // Rounded rect
+      const r = 4 * scale;
       ctx.beginPath();
-      ctx.arc(nx, ny, r, 0, Math.PI * 2);
-      ctx.fillStyle = isHovered || isSelected ? node.color + '30' : node.isRoot ? 'rgba(184,149,107,0.12)' : node.color + '15';
+      ctx.moveTo(nx - w/2 + r, ny - h/2);
+      ctx.lineTo(nx + w/2 - r, ny - h/2);
+      ctx.arcTo(nx + w/2, ny - h/2, nx + w/2, ny - h/2 + r, r);
+      ctx.lineTo(nx + w/2, ny + h/2 - r);
+      ctx.arcTo(nx + w/2, ny + h/2, nx + w/2 - r, ny + h/2, r);
+      ctx.lineTo(nx - w/2 + r, ny + h/2);
+      ctx.arcTo(nx - w/2, ny + h/2, nx - w/2, ny + h/2 - r, r);
+      ctx.lineTo(nx - w/2, ny - h/2 + r);
+      ctx.arcTo(nx - w/2, ny - h/2, nx - w/2 + r, ny - h/2, r);
+      ctx.closePath();
+
+      ctx.fillStyle = node.isRoot ? 'rgba(184,149,107,0.1)' : highlight ? node.color + '18' : 'white';
       ctx.fill();
-      ctx.strokeStyle = isHovered || isSelected ? node.color : node.color + '60';
-      ctx.lineWidth = (isHovered || isSelected ? 2 : 1) * scale;
+      ctx.strokeStyle = highlight ? node.color : node.isRoot ? 'rgba(184,149,107,0.4)' : 'rgba(26,26,26,0.12)';
+      ctx.lineWidth = highlight ? 2 * scale : 1 * scale;
       ctx.stroke();
 
+      // Color accent bar on left
+      if (!node.isRoot) {
+        ctx.fillStyle = node.color + '60';
+        ctx.fillRect(nx - w/2, ny - h/2, 3 * scale, h);
+      }
+
       // Label
-      const fontSize = Math.max(9, Math.min(13, 12 * scale));
+      const fontSize = Math.max(8, Math.min(12, 11 * scale));
       ctx.font = `${node.isRoot ? '600 ' : '500 '}${fontSize}px Inter, system-ui, sans-serif`;
       ctx.fillStyle = colors.dark;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
 
-      // Truncate if too long
       let label = node.label;
-      const maxWidth = r * 2.5;
+      const maxWidth = w - 12 * scale;
       while (ctx.measureText(label).width > maxWidth && label.length > 3) {
         label = label.slice(0, -4) + '...';
       }
-      ctx.fillText(label, nx, ny - (node.ltdId ? 6 * scale : 0));
+      ctx.fillText(label, nx, ny - (node.ltdId && scale > 0.5 ? 7 * scale : 0));
 
-      // LTD ID below name
-      if (node.ltdId && scale > 0.5) {
-        ctx.font = `${Math.max(8, 10 * scale)}px Inter, system-ui, sans-serif`;
+      // Subtitle
+      if (scale > 0.5) {
+        ctx.font = `${Math.max(7, 9 * scale)}px Inter, system-ui, sans-serif`;
         ctx.fillStyle = 'rgba(26,26,26,0.35)';
-        ctx.fillText(`#${node.ltdId}`, nx, ny + 8 * scale);
-      }
-
-      // Descendant count
-      if (node.totalDescendants > 0 && scale > 0.6) {
-        ctx.font = `600 ${Math.max(7, 9 * scale)}px Inter, system-ui, sans-serif`;
-        ctx.fillStyle = node.color;
-        ctx.fillText(`${node.totalDescendants}`, nx, ny + (node.ltdId ? 18 : 12) * scale);
+        const sub = [];
+        if (node.ltdId) sub.push(`#${node.ltdId}`);
+        if (node.totalDescendants > 0) sub.push(`${node.totalDescendants} in leg`);
+        if (sub.length > 0) ctx.fillText(sub.join(' \u00b7 '), nx, ny + 8 * scale);
       }
     }
   }, [layoutNodes, layoutEdges, transform, hoveredNode, selectedNode]);
 
-  // Mouse/touch handlers
+  // Interaction handlers
   const handleMouseDown = (e) => {
     setDragging(true);
     setDragStart({ x: e.clientX - transform.x, y: e.clientY - transform.y });
@@ -220,12 +237,10 @@ export default function RadialTree({ tree }) {
     const mx = e.clientX - rect.left;
     const my = e.clientY - rect.top;
 
-    // Hit test
     let found = null;
     for (const node of nodesRef.current) {
-      const dx = mx - node.screenX;
-      const dy = my - node.screenY;
-      if (dx * dx + dy * dy < node.screenRadius * node.screenRadius) {
+      if (mx >= node.screenX - node.screenW/2 && mx <= node.screenX + node.screenW/2 &&
+          my >= node.screenY - node.screenH/2 && my <= node.screenY + node.screenH/2) {
         found = node.id;
         break;
       }
@@ -234,26 +249,16 @@ export default function RadialTree({ tree }) {
     canvas.style.cursor = found ? 'pointer' : dragging ? 'grabbing' : 'grab';
 
     if (dragging && dragStart) {
-      setTransform(prev => ({
-        ...prev,
-        x: e.clientX - dragStart.x,
-        y: e.clientY - dragStart.y,
-      }));
+      setTransform(prev => ({ ...prev, x: e.clientX - dragStart.x, y: e.clientY - dragStart.y }));
     }
   };
 
-  const handleMouseUp = () => {
-    setDragging(false);
-    setDragStart(null);
-  };
+  const handleMouseUp = () => { setDragging(false); setDragStart(null); };
 
   const handleWheel = (e) => {
     e.preventDefault();
     const delta = e.deltaY > 0 ? 0.9 : 1.1;
-    setTransform(prev => ({
-      ...prev,
-      scale: Math.max(0.2, Math.min(3, prev.scale * delta)),
-    }));
+    setTransform(prev => ({ ...prev, scale: Math.max(0.15, Math.min(3, prev.scale * delta)) }));
   };
 
   const handleClick = (e) => {
@@ -262,11 +267,9 @@ export default function RadialTree({ tree }) {
     const rect = canvas.getBoundingClientRect();
     const mx = e.clientX - rect.left;
     const my = e.clientY - rect.top;
-
     for (const node of nodesRef.current) {
-      const dx = mx - node.screenX;
-      const dy = my - node.screenY;
-      if (dx * dx + dy * dy < node.screenRadius * node.screenRadius) {
+      if (mx >= node.screenX - node.screenW/2 && mx <= node.screenX + node.screenW/2 &&
+          my >= node.screenY - node.screenH/2 && my <= node.screenY + node.screenH/2) {
         setSelectedNode(prev => prev === node.id ? null : node.id);
         return;
       }
@@ -274,7 +277,7 @@ export default function RadialTree({ tree }) {
     setSelectedNode(null);
   };
 
-  // Touch handlers for mobile
+  // Touch
   const lastTouchRef = useRef(null);
   const lastPinchRef = useRef(null);
 
@@ -299,21 +302,15 @@ export default function RadialTree({ tree }) {
       const dx = e.touches[0].clientX - e.touches[1].clientX;
       const dy = e.touches[0].clientY - e.touches[1].clientY;
       const dist = Math.sqrt(dx * dx + dy * dy);
-      const ratio = dist / lastPinchRef.current;
-      setTransform(prev => ({ ...prev, scale: Math.max(0.2, Math.min(3, prev.scale * ratio)) }));
+      setTransform(prev => ({ ...prev, scale: Math.max(0.15, Math.min(3, prev.scale * (dist / lastPinchRef.current))) }));
       lastPinchRef.current = dist;
     }
   };
 
-  const handleTouchEnd = () => {
-    lastTouchRef.current = null;
-    lastPinchRef.current = null;
-  };
+  const handleTouchEnd = () => { lastTouchRef.current = null; lastPinchRef.current = null; };
 
-  // Reset view
   const resetView = () => setTransform({ x: 0, y: 0, scale: 1 });
 
-  // Selected node info
   const selectedInfo = selectedNode ? layoutNodes.find(n => n.id === selectedNode) : null;
 
   return (
@@ -336,24 +333,26 @@ export default function RadialTree({ tree }) {
       <div style={{ position: 'absolute', bottom: '12px', right: '12px', display: 'flex', gap: '4px' }}>
         <button onClick={() => setTransform(prev => ({ ...prev, scale: Math.min(3, prev.scale * 1.2) }))}
           style={{ width: '32px', height: '32px', background: 'white', border: '1px solid rgba(26,26,26,0.15)', cursor: 'pointer', fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: colors.dark }}>+</button>
-        <button onClick={() => setTransform(prev => ({ ...prev, scale: Math.max(0.2, prev.scale * 0.8) }))}
+        <button onClick={() => setTransform(prev => ({ ...prev, scale: Math.max(0.15, prev.scale * 0.8) }))}
           style={{ width: '32px', height: '32px', background: 'white', border: '1px solid rgba(26,26,26,0.15)', cursor: 'pointer', fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: colors.dark }}>{'\u2212'}</button>
         <button onClick={resetView}
           style={{ height: '32px', padding: '0 10px', background: 'white', border: '1px solid rgba(26,26,26,0.15)', cursor: 'pointer', fontSize: '11px', color: 'rgba(26,26,26,0.5)' }}>Reset</button>
       </div>
 
       {/* Legend */}
-      <div style={{ position: 'absolute', top: '12px', left: '12px', background: 'rgba(255,255,255,0.9)', padding: '8px 12px', border: '1px solid rgba(26,26,26,0.08)', fontSize: '11px' }}>
-        <p style={{ margin: '0 0 4px', color: 'rgba(26,26,26,0.4)', fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Legs</p>
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          {downline.slice(0, 8).map((leg, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: LEG_COLORS[i % LEG_COLORS.length] }} />
-              <span style={{ color: 'rgba(26,26,26,0.5)' }}>{leg.full_name?.split(' ')[0] || `Leg ${i + 1}`}</span>
-            </div>
-          ))}
+      {downline.length > 0 && (
+        <div style={{ position: 'absolute', top: '12px', left: '12px', background: 'rgba(255,255,255,0.92)', padding: '8px 12px', border: '1px solid rgba(26,26,26,0.08)', fontSize: '11px' }}>
+          <p style={{ margin: '0 0 4px', color: 'rgba(26,26,26,0.4)', fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Legs</p>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            {downline.slice(0, 8).map((leg, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <div style={{ width: '8px', height: '8px', borderRadius: '2px', background: LEG_COLORS[i % LEG_COLORS.length] }} />
+                <span style={{ color: 'rgba(26,26,26,0.5)' }}>{leg.full_name?.split(' ')[0] || `Leg ${i + 1}`}</span>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Selected node info */}
       {selectedInfo && (
@@ -366,7 +365,7 @@ export default function RadialTree({ tree }) {
 
       {/* Instructions */}
       <div style={{ position: 'absolute', top: '12px', right: '12px', fontSize: '10px', color: 'rgba(26,26,26,0.3)' }}>
-        Scroll to zoom {'\u00b7'} Drag to pan {'\u00b7'} Click a node for details
+        Scroll to zoom {'\u00b7'} Drag to pan {'\u00b7'} Click for details
       </div>
     </div>
   );
