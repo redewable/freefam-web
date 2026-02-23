@@ -218,6 +218,11 @@ export default function LeadershipPage() {
   const [dateCheckins, setDateCheckins] = useState([]);
   const [dateStats, setDateStats] = useState(null);
 
+  // Settings / Webcast
+  const [zoomLink, setZoomLink] = useState('');
+  const [zoomLinkInput, setZoomLinkInput] = useState('');
+  const [zoomSaving, setZoomSaving] = useState(false);
+
   // Lineup editor
   const [editingLineup, setEditingLineup] = useState(null);
   const [lineupDate, setLineupDate] = useState('');
@@ -353,6 +358,13 @@ export default function LeadershipPage() {
 
   useEffect(() => { if (auth) fetchAll(); }, [auth]);
   useEffect(() => { if (selectedDate) fetchDateDetail(selectedDate); }, [selectedDate]);
+  useEffect(() => {
+    if (tab === 'settings' && auth) {
+      fetch('/api/webcast').then(r => r.json()).then(data => {
+        if (data.link) { setZoomLink(data.link); setZoomLinkInput(data.link); }
+      }).catch(() => {});
+    }
+  }, [tab, auth]);
 
   // ═══════ ACTIONS ═══════
   const updateStatus = async (reg, action) => {
@@ -650,6 +662,7 @@ export default function LeadershipPage() {
     { id: 'history', label: 'History' },
     ...(isLeadership ? [{ id: 'users', label: 'Users' }] : []),
     ...(isLeadership ? [{ id: 'los-builder', label: 'LOS Builder', href: '/admin/los-builder' }] : []),
+    ...(isLeadership ? [{ id: 'settings', label: 'Settings' }] : []),
   ];
 
   const handleLogout = async () => {
@@ -1570,6 +1583,64 @@ export default function LeadershipPage() {
                     <p style={{ margin: 0, marginTop: '4px', fontStyle: 'italic', fontSize: '11px' }}>Members without any granted access level cannot see the leadership portal.</p>
                   </div>
                 </div>
+              </div>
+            </>
+          // ═══════════════ SETTINGS TAB ═══════════════
+          ) : tab === 'settings' && isLeadership ? (
+            <>
+              <h2 style={{ fontSize: '18px', color: colors.dark, margin: '0 0 16px', fontWeight: 500 }}>Settings</h2>
+
+              {/* Webcast Zoom Link */}
+              <div style={{ background: 'white', border: '1px solid rgba(26,26,26,0.08)', padding: '20px', marginBottom: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                  <svg style={{ width: '18px', height: '18px', color: '#3b82f6' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><polygon points="23 7 16 12 23 17 23 7" /><rect x="1" y="5" width="15" height="14" rx="2" /></svg>
+                  <h3 style={{ fontSize: '15px', fontWeight: 500, color: colors.dark, margin: 0 }}>Webcast Zoom Link</h3>
+                </div>
+                <p style={{ fontSize: '12px', color: 'rgba(26,26,26,0.5)', marginBottom: '12px', lineHeight: 1.5 }}>
+                  Set the Zoom meeting link for webcast ticket holders. This link is shown after purchase and in their My Events page.
+                </p>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <input
+                    type="url"
+                    placeholder="https://us06web.zoom.us/j/..."
+                    value={zoomLinkInput}
+                    onChange={(e) => setZoomLinkInput(e.target.value)}
+                    style={{ flex: 1, padding: '10px', border: '1px solid rgba(26,26,26,0.15)', background: 'white', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
+                  />
+                  <button
+                    onClick={async () => {
+                      if (!zoomLinkInput.trim()) return;
+                      setZoomSaving(true);
+                      try {
+                        const res = await fetch('/api/webcast', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ link: zoomLinkInput.trim() }),
+                        });
+                        if (res.ok) {
+                          setZoomLink(zoomLinkInput.trim());
+                          setToast('Zoom link saved!');
+                        }
+                      } catch (e) { console.error(e); }
+                      setZoomSaving(false);
+                    }}
+                    disabled={zoomSaving || !zoomLinkInput.trim()}
+                    style={{
+                      padding: '10px 16px', fontSize: '12px', letterSpacing: '0.05em', textTransform: 'uppercase',
+                      background: zoomSaving || !zoomLinkInput.trim() ? 'rgba(26,26,26,0.15)' : colors.dark,
+                      color: zoomSaving || !zoomLinkInput.trim() ? 'rgba(26,26,26,0.4)' : colors.bg,
+                      border: 'none', cursor: zoomSaving || !zoomLinkInput.trim() ? 'not-allowed' : 'pointer',
+                    }}
+                  >
+                    {zoomSaving ? 'Saving...' : 'Save'}
+                  </button>
+                </div>
+                {zoomLink && (
+                  <div style={{ marginTop: '10px', padding: '8px 12px', background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.15)' }}>
+                    <p style={{ fontSize: '10px', letterSpacing: '0.08em', textTransform: 'uppercase', color: '#22c55e', marginBottom: '4px', fontWeight: 600 }}>Current Link</p>
+                    <p style={{ fontSize: '12px', color: colors.dark, margin: 0, wordBreak: 'break-all' }}>{zoomLink}</p>
+                  </div>
+                )}
               </div>
             </>
           ) : null
