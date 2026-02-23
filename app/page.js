@@ -354,10 +354,10 @@ export default function FreedomFamily() {
       </nav>
 
       <section style={{ paddingTop: '140px', paddingBottom: '80px', textAlign: 'center', padding: '140px 20px 80px' }}>
-        <p style={{ color: colors.gold, fontSize: '11px', letterSpacing: '0.35em', textTransform: 'uppercase', marginBottom: '24px' }}>The Round Table</p>
+        <p style={{ color: colors.gold, fontSize: '11px', letterSpacing: '0.35em', textTransform: 'uppercase', marginBottom: '24px' }}>You&apos;re Invited</p>
         <h1 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 'clamp(52px, 12vw, 100px)', color: colors.dark, lineHeight: 0.9, marginBottom: '20px', fontWeight: 400 }}>Freedom <em>Family</em></h1>
-        <p style={{ fontSize: '16px', color: 'rgba(26,26,26,0.45)', letterSpacing: '0.05em', marginBottom: '40px', maxWidth: '420px', marginLeft: 'auto', marginRight: 'auto' }}>Info Session &amp; Training · Every Monday · 7:30 PM</p>
-        <button onClick={() => setModalOpen(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', padding: '18px 40px', background: colors.dark, color: colors.bg, fontSize: '12px', letterSpacing: '0.15em', textTransform: 'uppercase', border: 'none', cursor: 'pointer' }}>Register Now<Icons.ArrowRight style={{ width: '14px', height: '14px' }} /></button>
+        <p style={{ fontSize: '16px', color: 'rgba(26,26,26,0.45)', letterSpacing: '0.05em', marginBottom: '40px', maxWidth: '420px', marginLeft: 'auto', marginRight: 'auto', lineHeight: 1.6 }}>Info Session &amp; Training</p>
+        <button onClick={() => setModalOpen(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: '12px', padding: '18px 48px', background: `linear-gradient(135deg, ${colors.dark} 0%, #2a2a2a 100%)`, color: colors.bg, fontSize: '12px', letterSpacing: '0.2em', textTransform: 'uppercase', border: 'none', cursor: 'pointer', boxShadow: '0 4px 20px rgba(26,26,26,0.15)', position: 'relative', overflow: 'hidden' }}><span style={{ position: 'relative', zIndex: 1 }}>Register Now</span><Icons.ArrowRight style={{ width: '14px', height: '14px', position: 'relative', zIndex: 1 }} /><span style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '2px', background: `linear-gradient(to right, transparent, ${colors.gold}, transparent)` }} /></button>
       </section>
 
       <div style={{ maxWidth: '700px', margin: '0 auto', padding: '0 20px' }}><div style={{ height: '1px', background: 'linear-gradient(to right, transparent, rgba(26,26,26,0.1), transparent)' }} /></div>
@@ -370,7 +370,7 @@ export default function FreedomFamily() {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '32px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}><Icons.Calendar style={{ width: '18px', height: '18px', color: colors.gold }} /><span style={{ fontSize: '15px', color: colors.dark }}>Monday, February 23, 2026 · 7:30 PM</span></div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}><Icons.MapPin style={{ width: '18px', height: '18px', color: colors.gold }} /><span style={{ fontSize: '15px', color: colors.dark }}>Embassy Suites · 201 University Dr E, College Station</span></div>
+            <a href="https://maps.google.com/?q=Embassy+Suites,+201+University+Dr+E,+College+Station,+TX" target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', textDecoration: 'none' }}><Icons.MapPin style={{ width: '18px', height: '18px', color: colors.gold, flexShrink: 0, marginTop: '2px' }} /><span style={{ fontSize: '15px', color: colors.dark }}>Embassy Suites<br />201 University Dr E, College Station</span></a>
           </div>
           
           <div style={{ background: 'rgba(26,26,26,0.02)', padding: '24px', marginBottom: '32px' }}>
