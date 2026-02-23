@@ -140,27 +140,43 @@ const ShareModal = ({ isOpen, onClose, onCopy }) => {
 
 // Registration Modal
 const RegistrationModal = ({ isOpen, onClose, ticketType, setTicketType }) => {
-  const [step, setStep] = useState(ticketType ? 2 : 1);
+  const [step, setStep] = useState(ticketType ? (ticketType === 'webcast' ? 'webcast-select' : 2) : 1);
+  const [webcastSub, setWebcastSub] = useState('');
   const [form, setForm] = useState({ firstName: '', lastName: '', email: '', invitedBy: '', visitNumber: '', ltdId: '', uplinePlatinum: '', paymentOption: '', agreed: false, signature: '' });
   const [sigModal, setSigModal] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [complete, setComplete] = useState(false);
+  const [webcastToken, setWebcastToken] = useState('');
+  const [webcastZoomLink, setWebcastZoomLink] = useState('');
 
-  useEffect(() => { if (ticketType && isOpen) setStep(2); }, [ticketType, isOpen]);
+  useEffect(() => {
+    if (ticketType && isOpen) {
+      if (ticketType === 'webcast') setStep('webcast-select');
+      else setStep(2);
+    }
+  }, [ticketType, isOpen]);
 
-  const reset = () => { setStep(1); setTicketType(''); setForm({ firstName: '', lastName: '', email: '', invitedBy: '', visitNumber: '', ltdId: '', uplinePlatinum: '', paymentOption: '', agreed: false, signature: '' }); setComplete(false); };
+  const reset = () => { setStep(1); setTicketType(''); setWebcastSub(''); setForm({ firstName: '', lastName: '', email: '', invitedBy: '', visitNumber: '', ltdId: '', uplinePlatinum: '', paymentOption: '', agreed: false, signature: '' }); setComplete(false); setWebcastToken(''); setWebcastZoomLink(''); };
   const close = () => { reset(); onClose(); };
+
+  const effectiveType = webcastSub || ticketType;
+  const needsLtdFields = effectiveType === 'apprentice' || effectiveType === 'ibo' || effectiveType === 'webcast-apprentice' || effectiveType === 'webcast-ibo';
+  const needsPayment = effectiveType === 'ibo' || effectiveType === 'webcast-ibo';
+  const isWebcast = effectiveType?.startsWith('webcast-');
+  const isGuest = effectiveType === 'guest';
 
   const submit = async (e) => {
     e.preventDefault();
     setProcessing(true);
 
-    if (ticketType === 'ibo') {
+    // Paid paths: IBO in-person or IBO webcast
+    if (needsPayment) {
       try {
+        const priceType = effectiveType === 'webcast-ibo' ? 'webcast' : form.paymentOption;
         const res = await fetch('/api/checkout', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ priceType: form.paymentOption, customerEmail: form.email, customerName: `${form.firstName} ${form.lastName}`, ltdId: form.ltdId, uplinePlatinum: form.uplinePlatinum, source: 'main' }),
+          body: JSON.stringify({ priceType, customerEmail: form.email, customerName: `${form.firstName} ${form.lastName}`, ltdId: form.ltdId, uplinePlatinum: form.uplinePlatinum, source: effectiveType === 'webcast-ibo' ? 'webcast' : 'main' }),
         });
         const data = await res.json();
         if (data.url) window.location.href = data.url;
@@ -169,13 +185,21 @@ const RegistrationModal = ({ isOpen, onClose, ticketType, setTicketType }) => {
       return;
     }
 
-    // Guest or Apprentice - free registration
+    // Free paths: guest, apprentice, webcast-guest, webcast-apprentice
     try {
-      await fetch('/api/register', {
+      const res = await fetch('/api/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ firstName: form.firstName, lastName: form.lastName, email: form.email, type: ticketType, invitedBy: form.invitedBy, visitNumber: form.visitNumber, ltdId: form.ltdId, uplinePlatinum: form.uplinePlatinum, source: 'main' }),
+        body: JSON.stringify({ firstName: form.firstName, lastName: form.lastName, email: form.email, type: effectiveType, invitedBy: form.invitedBy, visitNumber: form.visitNumber, ltdId: form.ltdId, uplinePlatinum: form.uplinePlatinum, source: 'main' }),
       });
+      const data = await res.json();
+      if (isWebcast && data.webcastToken) {
+        setWebcastToken(data.webcastToken);
+        try {
+          const zRes = await fetch('/api/webcast').then(r => r.json());
+          if (zRes.link) setWebcastZoomLink(zRes.link);
+        } catch (e) {}
+      }
       setComplete(true);
     } catch (e) { alert('Failed.'); }
     setProcessing(false);
@@ -187,7 +211,16 @@ const RegistrationModal = ({ isOpen, onClose, ticketType, setTicketType }) => {
     { id: 'guest', label: 'Guest', sub: 'First-time visitor', price: 'Complimentary' },
     { id: 'apprentice', label: 'Apprentice', sub: 'First-year IBO', price: 'Complimentary' },
     { id: 'ibo', label: 'Business Owner', sub: 'Active IBO', price: 'From $12' },
+    { id: 'webcast', label: 'Webcast', sub: 'Watch live via Zoom', price: 'From Free' },
   ];
+
+  const webcastTickets = [
+    { id: 'webcast-guest', label: 'Guest', sub: 'First-time viewer', price: 'Free' },
+    { id: 'webcast-apprentice', label: 'Apprentice', sub: 'First-year IBO', price: 'Free' },
+    { id: 'webcast-ibo', label: 'Business Owner', sub: 'Active IBO', price: '$10' },
+  ];
+
+  const typeLabel = { 'guest': 'Guest', 'apprentice': 'Apprentice', 'ibo': 'Business Owner', 'webcast-guest': 'Webcast · Guest', 'webcast-apprentice': 'Webcast · Apprentice', 'webcast-ibo': 'Webcast · Business Owner' }[effectiveType] || '';
 
   const label = { fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.4)', display: 'block', marginBottom: '4px' };
   const input = { width: '100%', padding: '10px', background: 'white', border: '1px solid rgba(26,26,26,0.15)', outline: 'none', color: colors.dark, fontSize: '16px', boxSizing: 'border-box' };
@@ -203,9 +236,31 @@ const RegistrationModal = ({ isOpen, onClose, ticketType, setTicketType }) => {
             <div style={{ padding: '40px 28px', textAlign: 'center' }}>
               <div style={{ width: '48px', height: '48px', margin: '0 auto 16px', borderRadius: '50%', border: `1px solid ${colors.gold}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icons.Check style={{ width: '24px', height: '24px', color: colors.gold }} /></div>
               <p style={{ color: colors.gold, fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '8px' }}>Confirmed</p>
-              <h3 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: '24px', color: colors.dark, marginBottom: '8px' }}>{new Date().getDay() === 1 ? 'See You Tonight!' : 'See You Soon!'}</h3>
-              <p style={{ color: 'rgba(26,26,26,0.5)', fontSize: '13px', marginBottom: '20px' }}>Embassy Suites · College Station</p>
-              <button onClick={close} style={{ fontSize: '12px', color: 'rgba(26,26,26,0.4)', background: 'none', border: 'none', cursor: 'pointer' }}>Close</button>
+              {isWebcast ? (
+                <>
+                  <h3 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: '24px', color: colors.dark, marginBottom: '16px' }}>You&#39;re In!</h3>
+                  <p style={{ fontSize: '13px', color: 'rgba(26,26,26,0.5)', marginBottom: '20px', lineHeight: 1.6 }}>Your webcast registration is confirmed. Join live via Zoom at the scheduled time.</p>
+                  {webcastZoomLink ? (
+                    <a href={webcastZoomLink} target="_blank" rel="noopener noreferrer"
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', padding: '14px 28px', background: colors.dark, color: colors.bg, fontSize: '11px', letterSpacing: '0.15em', textTransform: 'uppercase', textDecoration: 'none' }}>
+                      Join Zoom Meeting <Icons.ArrowRight style={{ width: '14px', height: '14px' }} />
+                    </a>
+                  ) : (
+                    <p style={{ fontSize: '12px', color: 'rgba(26,26,26,0.4)', fontStyle: 'italic' }}>Zoom link will be available shortly before the event.</p>
+                  )}
+                  {webcastToken && (
+                    <p style={{ marginTop: '16px', fontSize: '11px', color: 'rgba(26,26,26,0.3)', lineHeight: 1.5 }}>
+                      Need the link later? Visit <a href={`/webcast?token=${webcastToken}`} style={{ color: colors.gold, textDecoration: 'none' }}>your webcast page</a> or use your email at <a href="/webcast" style={{ color: colors.gold, textDecoration: 'none' }}>/webcast</a>.
+                    </p>
+                  )}
+                </>
+              ) : (
+                <>
+                  <h3 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: '24px', color: colors.dark, marginBottom: '8px' }}>{new Date().getDay() === 1 ? 'See You Tonight!' : 'See You Soon!'}</h3>
+                  <p style={{ color: 'rgba(26,26,26,0.5)', fontSize: '13px', marginBottom: '20px' }}>Embassy Suites · College Station</p>
+                </>
+              )}
+              <button onClick={close} style={{ marginTop: '16px', fontSize: '12px', color: 'rgba(26,26,26,0.4)', background: 'none', border: 'none', cursor: 'pointer' }}>Close</button>
             </div>
           ) : step === 1 ? (
             <div style={{ padding: '28px' }}>
@@ -213,18 +268,33 @@ const RegistrationModal = ({ isOpen, onClose, ticketType, setTicketType }) => {
               <h2 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: '24px', color: colors.dark, marginBottom: '20px' }}>Select Your Path</h2>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {tickets.map(t => (
-                  <button key={t.id} onClick={() => { setTicketType(t.id); setStep(2); }}
-                    style={{ width: '100%', textAlign: 'left', padding: '14px', border: '1px solid rgba(26,26,26,0.1)', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <button key={t.id} onClick={() => { if (t.id === 'webcast') { setTicketType('webcast'); setStep('webcast-select'); } else { setTicketType(t.id); setStep(2); } }}
+                    style={{ width: '100%', textAlign: 'left', padding: '14px', border: t.id === 'webcast' ? '1px solid rgba(59,130,246,0.2)' : '1px solid rgba(26,26,26,0.1)', background: t.id === 'webcast' ? 'rgba(59,130,246,0.03)' : 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div><h3 style={{ fontSize: '15px', color: colors.dark, margin: '0 0 2px' }}>{t.label}</h3><p style={{ fontSize: '12px', color: 'rgba(26,26,26,0.5)', margin: 0 }}>{t.sub}</p></div>
                     <p style={{ fontSize: '13px', color: colors.gold, margin: 0 }}>{t.price}</p>
                   </button>
                 ))}
               </div>
             </div>
+          ) : step === 'webcast-select' ? (
+            <div style={{ padding: '28px' }}>
+              <button type="button" onClick={() => { setStep(1); setTicketType(''); setWebcastSub(''); }} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: 'rgba(26,26,26,0.4)', background: 'none', border: 'none', cursor: 'pointer', marginBottom: '12px' }}><Icons.ArrowLeft style={{ width: '12px', height: '12px' }} /> Back</button>
+              <p style={{ color: '#3b82f6', fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '6px' }}>Webcast</p>
+              <h2 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: '24px', color: colors.dark, marginBottom: '20px' }}>Select Your Role</h2>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {webcastTickets.map(t => (
+                  <button key={t.id} onClick={() => { setWebcastSub(t.id); setStep(2); }}
+                    style={{ width: '100%', textAlign: 'left', padding: '14px', border: '1px solid rgba(59,130,246,0.15)', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div><h3 style={{ fontSize: '15px', color: colors.dark, margin: '0 0 2px' }}>{t.label}</h3><p style={{ fontSize: '12px', color: 'rgba(26,26,26,0.5)', margin: 0 }}>{t.sub}</p></div>
+                    <p style={{ fontSize: '13px', color: t.price === 'Free' ? '#22c55e' : colors.gold, margin: 0 }}>{t.price}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
           ) : (
             <form onSubmit={submit} style={{ padding: '24px 28px' }}>
-              <button type="button" onClick={() => { setStep(1); setTicketType(''); }} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: 'rgba(26,26,26,0.4)', background: 'none', border: 'none', cursor: 'pointer', marginBottom: '12px' }}><Icons.ArrowLeft style={{ width: '12px', height: '12px' }} /> Back</button>
-              <p style={{ color: colors.gold, fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '6px' }}>{ticketType === 'guest' ? 'Guest' : ticketType === 'apprentice' ? 'Apprentice' : 'Business Owner'}</p>
+              <button type="button" onClick={() => { if (isWebcast) { setStep('webcast-select'); setWebcastSub(''); } else { setStep(1); setTicketType(''); } }} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: 'rgba(26,26,26,0.4)', background: 'none', border: 'none', cursor: 'pointer', marginBottom: '12px' }}><Icons.ArrowLeft style={{ width: '12px', height: '12px' }} /> Back</button>
+              <p style={{ color: isWebcast ? '#3b82f6' : colors.gold, fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '6px' }}>{typeLabel}</p>
               <h2 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: '22px', color: colors.dark, marginBottom: '16px' }}>Your Details</h2>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px' }}>
@@ -232,8 +302,8 @@ const RegistrationModal = ({ isOpen, onClose, ticketType, setTicketType }) => {
                   <div><label style={label}>Last Name</label><input type="text" name="lname" autoComplete="family-name" value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} style={input} required /></div>
                 </div>
                 <div><label style={label}>Email</label><input type="email" name="email" autoComplete="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} style={input} required /></div>
-                
-                {ticketType === 'guest' && (
+
+                {isGuest && (
                   <>
                     <div><label style={label}>Who Invited You</label><input type="text" value={form.invitedBy} onChange={(e) => setForm({ ...form, invitedBy: e.target.value })} style={input} required /></div>
                     <div>
@@ -248,15 +318,15 @@ const RegistrationModal = ({ isOpen, onClose, ticketType, setTicketType }) => {
                     </div>
                   </>
                 )}
-                
-                {(ticketType === 'apprentice' || ticketType === 'ibo') && (
+
+                {needsLtdFields && (
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px' }}>
                     <div><label style={label}>LTD ID</label><input type="text" value={form.ltdId} onChange={(e) => setForm({ ...form, ltdId: e.target.value })} style={input} required /></div>
                     <div><label style={label}>Upline Platinum</label><input type="text" value={form.uplinePlatinum} onChange={(e) => setForm({ ...form, uplinePlatinum: e.target.value })} style={input} required /></div>
                   </div>
                 )}
-                
-                {ticketType === 'ibo' && (
+
+                {effectiveType === 'ibo' && (
                   <div>
                     <label style={label}>Payment Option</label>
                     <div style={{ display: 'flex', gap: '8px' }}>
@@ -270,7 +340,7 @@ const RegistrationModal = ({ isOpen, onClose, ticketType, setTicketType }) => {
                     </div>
                   </div>
                 )}
-                
+
                 <div>
                   <label style={label}>Signature</label>
                   {form.signature ? (
@@ -283,7 +353,7 @@ const RegistrationModal = ({ isOpen, onClose, ticketType, setTicketType }) => {
                     <button type="button" onClick={() => setSigModal(true)} style={{ width: '100%', padding: '16px', background: 'white', border: '1px dashed rgba(26,26,26,0.3)', color: 'rgba(26,26,26,0.5)', fontSize: '14px', cursor: 'pointer' }}>Tap to Sign</button>
                   )}
                 </div>
-                
+
                 <div style={{ borderTop: '1px solid rgba(26,26,26,0.1)', paddingTop: '12px' }}>
                   <details style={{ fontSize: '10px', color: 'rgba(26,26,26,0.4)', marginBottom: '10px' }}><summary style={{ cursor: 'pointer' }}>LTD Disclosures</summary><p style={{ lineHeight: 1.5, marginTop: '6px' }}>{LTD_DISCLOSURES}</p></details>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
@@ -291,10 +361,10 @@ const RegistrationModal = ({ isOpen, onClose, ticketType, setTicketType }) => {
                     <span style={{ fontSize: '13px', color: 'rgba(26,26,26,0.6)' }}>I agree to the terms</span>
                   </label>
                 </div>
-                
-                <button type="submit" disabled={processing || !form.agreed || !form.signature || (ticketType === 'ibo' && !form.paymentOption)}
-                  style={{ width: '100%', padding: '14px', background: processing || !form.agreed || !form.signature || (ticketType === 'ibo' && !form.paymentOption) ? 'rgba(26,26,26,0.2)' : colors.dark, color: processing || !form.agreed || !form.signature || (ticketType === 'ibo' && !form.paymentOption) ? 'rgba(26,26,26,0.4)' : colors.bg, fontSize: '12px', letterSpacing: '0.1em', textTransform: 'uppercase', border: 'none', cursor: processing || !form.agreed || !form.signature || (ticketType === 'ibo' && !form.paymentOption) ? 'not-allowed' : 'pointer', marginTop: '4px' }}>
-                  {processing ? 'Processing...' : ticketType === 'ibo' ? `Continue — ${form.paymentOption === 'monthly' ? '$40' : '$12'}` : 'Complete Registration'}
+
+                <button type="submit" disabled={processing || !form.agreed || !form.signature || (effectiveType === 'ibo' && !form.paymentOption)}
+                  style={{ width: '100%', padding: '14px', background: processing || !form.agreed || !form.signature || (effectiveType === 'ibo' && !form.paymentOption) ? 'rgba(26,26,26,0.2)' : colors.dark, color: processing || !form.agreed || !form.signature || (effectiveType === 'ibo' && !form.paymentOption) ? 'rgba(26,26,26,0.4)' : colors.bg, fontSize: '12px', letterSpacing: '0.1em', textTransform: 'uppercase', border: 'none', cursor: processing || !form.agreed || !form.signature || (effectiveType === 'ibo' && !form.paymentOption) ? 'not-allowed' : 'pointer', marginTop: '4px' }}>
+                  {processing ? 'Processing...' : needsPayment ? `Continue — ${effectiveType === 'webcast-ibo' ? '$10' : form.paymentOption === 'monthly' ? '$40' : '$12'}` : 'Complete Registration'}
                 </button>
               </div>
             </form>
@@ -313,11 +383,19 @@ export default function FreedomFamily() {
   const [ticketType, setTicketType] = useState('');
   const [toast, setToast] = useState({ visible: false, message: '' });
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [webcastSuccess, setWebcastSuccess] = useState(false);
+  const [zoomLink, setZoomLink] = useState('');
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
-      if (params.get('success') === 'true') { setToast({ visible: true, message: 'Payment successful!' }); window.history.replaceState({}, '', window.location.pathname); }
+      if (params.get('success') === 'true' && params.get('webcast') === 'true') {
+        setWebcastSuccess(true);
+        fetch('/api/webcast').then(r => r.json()).then(data => {
+          if (data.link) setZoomLink(data.link);
+        }).catch(() => {});
+        window.history.replaceState({}, '', window.location.pathname);
+      } else if (params.get('success') === 'true') { setToast({ visible: true, message: 'Payment successful!' }); window.history.replaceState({}, '', window.location.pathname); }
       if (params.get('canceled') === 'true') { setToast({ visible: true, message: 'Payment canceled' }); window.history.replaceState({}, '', window.location.pathname); }
       const reg = params.get('register');
       if (reg && ['guest', 'apprentice', 'ibo'].includes(reg)) { setTicketType(reg); setModalOpen(true); window.history.replaceState({}, '', window.location.pathname); }
@@ -384,6 +462,12 @@ export default function FreedomFamily() {
             <button onClick={() => setModalOpen(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', padding: '14px 24px', background: colors.dark, color: colors.bg, fontSize: '12px', letterSpacing: '0.1em', textTransform: 'uppercase', border: 'none', cursor: 'pointer' }}>Register Now<Icons.ArrowRight style={{ width: '14px', height: '14px' }} /></button>
             <button onClick={() => setShareOpen(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', padding: '14px 24px', background: 'transparent', color: colors.dark, fontSize: '12px', letterSpacing: '0.1em', textTransform: 'uppercase', border: '1px solid rgba(26,26,26,0.2)', cursor: 'pointer' }}><Icons.Share style={{ width: '14px', height: '14px' }} />Share Guest Link</button>
           </div>
+          <p style={{ marginTop: '16px', fontSize: '12px', color: 'rgba(26,26,26,0.35)' }}>
+            Unable to attend in person?{' '}
+            <button onClick={() => { setTicketType('webcast'); setModalOpen(true); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px', color: colors.gold, textDecoration: 'underline', padding: 0 }}>
+              Watch via webcast
+            </button>
+          </p>
         </div>
       </section>
 
@@ -455,6 +539,38 @@ export default function FreedomFamily() {
           </div>
         </div>
       </footer>
+
+      {/* Webcast Success Overlay */}
+      {webcastSuccess && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div style={{ position: 'absolute', inset: 0, background: 'rgba(26,26,26,0.6)', backdropFilter: 'blur(8px)' }} onClick={() => setWebcastSuccess(false)} />
+          <div style={{ position: 'relative', width: '100%', maxWidth: '420px', background: colors.bg, textAlign: 'center' }}>
+            <div style={{ height: '2px', background: `linear-gradient(to right, transparent, ${colors.gold}, transparent)` }} />
+            <div style={{ padding: '40px 28px' }}>
+              <div style={{ width: '48px', height: '48px', margin: '0 auto 16px', borderRadius: '50%', border: `1px solid ${colors.gold}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Icons.Check style={{ width: '24px', height: '24px', color: colors.gold }} />
+              </div>
+              <p style={{ color: colors.gold, fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '8px' }}>Webcast Confirmed</p>
+              <h3 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: '24px', color: colors.dark, marginBottom: '16px' }}>You&#39;re In!</h3>
+              <p style={{ fontSize: '13px', color: 'rgba(26,26,26,0.5)', marginBottom: '24px', lineHeight: 1.6 }}>
+                Your webcast ticket has been confirmed. Join the live broadcast via Zoom at the scheduled time.
+              </p>
+              {zoomLink ? (
+                <a href={zoomLink} target="_blank" rel="noopener noreferrer"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', padding: '14px 28px', background: colors.dark, color: colors.bg, fontSize: '11px', letterSpacing: '0.15em', textTransform: 'uppercase', border: 'none', textDecoration: 'none', cursor: 'pointer' }}>
+                  Join Zoom Meeting <Icons.ArrowRight style={{ width: '14px', height: '14px' }} />
+                </a>
+              ) : (
+                <p style={{ fontSize: '12px', color: 'rgba(26,26,26,0.4)', fontStyle: 'italic' }}>Zoom link will be available shortly before the event.</p>
+              )}
+              <p style={{ marginTop: '20px', fontSize: '11px', color: 'rgba(26,26,26,0.3)' }}>
+                The Zoom link will also appear in your <a href="/resources" style={{ color: colors.gold, textDecoration: 'none' }}>My Events</a> page.
+              </p>
+              <button onClick={() => setWebcastSuccess(false)} style={{ marginTop: '16px', fontSize: '12px', color: 'rgba(26,26,26,0.4)', background: 'none', border: 'none', cursor: 'pointer' }}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <RegistrationModal isOpen={modalOpen} onClose={() => setModalOpen(false)} ticketType={ticketType} setTicketType={setTicketType} />
       <ShareModal isOpen={shareOpen} onClose={() => setShareOpen(false)} onCopy={() => setToast({ visible: true, message: 'Link copied!' })} />
