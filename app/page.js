@@ -148,6 +148,8 @@ const RegistrationModal = ({ isOpen, onClose, ticketType, setTicketType }) => {
   const [complete, setComplete] = useState(false);
   const [webcastToken, setWebcastToken] = useState('');
   const [webcastZoomLink, setWebcastZoomLink] = useState('');
+  const [addSpouse, setAddSpouse] = useState(false);
+  const [spouseForm, setSpouseForm] = useState({ firstName: '', lastName: '', ltdId: '' });
 
   useEffect(() => {
     if (ticketType && isOpen) {
@@ -156,7 +158,7 @@ const RegistrationModal = ({ isOpen, onClose, ticketType, setTicketType }) => {
     }
   }, [ticketType, isOpen]);
 
-  const reset = () => { setStep(1); setTicketType(''); setWebcastSub(''); setForm({ firstName: '', lastName: '', email: '', invitedBy: '', visitNumber: '', ltdId: '', uplinePlatinum: '', paymentOption: '', agreed: false, signature: '' }); setComplete(false); setWebcastToken(''); setWebcastZoomLink(''); };
+  const reset = () => { setStep(1); setTicketType(''); setWebcastSub(''); setForm({ firstName: '', lastName: '', email: '', invitedBy: '', visitNumber: '', ltdId: '', uplinePlatinum: '', paymentOption: '', agreed: false, signature: '' }); setComplete(false); setWebcastToken(''); setWebcastZoomLink(''); setAddSpouse(false); setSpouseForm({ firstName: '', lastName: '', ltdId: '' }); };
   const close = () => { reset(); onClose(); };
 
   const effectiveType = webcastSub || ticketType;
@@ -173,10 +175,14 @@ const RegistrationModal = ({ isOpen, onClose, ticketType, setTicketType }) => {
     if (needsPayment) {
       try {
         const priceType = effectiveType === 'webcast-ibo' ? 'webcast' : form.paymentOption;
+        const checkoutBody = { priceType, customerEmail: form.email, customerName: `${form.firstName} ${form.lastName}`, ltdId: form.ltdId, uplinePlatinum: form.uplinePlatinum, source: effectiveType === 'webcast-ibo' ? 'webcast' : 'main' };
+        if (addSpouse && spouseForm.firstName && spouseForm.lastName && spouseForm.ltdId) {
+          checkoutBody.spouse = { name: `${spouseForm.firstName} ${spouseForm.lastName}`, ltdId: spouseForm.ltdId };
+        }
         const res = await fetch('/api/checkout', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ priceType, customerEmail: form.email, customerName: `${form.firstName} ${form.lastName}`, ltdId: form.ltdId, uplinePlatinum: form.uplinePlatinum, source: effectiveType === 'webcast-ibo' ? 'webcast' : 'main' }),
+          body: JSON.stringify(checkoutBody),
         });
         const data = await res.json();
         if (data.url) window.location.href = data.url;
@@ -341,6 +347,25 @@ const RegistrationModal = ({ isOpen, onClose, ticketType, setTicketType }) => {
                   </div>
                 )}
 
+                {needsPayment && (
+                  <div style={{ borderTop: '1px solid rgba(26,26,26,0.08)', paddingTop: '12px' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
+                      <input type="checkbox" checked={addSpouse} onChange={(e) => setAddSpouse(e.target.checked)} style={{ width: '16px', height: '16px', accentColor: colors.gold }} />
+                      <span style={{ fontSize: '13px', color: colors.dark }}>Also registering spouse</span>
+                    </label>
+                    {addSpouse && (
+                      <div style={{ marginTop: '12px', padding: '14px', background: 'rgba(184,149,107,0.04)', border: '1px solid rgba(184,149,107,0.15)' }}>
+                        <p style={{ ...label, color: colors.gold, marginBottom: '10px' }}>Spouse Details</p>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '10px', marginBottom: '10px' }}>
+                          <div><label style={label}>First Name</label><input type="text" value={spouseForm.firstName} onChange={(e) => setSpouseForm({ ...spouseForm, firstName: e.target.value })} style={input} required /></div>
+                          <div><label style={label}>Last Name</label><input type="text" value={spouseForm.lastName} onChange={(e) => setSpouseForm({ ...spouseForm, lastName: e.target.value })} style={input} required /></div>
+                        </div>
+                        <div><label style={label}>LTD ID</label><input type="text" value={spouseForm.ltdId} onChange={(e) => setSpouseForm({ ...spouseForm, ltdId: e.target.value })} style={input} required /></div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <div>
                   <label style={label}>Signature</label>
                   {form.signature ? (
@@ -364,7 +389,7 @@ const RegistrationModal = ({ isOpen, onClose, ticketType, setTicketType }) => {
 
                 <button type="submit" disabled={processing || !form.agreed || !form.signature || (effectiveType === 'ibo' && !form.paymentOption)}
                   style={{ width: '100%', padding: '14px', background: processing || !form.agreed || !form.signature || (effectiveType === 'ibo' && !form.paymentOption) ? 'rgba(26,26,26,0.2)' : colors.dark, color: processing || !form.agreed || !form.signature || (effectiveType === 'ibo' && !form.paymentOption) ? 'rgba(26,26,26,0.4)' : colors.bg, fontSize: '12px', letterSpacing: '0.1em', textTransform: 'uppercase', border: 'none', cursor: processing || !form.agreed || !form.signature || (effectiveType === 'ibo' && !form.paymentOption) ? 'not-allowed' : 'pointer', marginTop: '4px' }}>
-                  {processing ? 'Processing...' : needsPayment ? `Continue — ${effectiveType === 'webcast-ibo' ? '$10' : form.paymentOption === 'monthly' ? '$40' : '$12'}` : 'Complete Registration'}
+                  {processing ? 'Processing...' : needsPayment ? (() => { const base = effectiveType === 'webcast-ibo' ? 10 : form.paymentOption === 'monthly' ? 40 : 12; const total = addSpouse ? base * 2 : base; return `Continue — $${total}${addSpouse ? ' (2 tickets)' : ''}`; })() : 'Complete Registration'}
                 </button>
               </div>
             </form>

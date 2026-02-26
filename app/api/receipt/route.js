@@ -31,6 +31,8 @@ export async function GET(request) {
       amount: session.amount_total ? (session.amount_total / 100).toFixed(2) : '0.00',
       priceType: meta.priceType || 'single',
       source: meta.source || 'main',
+      spouseName: meta.spouseName || '',
+      spouseLtdId: meta.spouseLtdId || '',
     });
   } catch (error) {
     console.error('Receipt API error:', error);
