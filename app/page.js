@@ -336,7 +336,7 @@ const RegistrationModal = ({ isOpen, onClose, ticketType, setTicketType }) => {
                   <div>
                     <label style={label}>Payment Option</label>
                     <div style={{ display: 'flex', gap: '8px' }}>
-                      {[{ id: 'single', label: 'Single · $12', sub: 'This week' }, { id: 'monthly', label: 'Monthly · $40', sub: 'All month' }].map(o => (
+                      {[{ id: 'single', label: 'Single · $12', sub: 'This week' }, { id: 'monthly5', label: 'Monthly · $50', sub: '5 weeks' }].map(o => (
                         <label key={o.id} style={{ flex: 1, padding: '12px', textAlign: 'center', border: form.paymentOption === o.id ? `1px solid ${colors.dark}` : '1px solid rgba(26,26,26,0.15)', background: form.paymentOption === o.id ? colors.dark : 'white', color: form.paymentOption === o.id ? colors.bg : colors.dark, cursor: 'pointer' }}>
                           <input type="radio" name="payment" value={o.id} checked={form.paymentOption === o.id} onChange={(e) => setForm({ ...form, paymentOption: e.target.value })} style={{ display: 'none' }} required />
                           <p style={{ fontSize: '13px', fontWeight: 500, margin: 0 }}>{o.label}</p>
@@ -389,7 +389,7 @@ const RegistrationModal = ({ isOpen, onClose, ticketType, setTicketType }) => {
 
                 <button type="submit" disabled={processing || !form.agreed || !form.signature || (effectiveType === 'ibo' && !form.paymentOption)}
                   style={{ width: '100%', padding: '14px', background: processing || !form.agreed || !form.signature || (effectiveType === 'ibo' && !form.paymentOption) ? 'rgba(26,26,26,0.2)' : colors.dark, color: processing || !form.agreed || !form.signature || (effectiveType === 'ibo' && !form.paymentOption) ? 'rgba(26,26,26,0.4)' : colors.bg, fontSize: '12px', letterSpacing: '0.1em', textTransform: 'uppercase', border: 'none', cursor: processing || !form.agreed || !form.signature || (effectiveType === 'ibo' && !form.paymentOption) ? 'not-allowed' : 'pointer', marginTop: '4px' }}>
-                  {processing ? 'Processing...' : needsPayment ? (() => { const base = effectiveType === 'webcast-ibo' ? 10 : form.paymentOption === 'monthly' ? 40 : 12; const total = addSpouse ? base * 2 : base; return `Continue — $${total}${addSpouse ? ' (2 tickets)' : ''}`; })() : 'Complete Registration'}
+                  {processing ? 'Processing...' : needsPayment ? (() => { const base = effectiveType === 'webcast-ibo' ? 10 : form.paymentOption === 'monthly5' ? 50 : 12; const total = addSpouse ? base * 2 : base; return `Continue — $${total}${addSpouse ? ' (2 tickets)' : ''}`; })() : 'Complete Registration'}
                 </button>
               </div>
             </form>

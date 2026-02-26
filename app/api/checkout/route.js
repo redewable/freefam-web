@@ -13,6 +13,8 @@ export async function POST(request) {
     let priceId;
     if (priceType === 'monthly') {
       priceId = process.env.STRIPE_PRICE_MONTHLY;
+    } else if (priceType === 'monthly5') {
+      priceId = process.env.STRIPE_PRICE_MONTHLY_5WK;
     } else if (priceType === 'webcast') {
       priceId = process.env.STRIPE_PRICE_WEBCAST;
     } else {
