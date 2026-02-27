@@ -48,18 +48,22 @@ const SignatureModal = ({ isOpen, onClose, onSave }) => {
   if (!isOpen) return null;
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-      <div style={{ position: 'absolute', inset: 0, background: 'rgba(26,26,26,0.8)' }} onClick={onClose} />
-      <div style={{ position: 'relative', width: '100%', maxWidth: '420px', background: colors.bg, padding: '24px' }}>
-        <p style={{ fontSize: '12px', color: 'rgba(26,26,26,0.5)', marginBottom: '12px', textAlign: 'center' }}>Sign below</p>
-        <div style={{ border: '1px solid rgba(26,26,26,0.2)', background: 'white', marginBottom: '16px' }}>
-          <canvas ref={canvasRef} width={700} height={200} style={{ width: '100%', height: '140px', touchAction: 'none', cursor: 'crosshair' }}
+    <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', flexDirection: 'column', background: colors.bg }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid rgba(26,26,26,0.1)' }}>
+        <p style={{ fontSize: '14px', color: 'rgba(26,26,26,0.5)', margin: 0 }}>Sign below</p>
+        <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}>
+          <Icons.X style={{ width: '20px', height: '20px', color: colors.dark }} />
+        </button>
+      </div>
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+        <div style={{ width: '100%', maxWidth: '600px', border: '1px solid rgba(26,26,26,0.2)', background: 'white' }}>
+          <canvas ref={canvasRef} width={700} height={200} style={{ width: '100%', height: '220px', touchAction: 'none', cursor: 'crosshair' }}
             onMouseDown={start} onMouseMove={draw} onMouseUp={stop} onMouseLeave={stop} onTouchStart={start} onTouchMove={draw} onTouchEnd={stop} />
         </div>
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <button onClick={clear} style={{ flex: 1, padding: '12px', background: 'transparent', border: '1px solid rgba(26,26,26,0.2)', color: colors.dark, fontSize: '13px', cursor: 'pointer' }}>Clear</button>
-          <button onClick={save} disabled={!hasSig} style={{ flex: 1, padding: '12px', background: hasSig ? colors.dark : 'rgba(26,26,26,0.2)', border: 'none', color: hasSig ? colors.bg : 'rgba(26,26,26,0.4)', fontSize: '13px', cursor: hasSig ? 'pointer' : 'not-allowed' }}>Confirm</button>
-        </div>
+      </div>
+      <div style={{ display: 'flex', gap: '10px', padding: '16px 20px', borderTop: '1px solid rgba(26,26,26,0.1)' }}>
+        <button onClick={clear} style={{ flex: 1, padding: '14px', background: 'transparent', border: '1px solid rgba(26,26,26,0.2)', color: colors.dark, fontSize: '14px', cursor: 'pointer' }}>Clear</button>
+        <button onClick={save} disabled={!hasSig} style={{ flex: 1, padding: '14px', background: hasSig ? colors.dark : 'rgba(26,26,26,0.2)', border: 'none', color: hasSig ? colors.bg : 'rgba(26,26,26,0.4)', fontSize: '14px', cursor: hasSig ? 'pointer' : 'not-allowed' }}>Confirm</button>
       </div>
     </div>
   );
