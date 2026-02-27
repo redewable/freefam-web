@@ -80,6 +80,16 @@ const RegistrationModal = ({ isOpen, onClose, ticketType, setTicketType }) => {
   const [webcastZoomLink, setWebcastZoomLink] = useState('');
   const [addSpouse, setAddSpouse] = useState(false);
   const [spouseForm, setSpouseForm] = useState({ firstName: '', lastName: '', ltdId: '' });
+  const formRef = useRef(null);
+
+  const handleEmailBlur = () => {
+    setTimeout(() => {
+      if (!formRef.current) return;
+      const inputs = Array.from(formRef.current.querySelectorAll('input[type="text"], input[type="email"]'));
+      const next = inputs.find(i => i.offsetParent !== null && !i.value && i.required !== false);
+      if (next) next.focus();
+    }, 80);
+  };
 
   useEffect(() => {
     if (ticketType && isOpen) {
@@ -235,7 +245,7 @@ const RegistrationModal = ({ isOpen, onClose, ticketType, setTicketType }) => {
               </div>
             </div>
           ) : (
-            <form onSubmit={submit} style={{ padding: '24px 28px' }}>
+            <form ref={formRef} onSubmit={submit} style={{ padding: '24px 28px' }}>
               <button type="button" onClick={() => { if (isWebcast) { setStep('webcast-select'); setWebcastSub(''); } else { setStep(1); setTicketType(''); } }} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: 'rgba(26,26,26,0.4)', background: 'none', border: 'none', cursor: 'pointer', marginBottom: '12px' }}><Icons.ArrowLeft style={{ width: '12px', height: '12px' }} /> Back</button>
               <p style={{ color: isWebcast ? '#3b82f6' : colors.gold, fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '6px' }}>{typeLabel}</p>
               <h2 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: '22px', color: colors.dark, marginBottom: '16px' }}>Your Details</h2>
@@ -244,7 +254,7 @@ const RegistrationModal = ({ isOpen, onClose, ticketType, setTicketType }) => {
                   <div><label style={label}>First Name</label><input type="text" name="fname" autoComplete="given-name" value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} style={input} required /></div>
                   <div><label style={label}>Last Name</label><input type="text" name="lname" autoComplete="family-name" value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} style={input} required /></div>
                 </div>
-                <div><label style={label}>Email</label><input type="email" name="email" autoComplete="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} style={input} required /></div>
+                <div><label style={label}>Email</label><input type="email" name="email" autoComplete="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} onBlur={handleEmailBlur} style={input} required /></div>
                 {isGuest && (
                   <>
                     <div><label style={label}>Who Invited You</label><input type="text" value={form.invitedBy} onChange={(e) => setForm({ ...form, invitedBy: e.target.value })} style={input} required /></div>
