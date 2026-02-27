@@ -57,7 +57,7 @@ const SignatureModal = ({ isOpen, onClose, onSave }) => {
       </div>
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
         <div style={{ width: '100%', maxWidth: '600px', border: '1px solid rgba(26,26,26,0.2)', background: 'white' }}>
-          <canvas ref={canvasRef} width={700} height={200} style={{ width: '100%', height: '220px', touchAction: 'none', cursor: 'crosshair' }}
+          <canvas ref={canvasRef} width={700} height={200} style={{ width: '100%', height: '330px', touchAction: 'none', cursor: 'crosshair' }}
             onMouseDown={start} onMouseMove={draw} onMouseUp={stop} onMouseLeave={stop} onTouchStart={start} onTouchMove={draw} onTouchEnd={stop} />
         </div>
       </div>
@@ -262,8 +262,8 @@ const RegistrationModal = ({ isOpen, onClose, ticketType, setTicketType }) => {
                 )}
                 {needsLtdFields && (
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px' }}>
-                    <div><label style={label}>LTD ID</label><input type="text" value={form.ltdId} onChange={(e) => setForm({ ...form, ltdId: e.target.value })} style={input} required /></div>
-                    <div><label style={label}>Upline Platinum</label><input type="text" value={form.uplinePlatinum} onChange={(e) => setForm({ ...form, uplinePlatinum: e.target.value })} style={input} required /></div>
+                    <div><label style={label}>LTD ID</label><input type="text" inputMode="numeric" pattern="[0-9]*" autoComplete="off" value={form.ltdId} onChange={(e) => setForm({ ...form, ltdId: e.target.value })} style={input} required /></div>
+                    <div><label style={label}>Upline Platinum</label><input type="text" autoComplete="off" value={form.uplinePlatinum} onChange={(e) => setForm({ ...form, uplinePlatinum: e.target.value })} style={input} required /></div>
                   </div>
                 )}
                 {needsPayment && (
@@ -279,7 +279,7 @@ const RegistrationModal = ({ isOpen, onClose, ticketType, setTicketType }) => {
                           <div><label style={label}>First Name</label><input type="text" value={spouseForm.firstName} onChange={(e) => setSpouseForm({ ...spouseForm, firstName: e.target.value })} style={input} required /></div>
                           <div><label style={label}>Last Name</label><input type="text" value={spouseForm.lastName} onChange={(e) => setSpouseForm({ ...spouseForm, lastName: e.target.value })} style={input} required /></div>
                         </div>
-                        <div><label style={label}>LTD ID</label><input type="text" value={spouseForm.ltdId} onChange={(e) => setSpouseForm({ ...spouseForm, ltdId: e.target.value })} style={input} required /></div>
+                        <div><label style={label}>LTD ID</label><input type="text" inputMode="numeric" pattern="[0-9]*" autoComplete="off" value={spouseForm.ltdId} onChange={(e) => setSpouseForm({ ...spouseForm, ltdId: e.target.value })} style={input} required /></div>
                       </div>
                     )}
                   </div>
