@@ -223,6 +223,8 @@ export default function LeadershipPage() {
   const [zoomLink, setZoomLink] = useState('');
   const [zoomLinkInput, setZoomLinkInput] = useState('');
   const [zoomSaving, setZoomSaving] = useState(false);
+  const [sendingLink, setSendingLink] = useState(null);
+  const [sentLinks, setSentLinks] = useState([]);
 
   // Lineup editor
   const [editingLineup, setEditingLineup] = useState(null);
@@ -630,7 +632,12 @@ export default function LeadershipPage() {
     return { label: 'Weekly', bg: 'rgba(26,26,26,0.05)', color: 'rgba(26,26,26,0.6)' };
   };
 
-  let filtered = regs.filter(r => {
+  // Separate in-person vs webcast registrations
+  const isWebcastReg = (r) => r.source === 'webcast' || (r.type && r.type.startsWith('webcast-'));
+  const inPersonRegs = regs.filter(r => !isWebcastReg(r));
+  const webcastRegs = regs.filter(r => isWebcastReg(r));
+
+  let filtered = inPersonRegs.filter(r => {
     const s = search.toLowerCase();
     return r.name.toLowerCase().includes(s) || r.email.toLowerCase().includes(s) || (r.ltdId && r.ltdId.toLowerCase().includes(s));
   });
@@ -1677,6 +1684,82 @@ export default function LeadershipPage() {
                       </button>
                     </div>
                     <p style={{ fontSize: '12px', color: colors.dark, margin: 0, wordBreak: 'break-all' }}>{zoomLink}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Webcast Registrations */}
+              <div style={{ background: 'white', border: '1px solid rgba(26,26,26,0.08)', padding: '20px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <svg style={{ width: '18px', height: '18px', color: '#3b82f6' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87" /><path d="M16 3.13a4 4 0 010 7.75" /></svg>
+                    <h3 style={{ fontSize: '15px', fontWeight: 500, color: colors.dark, margin: 0 }}>Registrations</h3>
+                  </div>
+                  <span style={{ fontSize: '12px', color: 'rgba(26,26,26,0.4)' }}>{webcastRegs.length} registered</span>
+                </div>
+                {webcastRegs.length === 0 ? (
+                  <p style={{ fontSize: '13px', color: 'rgba(26,26,26,0.4)', textAlign: 'center', padding: '20px 0' }}>No webcast registrations this week</p>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {webcastRegs.map(reg => {
+                      const isSending = sendingLink === reg.id;
+                      const isSent = sentLinks.includes(reg.id);
+                      const webcastType = reg.type?.replace('webcast-', '') || 'ibo';
+                      const badge = webcastType === 'guest' ? { label: 'Guest', bg: 'rgba(59,130,246,0.1)', color: '#3b82f6' }
+                        : webcastType === 'apprentice' ? { label: 'Apprentice', bg: 'rgba(168,85,247,0.1)', color: '#a855f7' }
+                        : { label: 'IBO', bg: 'rgba(184,149,107,0.15)', color: colors.gold };
+                      return (
+                        <div key={reg.id} style={{ padding: '10px 12px', background: isSent ? 'rgba(34,197,94,0.04)' : 'white', border: isSent ? '1px solid rgba(34,197,94,0.15)' : '1px solid rgba(26,26,26,0.1)' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <p style={{ fontSize: '14px', fontWeight: 500, color: colors.dark, margin: '0 0 1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{reg.name}</p>
+                              <p style={{ fontSize: '11px', color: 'rgba(26,26,26,0.5)', margin: 0 }}>{reg.email}</p>
+                            </div>
+                            <div style={{ padding: '3px 8px', background: badge.bg, fontSize: '9px', fontWeight: 600, color: badge.color, textTransform: 'uppercase', whiteSpace: 'nowrap', flexShrink: 0 }}>{badge.label}</div>
+                            {zoomLink ? (
+                              <button
+                                disabled={isSending}
+                                onClick={async () => {
+                                  setSendingLink(reg.id);
+                                  const shareText = `Hi ${reg.name.split(' ')[0]}! Here's your webcast link for tonight's meeting:`;
+                                  if (navigator.share) {
+                                    try {
+                                      await navigator.share({ title: 'Webcast Link', text: shareText, url: zoomLink });
+                                      setSentLinks(prev => [...prev, reg.id]);
+                                    } catch (e) {
+                                      if (e.name !== 'AbortError') {
+                                        navigator.clipboard.writeText(`${shareText}\n${zoomLink}`);
+                                        setSentLinks(prev => [...prev, reg.id]);
+                                        setToast('Link copied!');
+                                      }
+                                    }
+                                  } else {
+                                    navigator.clipboard.writeText(`${shareText}\n${zoomLink}`);
+                                    setSentLinks(prev => [...prev, reg.id]);
+                                    setToast('Link copied!');
+                                  }
+                                  setSendingLink(null);
+                                }}
+                                style={{
+                                  display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 10px', fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', flexShrink: 0, cursor: 'pointer',
+                                  background: isSent ? '#22c55e' : 'rgba(59,130,246,0.08)',
+                                  color: isSent ? 'white' : '#3b82f6',
+                                  border: isSent ? '1px solid #22c55e' : '1px solid rgba(59,130,246,0.15)',
+                                }}
+                              >
+                                {isSent ? (
+                                  <><Icons.Check style={{ width: '12px', height: '12px' }} />Sent</>
+                                ) : (
+                                  <><svg style={{ width: '12px', height: '12px' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M22 2L11 13" /><path d="M22 2L15 22l-4-9-9-4z" /></svg>Send</>
+                                )}
+                              </button>
+                            ) : (
+                              <span style={{ fontSize: '9px', color: 'rgba(26,26,26,0.3)', textTransform: 'uppercase' }}>No link set</span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
