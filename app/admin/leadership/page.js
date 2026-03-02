@@ -662,7 +662,7 @@ export default function LeadershipPage() {
     { id: 'history', label: 'History' },
     ...(isLeadership ? [{ id: 'users', label: 'Users' }] : []),
     ...(isLeadership ? [{ id: 'los-builder', label: 'LOS Builder', href: '/admin/los-builder' }] : []),
-    ...(isLeadership ? [{ id: 'settings', label: 'Settings' }] : []),
+    ...(isLeadership ? [{ id: 'settings', label: 'Webcast' }] : []),
   ];
 
   const handleLogout = async () => {
@@ -1588,7 +1588,7 @@ export default function LeadershipPage() {
           // ═══════════════ SETTINGS TAB ═══════════════
           ) : tab === 'settings' && isLeadership ? (
             <>
-              <h2 style={{ fontSize: '18px', color: colors.dark, margin: '0 0 16px', fontWeight: 500 }}>Settings</h2>
+              <h2 style={{ fontSize: '18px', color: colors.dark, margin: '0 0 16px', fontWeight: 500 }}>Webcast</h2>
 
               {/* Webcast Zoom Link */}
               <div style={{ background: 'white', border: '1px solid rgba(26,26,26,0.08)', padding: '20px', marginBottom: '16px' }}>
@@ -1637,7 +1637,27 @@ export default function LeadershipPage() {
                 </div>
                 {zoomLink && (
                   <div style={{ marginTop: '10px', padding: '8px 12px', background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.15)' }}>
-                    <p style={{ fontSize: '10px', letterSpacing: '0.08em', textTransform: 'uppercase', color: '#22c55e', marginBottom: '4px', fontWeight: 600 }}>Current Link</p>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                      <p style={{ fontSize: '10px', letterSpacing: '0.08em', textTransform: 'uppercase', color: '#22c55e', margin: 0, fontWeight: 600 }}>Current Link</p>
+                      <button
+                        onClick={async () => {
+                          if (navigator.share) {
+                            try {
+                              await navigator.share({ title: 'Webcast Zoom Link', text: 'Join the webcast:', url: zoomLink });
+                            } catch (e) {
+                              if (e.name !== 'AbortError') { navigator.clipboard.writeText(zoomLink); setToast('Link copied!'); }
+                            }
+                          } else {
+                            navigator.clipboard.writeText(zoomLink);
+                            setToast('Link copied!');
+                          }
+                        }}
+                        style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 10px', fontSize: '11px', color: '#3b82f6', background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.15)', cursor: 'pointer' }}
+                      >
+                        <svg style={{ width: '12px', height: '12px' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><path d="M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98" /></svg>
+                        Share
+                      </button>
+                    </div>
                     <p style={{ fontSize: '12px', color: colors.dark, margin: 0, wordBreak: 'break-all' }}>{zoomLink}</p>
                   </div>
                 )}

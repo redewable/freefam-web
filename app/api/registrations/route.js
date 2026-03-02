@@ -45,23 +45,41 @@ export async function GET(request) {
         status: 'complete',
       });
 
-      paidRegs = sessions.data
-        .map(session => ({
-          id: session.id,
-          name: session.metadata?.customerName || session.customer_details?.name || 'Unknown',
-          email: session.customer_details?.email || 'Unknown',
-          ltdId: session.metadata?.ltdId || '',
-          uplinePlatinum: session.metadata?.uplinePlatinum || '',
-          priceType: session.metadata?.priceType || 'single',
-          type: 'ibo',
-          source: session.metadata?.source || 'main',
-          amount: session.amount_total / 100,
-          date: new Date(session.created * 1000).toLocaleDateString(),
-          createdAt: new Date(session.created * 1000).toISOString(),
-          checkedIn: false,
-          visitNumber: '',
-        }))
-        .filter(reg => {
+      const rawPaid = sessions.data
+        .map(session => {
+          const entries = [];
+          const base = {
+            id: session.id,
+            name: session.metadata?.customerName || session.customer_details?.name || 'Unknown',
+            email: session.customer_details?.email || 'Unknown',
+            ltdId: session.metadata?.ltdId || '',
+            uplinePlatinum: session.metadata?.uplinePlatinum || '',
+            priceType: session.metadata?.priceType || 'single',
+            type: 'ibo',
+            source: session.metadata?.source || 'main',
+            amount: session.amount_total / 100,
+            date: new Date(session.created * 1000).toLocaleDateString(),
+            createdAt: new Date(session.created * 1000).toISOString(),
+            checkedIn: false,
+            visitNumber: '',
+          };
+          entries.push(base);
+
+          // If spouse metadata exists, create a second entry
+          if (session.metadata?.spouseName) {
+            entries.push({
+              ...base,
+              id: `${session.id}_spouse`,
+              name: session.metadata.spouseName,
+              ltdId: session.metadata.spouseLtdId || '',
+              isSpouse: true,
+            });
+          }
+          return entries;
+        })
+        .flat();
+
+      paidRegs = rawPaid.filter(reg => {
           const created = new Date(reg.createdAt);
           // Single tickets: only show if purchased this week
           if (reg.priceType === 'single') return created >= weekStart;
