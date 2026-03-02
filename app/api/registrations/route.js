@@ -142,17 +142,27 @@ export async function GET(request) {
     }
 
     // 3. Get check-in statuses
-    // Check both current week AND previous week keys, since our visibility
-    // window extends back to the previous Tuesday (before this week's Monday)
+    const allRegs = [...paidRegs, ...freeRegs];
+
+    // Build a set of IDs that were checked in at last week's meeting
+    // Using history set (365-day TTL) instead of check-in keys (which expire end-of-week)
     const prevMonday = new Date(weekStart);
     prevMonday.setDate(prevMonday.getDate() - 7);
     const prevWeekKey = `${prevMonday.getFullYear()}-${String(prevMonday.getMonth() + 1).padStart(2, '0')}-${String(prevMonday.getDate()).padStart(2, '0')}`;
-
-    const allRegs = [...paidRegs, ...freeRegs];
+    const prevHistoryKey = `history:${prevWeekKey}`;
+    const prevCheckedInIds = new Set();
+    try {
+      const prevHistory = await kv.smembers(prevHistoryKey) || [];
+      for (const item of prevHistory) {
+        try {
+          const parsed = typeof item === 'string' ? JSON.parse(item) : item;
+          if (parsed.id) prevCheckedInIds.add(parsed.id);
+        } catch (e) {}
+      }
+    } catch (e) {}
 
     for (const reg of allRegs) {
       try {
-        // Check current week first
         const checkinKey = `checkin:week:${weekKey}:${reg.id}`;
         const status = await kv.get(checkinKey);
         if (status?.checkedIn) {
@@ -160,17 +170,11 @@ export async function GET(request) {
           reg.checkedInAt = status.timestamp;
         } else if (status?.noShow) {
           reg.noShow = true;
-        } else {
-          // For early registrants, also check if they were checked in last week
-          const prevCheckinKey = `checkin:week:${prevWeekKey}:${reg.id}`;
-          const prevStatus = await kv.get(prevCheckinKey);
-          if (prevStatus?.checkedIn) {
-            reg.checkedInPrevWeek = true;
-          }
+        } else if (prevCheckedInIds.has(reg.id)) {
+          // Was checked in at last week's meeting — don't show again
+          reg.checkedInPrevWeek = true;
         }
-      } catch (e) {
-        // Ignore check-in fetch errors
-      }
+      } catch (e) {}
     }
 
     // Remove anyone already checked in during the previous week's meeting
