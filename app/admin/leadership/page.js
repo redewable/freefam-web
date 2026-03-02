@@ -225,6 +225,7 @@ export default function LeadershipPage() {
   const [zoomSaving, setZoomSaving] = useState(false);
   const [sendingLink, setSendingLink] = useState(null);
   const [sentLinks, setSentLinks] = useState([]);
+  const [expandedWebcastReg, setExpandedWebcastReg] = useState(null);
 
   // Lineup editor
   const [editingLineup, setEditingLineup] = useState(null);
@@ -670,7 +671,7 @@ export default function LeadershipPage() {
     { id: 'history', label: 'History' },
     ...(isLeadership ? [{ id: 'users', label: 'Users' }] : []),
     ...(isLeadership ? [{ id: 'los-builder', label: 'LOS Builder', href: '/admin/los-builder' }] : []),
-    ...(isLeadership ? [{ id: 'settings', label: 'Webcast' }] : []),
+    ...(canCheckIn ? [{ id: 'settings', label: 'Webcast' }] : []),
   ];
 
   const handleLogout = async () => {
@@ -1611,7 +1612,7 @@ export default function LeadershipPage() {
               </div>
             </>
           // ═══════════════ SETTINGS TAB ═══════════════
-          ) : tab === 'settings' && isLeadership ? (
+          ) : tab === 'settings' && canCheckIn ? (
             <>
               <h2 style={{ fontSize: '18px', color: colors.dark, margin: '0 0 16px', fontWeight: 500 }}>Webcast</h2>
 
@@ -1708,9 +1709,10 @@ export default function LeadershipPage() {
                       const badge = webcastType === 'guest' ? { label: 'Guest', bg: 'rgba(59,130,246,0.1)', color: '#3b82f6' }
                         : webcastType === 'apprentice' ? { label: 'Apprentice', bg: 'rgba(168,85,247,0.1)', color: '#a855f7' }
                         : { label: 'IBO', bg: 'rgba(184,149,107,0.15)', color: colors.gold };
+                      const isWcExpanded = expandedWebcastReg === reg.id;
                       return (
-                        <div key={reg.id} style={{ padding: '10px 12px', background: isSent ? 'rgba(34,197,94,0.04)' : 'white', border: isSent ? '1px solid rgba(34,197,94,0.15)' : '1px solid rgba(26,26,26,0.1)' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div key={reg.id} style={{ background: isSent ? 'rgba(34,197,94,0.04)' : 'white', border: isSent ? '1px solid rgba(34,197,94,0.15)' : '1px solid rgba(26,26,26,0.1)' }}>
+                          <div style={{ padding: '10px 12px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }} onClick={() => setExpandedWebcastReg(isWcExpanded ? null : reg.id)}>
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <p style={{ fontSize: '14px', fontWeight: 500, color: colors.dark, margin: '0 0 1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{reg.name}</p>
                               <p style={{ fontSize: '11px', color: 'rgba(26,26,26,0.5)', margin: 0 }}>{reg.email}</p>
@@ -1719,7 +1721,8 @@ export default function LeadershipPage() {
                             {zoomLink ? (
                               <button
                                 disabled={isSending}
-                                onClick={async () => {
+                                onClick={async (e) => {
+                                  e.stopPropagation();
                                   setSendingLink(reg.id);
                                   const shareText = `Hi ${reg.name.split(' ')[0]}! Here's your webcast link for tonight's meeting:`;
                                   if (navigator.share) {
@@ -1757,6 +1760,21 @@ export default function LeadershipPage() {
                               <span style={{ fontSize: '9px', color: 'rgba(26,26,26,0.3)', textTransform: 'uppercase' }}>No link set</span>
                             )}
                           </div>
+                          {isWcExpanded && (
+                            <div style={{ padding: '0 12px 12px', borderTop: '1px solid rgba(26,26,26,0.06)' }}>
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', paddingTop: '10px' }}>
+                                {reg.name && <div><p style={{ fontSize: '9px', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.4)', margin: '0 0 2px' }}>Name</p><p style={{ fontSize: '13px', color: colors.dark, margin: 0 }}>{reg.name}</p></div>}
+                                {reg.email && <div><p style={{ fontSize: '9px', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.4)', margin: '0 0 2px' }}>Email</p><p style={{ fontSize: '13px', color: colors.dark, margin: 0, wordBreak: 'break-all' }}>{reg.email}</p></div>}
+                                {reg.ltdId && <div><p style={{ fontSize: '9px', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.4)', margin: '0 0 2px' }}>LTD ID</p><p style={{ fontSize: '13px', color: colors.dark, margin: 0 }}>{reg.ltdId}</p></div>}
+                                {reg.uplinePlatinum && <div><p style={{ fontSize: '9px', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.4)', margin: '0 0 2px' }}>Upline Platinum</p><p style={{ fontSize: '13px', color: colors.dark, margin: 0 }}>{reg.uplinePlatinum}</p></div>}
+                                {reg.invitedBy && <div><p style={{ fontSize: '9px', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.4)', margin: '0 0 2px' }}>Invited By</p><p style={{ fontSize: '13px', color: colors.dark, margin: 0 }}>{reg.invitedBy}</p></div>}
+                                {reg.visitNumber && <div><p style={{ fontSize: '9px', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.4)', margin: '0 0 2px' }}>Visit</p><p style={{ fontSize: '13px', color: colors.dark, margin: 0 }}>{reg.visitNumber}</p></div>}
+                                <div><p style={{ fontSize: '9px', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.4)', margin: '0 0 2px' }}>Type</p><p style={{ fontSize: '13px', color: colors.dark, margin: 0, textTransform: 'capitalize' }}>{webcastType}{reg.isSpouse ? ' (Spouse)' : ''}</p></div>
+                                {reg.amount > 0 && <div><p style={{ fontSize: '9px', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.4)', margin: '0 0 2px' }}>Paid</p><p style={{ fontSize: '13px', color: colors.dark, margin: 0 }}>${reg.amount}</p></div>}
+                                {reg.date && <div><p style={{ fontSize: '9px', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.4)', margin: '0 0 2px' }}>Registered</p><p style={{ fontSize: '13px', color: colors.dark, margin: 0 }}>{reg.date}</p></div>}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       );
                     })}
