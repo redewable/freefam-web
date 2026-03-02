@@ -10,11 +10,22 @@ const getCSTDate = () => {
   return new Date(now.toLocaleString('en-US', { timeZone: 'America/Chicago' }));
 };
 
+// Returns the Monday of the current week (for week key / check-in purposes)
 const getWeekStart = () => {
   const now = getCSTDate();
   const day = now.getDay();
   const diff = now.getDate() - day + (day === 0 ? -6 : 1);
   return new Date(now.getFullYear(), now.getMonth(), diff, 0, 0, 0);
+};
+
+// Returns the previous Tuesday at midnight — the registration visibility window
+// Meeting is Monday, so we want to see anyone who registered since the day after last meeting
+const getRegistrationCutoff = () => {
+  const monday = getWeekStart();
+  const prevTuesday = new Date(monday);
+  prevTuesday.setDate(monday.getDate() - 6); // Monday minus 6 = previous Tuesday
+  prevTuesday.setHours(0, 0, 0, 0);
+  return prevTuesday;
 };
 
 const getMonthStart = () => {
@@ -34,6 +45,7 @@ export async function GET(request) {
     const filter = searchParams.get('filter') || 'all';
 
     const weekStart = getWeekStart();
+    const registrationCutoff = getRegistrationCutoff();
     const monthStart = getMonthStart();
     const weekKey = getWeekKey();
 
@@ -81,11 +93,11 @@ export async function GET(request) {
 
       paidRegs = rawPaid.filter(reg => {
           const created = new Date(reg.createdAt);
-          // Single tickets: only show if purchased this week
-          if (reg.priceType === 'single') return created >= weekStart;
-          // Monthly tickets: show if purchased this month
-          if (reg.priceType === 'monthly') return created >= monthStart;
-          return created >= weekStart;
+          // Single tickets: show if purchased since previous Tuesday
+          if (reg.priceType === 'single') return created >= registrationCutoff;
+          // Monthly/monthly5 tickets: show if purchased this month
+          if (reg.priceType === 'monthly' || reg.priceType === 'monthly5') return created >= monthStart;
+          return created >= registrationCutoff;
         });
     } catch (stripeError) {
       console.error('Stripe error:', stripeError.message);
@@ -104,9 +116,9 @@ export async function GET(request) {
         freeRegs = registrations
           .filter(reg => reg !== null)
           .filter(reg => {
-            // Only show guests/apprentices registered this week
+            // Show guests/apprentices registered since previous Tuesday
             const created = new Date(reg.createdAt);
-            return created >= weekStart;
+            return created >= registrationCutoff;
           })
           .map(reg => ({
             id: reg.id,
