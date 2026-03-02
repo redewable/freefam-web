@@ -141,11 +141,18 @@ export async function GET(request) {
       console.error('KV error:', kvError.message);
     }
 
-    // 3. Get check-in statuses (all use weekly keys now)
+    // 3. Get check-in statuses
+    // Check both current week AND previous week keys, since our visibility
+    // window extends back to the previous Tuesday (before this week's Monday)
+    const prevMonday = new Date(weekStart);
+    prevMonday.setDate(prevMonday.getDate() - 7);
+    const prevWeekKey = `${prevMonday.getFullYear()}-${String(prevMonday.getMonth() + 1).padStart(2, '0')}-${String(prevMonday.getDate()).padStart(2, '0')}`;
+
     const allRegs = [...paidRegs, ...freeRegs];
 
     for (const reg of allRegs) {
       try {
+        // Check current week first
         const checkinKey = `checkin:week:${weekKey}:${reg.id}`;
         const status = await kv.get(checkinKey);
         if (status?.checkedIn) {
@@ -153,18 +160,28 @@ export async function GET(request) {
           reg.checkedInAt = status.timestamp;
         } else if (status?.noShow) {
           reg.noShow = true;
+        } else {
+          // For early registrants, also check if they were checked in last week
+          const prevCheckinKey = `checkin:week:${prevWeekKey}:${reg.id}`;
+          const prevStatus = await kv.get(prevCheckinKey);
+          if (prevStatus?.checkedIn) {
+            reg.checkedInPrevWeek = true;
+          }
         }
       } catch (e) {
         // Ignore check-in fetch errors
       }
     }
 
+    // Remove anyone already checked in during the previous week's meeting
+    const visibleRegs = allRegs.filter(r => !r.checkedInPrevWeek);
+
     // 4. Filter if needed
-    let filtered = allRegs;
+    let filtered = visibleRegs;
     if (filter !== 'all') {
-      if (filter === 'ibo') filtered = allRegs.filter(r => r.type === 'ibo');
-      else if (filter === 'apprentice') filtered = allRegs.filter(r => r.type === 'apprentice');
-      else if (filter === 'guest') filtered = allRegs.filter(r => r.type === 'guest');
+      if (filter === 'ibo') filtered = visibleRegs.filter(r => r.type === 'ibo');
+      else if (filter === 'apprentice') filtered = visibleRegs.filter(r => r.type === 'apprentice');
+      else if (filter === 'guest') filtered = visibleRegs.filter(r => r.type === 'guest');
     }
 
     // Sort by date (newest first)
