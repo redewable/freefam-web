@@ -212,6 +212,7 @@ export default function LeadershipPage() {
   const [sortBy, setSortBy] = useState('pending');
   const [updating, setUpdating] = useState(null);
   const [fixMsg, setFixMsg] = useState(null);
+  const [expandedReg, setExpandedReg] = useState(null);
 
   // History detail
   const [selectedDate, setSelectedDate] = useState(null);
@@ -976,9 +977,10 @@ export default function LeadershipPage() {
                     const rowBg = reg.checkedIn ? 'rgba(34,197,94,0.06)' : reg.noShow ? 'rgba(239,68,68,0.06)' : 'white';
                     const rowBorder = reg.checkedIn ? '1px solid rgba(34,197,94,0.2)' : reg.noShow ? '1px solid rgba(239,68,68,0.2)' : '1px solid rgba(26,26,26,0.1)';
                     const isUpdating = updating === reg.id;
+                    const isExpanded = expandedReg === reg.id;
                     return (
-                      <div key={reg.id} style={{ padding: '10px 12px', background: rowBg, border: rowBorder }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div key={reg.id} style={{ background: rowBg, border: rowBorder }}>
+                        <div style={{ padding: '10px 12px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }} onClick={() => setExpandedReg(isExpanded ? null : reg.id)}>
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <p style={{ fontSize: '14px', fontWeight: 500, color: colors.dark, margin: '0 0 1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{reg.name}</p>
                             <p style={{ fontSize: '11px', color: 'rgba(26,26,26,0.5)', margin: 0 }}>{reg.ltdId || reg.email?.split('@')[0]}</p>
@@ -986,22 +988,22 @@ export default function LeadershipPage() {
                           <div style={{ padding: '3px 8px', background: badge.bg, fontSize: '9px', fontWeight: 600, color: badge.color, textTransform: 'uppercase', whiteSpace: 'nowrap', flexShrink: 0 }}>{badge.label}</div>
                           {canCheckIn ? (
                             reg.checkedIn ? (
-                              <button onClick={() => updateStatus(reg, 'checkout')} disabled={isUpdating}
+                              <button onClick={(e) => { e.stopPropagation(); updateStatus(reg, 'checkout'); }} disabled={isUpdating}
                                 style={{ padding: '6px 12px', background: '#22c55e', border: '1px solid #22c55e', color: 'white', fontSize: '10px', fontWeight: 600, cursor: 'pointer', opacity: isUpdating ? 0.5 : 1, display: 'flex', alignItems: 'center', gap: '4px', textTransform: 'uppercase', flexShrink: 0 }}>
                                 <Icons.Check style={{ width: '12px', height: '12px' }} />Arrived
                               </button>
                             ) : reg.noShow ? (
-                              <button onClick={() => updateStatus(reg, 'clear_noshow')} disabled={isUpdating}
+                              <button onClick={(e) => { e.stopPropagation(); updateStatus(reg, 'clear_noshow'); }} disabled={isUpdating}
                                 style={{ padding: '6px 12px', background: '#ef4444', border: '1px solid #ef4444', color: 'white', fontSize: '10px', fontWeight: 600, cursor: 'pointer', opacity: isUpdating ? 0.5 : 1, textTransform: 'uppercase', flexShrink: 0 }}>
                                 No Show
                               </button>
                             ) : (
                               <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
-                                <button onClick={() => updateStatus(reg, 'checkin')} disabled={isUpdating}
+                                <button onClick={(e) => { e.stopPropagation(); updateStatus(reg, 'checkin'); }} disabled={isUpdating}
                                   style={{ padding: '6px 10px', background: 'transparent', border: '1px solid rgba(26,26,26,0.3)', color: colors.dark, fontSize: '10px', fontWeight: 600, cursor: 'pointer', opacity: isUpdating ? 0.5 : 1, textTransform: 'uppercase' }}>
                                   In
                                 </button>
-                                <button onClick={() => updateStatus(reg, 'noshow')} disabled={isUpdating}
+                                <button onClick={(e) => { e.stopPropagation(); updateStatus(reg, 'noshow'); }} disabled={isUpdating}
                                   style={{ padding: '6px 8px', background: 'transparent', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444', fontSize: '10px', fontWeight: 600, cursor: 'pointer', opacity: isUpdating ? 0.5 : 1, textTransform: 'uppercase' }}>
                                   NS
                                 </button>
@@ -1013,6 +1015,22 @@ export default function LeadershipPage() {
                             </span>
                           )}
                         </div>
+                        {isExpanded && (
+                          <div style={{ padding: '0 12px 12px', borderTop: '1px solid rgba(26,26,26,0.06)' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', paddingTop: '10px' }}>
+                              {reg.name && <div><p style={{ fontSize: '9px', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.4)', margin: '0 0 2px' }}>Name</p><p style={{ fontSize: '13px', color: colors.dark, margin: 0 }}>{reg.name}</p></div>}
+                              {reg.email && <div><p style={{ fontSize: '9px', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.4)', margin: '0 0 2px' }}>Email</p><p style={{ fontSize: '13px', color: colors.dark, margin: 0, wordBreak: 'break-all' }}>{reg.email}</p></div>}
+                              {reg.ltdId && <div><p style={{ fontSize: '9px', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.4)', margin: '0 0 2px' }}>LTD ID</p><p style={{ fontSize: '13px', color: colors.dark, margin: 0 }}>{reg.ltdId}</p></div>}
+                              {reg.uplinePlatinum && <div><p style={{ fontSize: '9px', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.4)', margin: '0 0 2px' }}>Upline Platinum</p><p style={{ fontSize: '13px', color: colors.dark, margin: 0 }}>{reg.uplinePlatinum}</p></div>}
+                              {reg.invitedBy && <div><p style={{ fontSize: '9px', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.4)', margin: '0 0 2px' }}>Invited By</p><p style={{ fontSize: '13px', color: colors.dark, margin: 0 }}>{reg.invitedBy}</p></div>}
+                              {reg.visitNumber && <div><p style={{ fontSize: '9px', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.4)', margin: '0 0 2px' }}>Visit</p><p style={{ fontSize: '13px', color: colors.dark, margin: 0 }}>{reg.visitNumber}</p></div>}
+                              {reg.type && <div><p style={{ fontSize: '9px', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.4)', margin: '0 0 2px' }}>Type</p><p style={{ fontSize: '13px', color: colors.dark, margin: 0, textTransform: 'capitalize' }}>{reg.type}{reg.isSpouse ? ' (Spouse)' : ''}</p></div>}
+                              {reg.source && <div><p style={{ fontSize: '9px', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.4)', margin: '0 0 2px' }}>Source</p><p style={{ fontSize: '13px', color: colors.dark, margin: 0, textTransform: 'capitalize' }}>{reg.source}</p></div>}
+                              {reg.amount > 0 && <div><p style={{ fontSize: '9px', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.4)', margin: '0 0 2px' }}>Paid</p><p style={{ fontSize: '13px', color: colors.dark, margin: 0 }}>${reg.amount}</p></div>}
+                              {reg.date && <div><p style={{ fontSize: '9px', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.4)', margin: '0 0 2px' }}>Registered</p><p style={{ fontSize: '13px', color: colors.dark, margin: 0 }}>{reg.date}</p></div>}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     );
                   })}
