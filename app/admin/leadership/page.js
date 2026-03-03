@@ -627,18 +627,24 @@ export default function LeadershipPage() {
 
   // ═══════ FILTER/SORT for check-in ═══════
   const getBadge = (reg) => {
+    const isWc = isWebcastReg(reg);
+    if (isWc) {
+      const sub = reg.type?.replace('webcast-', '') || 'ibo';
+      if (sub === 'guest') return { label: 'Webcast · Guest', bg: 'rgba(59,130,246,0.1)', color: '#3b82f6' };
+      if (sub === 'apprentice') return { label: 'Webcast · Appr', bg: 'rgba(168,85,247,0.1)', color: '#a855f7' };
+      return { label: 'Webcast · IBO', bg: 'rgba(59,130,246,0.1)', color: '#3b82f6' };
+    }
     if (reg.type === 'guest') return { label: reg.visitNumber || 'Guest', bg: 'rgba(59,130,246,0.1)', color: '#3b82f6' };
     if (reg.type === 'apprentice') return { label: 'Apprentice', bg: 'rgba(168,85,247,0.1)', color: '#a855f7' };
-    if (reg.priceType === 'monthly') return { label: 'Monthly', bg: 'rgba(184,149,107,0.15)', color: colors.gold };
+    if (reg.priceType === 'monthly' || reg.priceType === 'monthly5') return { label: 'Monthly', bg: 'rgba(184,149,107,0.15)', color: colors.gold };
     return { label: 'Weekly', bg: 'rgba(26,26,26,0.05)', color: 'rgba(26,26,26,0.6)' };
   };
 
-  // Separate in-person vs webcast registrations
+  // Identify webcast registrations
   const isWebcastReg = (r) => r.source === 'webcast' || (r.type && r.type.startsWith('webcast-'));
-  const inPersonRegs = regs.filter(r => !isWebcastReg(r));
   const webcastRegs = regs.filter(r => isWebcastReg(r));
 
-  let filtered = inPersonRegs.filter(r => {
+  let filtered = regs.filter(r => {
     const s = search.toLowerCase();
     return r.name.toLowerCase().includes(s) || r.email.toLowerCase().includes(s) || (r.ltdId && r.ltdId.toLowerCase().includes(s));
   });
