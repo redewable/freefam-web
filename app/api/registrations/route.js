@@ -93,10 +93,20 @@ export async function GET(request) {
 
       paidRegs = rawPaid.filter(reg => {
           const created = new Date(reg.createdAt);
-          // Single tickets: show if purchased since previous Tuesday
-          if (reg.priceType === 'single') return created >= registrationCutoff;
-          // Monthly/monthly5 tickets: show if purchased this month
-          if (reg.priceType === 'monthly' || reg.priceType === 'monthly5') return created >= monthStart;
+          // Single/webcast tickets: show if purchased since previous Tuesday
+          if (reg.priceType === 'single' || reg.priceType === 'webcast') return created >= registrationCutoff;
+          // Monthly tickets: show if purchased within last 4 weeks
+          if (reg.priceType === 'monthly') {
+            const cutoff = new Date(weekStart);
+            cutoff.setDate(cutoff.getDate() - 28);
+            return created >= cutoff;
+          }
+          // Monthly 5-week tickets: show if purchased within last 5 weeks
+          if (reg.priceType === 'monthly5') {
+            const cutoff = new Date(weekStart);
+            cutoff.setDate(cutoff.getDate() - 35);
+            return created >= cutoff;
+          }
           return created >= registrationCutoff;
         });
     } catch (stripeError) {
@@ -178,6 +188,13 @@ export async function GET(request) {
     }
 
     // Remove anyone already checked in during the previous week's meeting
+    // BUT keep monthly ticket holders — they should show every week with fresh status
+    const isMonthly = (r) => r.priceType === 'monthly' || r.priceType === 'monthly5';
+    for (const reg of allRegs) {
+      if (reg.checkedInPrevWeek && isMonthly(reg)) {
+        reg.checkedInPrevWeek = false; // Reset so they appear as pending this week
+      }
+    }
     const visibleRegs = allRegs.filter(r => !r.checkedInPrevWeek);
 
     // 4. Filter if needed
@@ -198,7 +215,11 @@ export async function GET(request) {
         freeCount: freeRegs.length,
         totalCount: filtered.length,
         weekStart: weekStart.toISOString(),
+        registrationCutoff: registrationCutoff.toISOString(),
+        monthStart: monthStart.toISOString(),
         weekKey,
+        prevWeekKey,
+        prevCheckedInCount: prevCheckedInIds.size,
       }
     });
   } catch (error) {
