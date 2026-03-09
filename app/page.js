@@ -425,6 +425,15 @@ export default function FreedomFamily() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [webcastSuccess, setWebcastSuccess] = useState(false);
   const [zoomLink, setZoomLink] = useState('');
+  const [eventPresenter, setEventPresenter] = useState('');
+  const [eventDate, setEventDate] = useState('');
+
+  useEffect(() => {
+    fetch('/api/event-settings').then(r => r.json()).then(data => {
+      if (data.mainPresenter) setEventPresenter(data.mainPresenter);
+      if (data.mainDate) setEventDate(data.mainDate);
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -484,10 +493,10 @@ export default function FreedomFamily() {
         <div style={{ maxWidth: '580px', margin: '0 auto' }}>
           <p style={{ color: colors.gold, fontSize: '10px', letterSpacing: '0.25em', textTransform: 'uppercase', marginBottom: '14px' }}>This Monday</p>
           <h2 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 'clamp(30px, 6vw, 44px)', color: colors.dark, marginBottom: '10px', fontWeight: 400, lineHeight: 1.1 }}>Showing The Plan</h2>
-          <p style={{ fontSize: '17px', color: 'rgba(26,26,26,0.5)', marginBottom: '32px' }}>Derly Trevino</p>
+          {(eventPresenter || 'Talor Byington') && <p style={{ fontSize: '17px', color: 'rgba(26,26,26,0.5)', marginBottom: '32px' }}>{eventPresenter || 'Talor Byington'}</p>}
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '32px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}><Icons.Calendar style={{ width: '18px', height: '18px', color: colors.gold }} /><span style={{ fontSize: '15px', color: colors.dark }}>Monday, March 2, 2026 · 7:30 PM</span></div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}><Icons.Calendar style={{ width: '18px', height: '18px', color: colors.gold }} /><span style={{ fontSize: '15px', color: colors.dark }}>{eventDate || 'Monday, March 9, 2026'} · 7:30 PM</span></div>
             <a href="https://maps.google.com/?q=Embassy+Suites,+201+University+Dr+E,+College+Station,+TX" target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', textDecoration: 'none' }}><Icons.MapPin style={{ width: '18px', height: '18px', color: colors.gold, flexShrink: 0, marginTop: '2px' }} /><span style={{ fontSize: '15px', color: colors.dark }}>Embassy Suites<br />201 University Dr E, College Station</span></a>
           </div>
           

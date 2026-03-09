@@ -227,6 +227,10 @@ export default function LeadershipPage() {
   const [sentLinks, setSentLinks] = useState([]);
   const [expandedWebcastReg, setExpandedWebcastReg] = useState(null);
 
+  // Event settings
+  const [eventSettings, setEventSettings] = useState({ mainPresenter: '', mainDate: '', bcsPresenter: '', bcsDate: '' });
+  const [eventSaving, setEventSaving] = useState(false);
+
   // Lineup editor
   const [editingLineup, setEditingLineup] = useState(null);
   const [lineupDate, setLineupDate] = useState('');
@@ -366,6 +370,11 @@ export default function LeadershipPage() {
     if (tab === 'settings' && auth) {
       fetch('/api/webcast').then(r => r.json()).then(data => {
         if (data.link) { setZoomLink(data.link); setZoomLinkInput(data.link); }
+      }).catch(() => {});
+    }
+    if (tab === 'event' && auth) {
+      fetch('/api/event-settings').then(r => r.json()).then(data => {
+        setEventSettings({ mainPresenter: data.mainPresenter || '', mainDate: data.mainDate || '', bcsPresenter: data.bcsPresenter || '', bcsDate: data.bcsDate || '' });
       }).catch(() => {});
     }
   }, [tab, auth]);
@@ -678,6 +687,7 @@ export default function LeadershipPage() {
     ...(isLeadership ? [{ id: 'users', label: 'Users' }] : []),
     ...(isLeadership ? [{ id: 'los-builder', label: 'LOS Builder', href: '/admin/los-builder' }] : []),
     ...(canCheckIn ? [{ id: 'settings', label: 'Webcast' }] : []),
+    ...(canCheckIn ? [{ id: 'event', label: 'Event' }] : []),
   ];
 
   const handleLogout = async () => {
@@ -1787,6 +1797,71 @@ export default function LeadershipPage() {
                   </div>
                 )}
               </div>
+            </>
+          ) : tab === 'event' && canCheckIn ? (
+            <>
+              <h2 style={{ fontSize: '18px', color: colors.dark, margin: '0 0 16px', fontWeight: 500 }}>Event Details</h2>
+              <p style={{ fontSize: '12px', color: 'rgba(26,26,26,0.5)', marginBottom: '20px', lineHeight: 1.5 }}>
+                Update the presenter name and date shown on the registration pages. Changes take effect immediately.
+              </p>
+
+              {/* Main Page */}
+              <div style={{ background: 'white', border: '1px solid rgba(26,26,26,0.08)', padding: '20px', marginBottom: '16px' }}>
+                <h3 style={{ fontSize: '14px', fontWeight: 600, color: colors.dark, margin: '0 0 14px' }}>Home Page</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '10px', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.5)', marginBottom: '4px' }}>Presenter Name</label>
+                    <input type="text" placeholder="e.g. Talor Byington" value={eventSettings.mainPresenter} onChange={(e) => setEventSettings(s => ({ ...s, mainPresenter: e.target.value }))}
+                      style={{ width: '100%', padding: '10px', border: '1px solid rgba(26,26,26,0.15)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '10px', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.5)', marginBottom: '4px' }}>Date</label>
+                    <input type="text" placeholder="e.g. Monday, March 9, 2026" value={eventSettings.mainDate} onChange={(e) => setEventSettings(s => ({ ...s, mainDate: e.target.value }))}
+                      style={{ width: '100%', padding: '10px', border: '1px solid rgba(26,26,26,0.15)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
+                  </div>
+                </div>
+              </div>
+
+              {/* BCS Page */}
+              <div style={{ background: 'white', border: '1px solid rgba(26,26,26,0.08)', padding: '20px', marginBottom: '20px' }}>
+                <h3 style={{ fontSize: '14px', fontWeight: 600, color: colors.dark, margin: '0 0 14px' }}>BCS Page</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '10px', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.5)', marginBottom: '4px' }}>Presenter Name</label>
+                    <input type="text" placeholder="e.g. Talor Byington" value={eventSettings.bcsPresenter} onChange={(e) => setEventSettings(s => ({ ...s, bcsPresenter: e.target.value }))}
+                      style={{ width: '100%', padding: '10px', border: '1px solid rgba(26,26,26,0.15)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '10px', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.5)', marginBottom: '4px' }}>Date</label>
+                    <input type="text" placeholder="e.g. Monday, March 9, 2026" value={eventSettings.bcsDate} onChange={(e) => setEventSettings(s => ({ ...s, bcsDate: e.target.value }))}
+                      style={{ width: '100%', padding: '10px', border: '1px solid rgba(26,26,26,0.15)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={async () => {
+                  setEventSaving(true);
+                  try {
+                    const res = await fetch('/api/event-settings', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify(eventSettings),
+                    });
+                    if (res.ok) setToast('Event details saved!');
+                  } catch (e) { console.error(e); }
+                  setEventSaving(false);
+                }}
+                disabled={eventSaving}
+                style={{
+                  width: '100%', padding: '14px', fontSize: '12px', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600,
+                  background: eventSaving ? 'rgba(26,26,26,0.15)' : colors.dark,
+                  color: eventSaving ? 'rgba(26,26,26,0.4)' : colors.bg,
+                  border: 'none', cursor: eventSaving ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {eventSaving ? 'Saving...' : 'Save Changes'}
+              </button>
             </>
           ) : null
         )}

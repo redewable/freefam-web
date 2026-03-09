@@ -346,6 +346,15 @@ export default function BCSFreedomTeam() {
   const [toast, setToast] = useState({ visible: false, message: '' });
   const [webcastSuccess, setWebcastSuccess] = useState(false);
   const [zoomLink, setZoomLink] = useState('');
+  const [eventPresenter, setEventPresenter] = useState('');
+  const [eventDate, setEventDate] = useState('');
+
+  useEffect(() => {
+    fetch('/api/event-settings').then(r => r.json()).then(data => {
+      if (data.bcsPresenter) setEventPresenter(data.bcsPresenter);
+      if (data.bcsDate) setEventDate(data.bcsDate);
+    }).catch(() => {});
+  }, []);
 
   const shareGuestLink = () => {
     const url = `${window.location.origin}/guest`;
@@ -403,7 +412,7 @@ export default function BCSFreedomTeam() {
         <div style={{ maxWidth: '500px', margin: '0 auto' }}>
           <p style={{ color: colors.gold, fontSize: '10px', letterSpacing: '0.25em', textTransform: 'uppercase', marginBottom: '12px' }}>This Monday</p>
           <h2 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 'clamp(28px, 6vw, 40px)', color: colors.dark, marginBottom: '8px', fontWeight: 400, lineHeight: 1.1 }}>Showing The Plan</h2>
-          <p style={{ fontSize: '16px', color: 'rgba(26,26,26,0.5)', marginBottom: '24px' }}>Derly Trevino</p>
+          {(eventPresenter || 'Talor Byington') && <p style={{ fontSize: '16px', color: 'rgba(26,26,26,0.5)', marginBottom: '24px' }}>{eventPresenter || 'Talor Byington'}</p>}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}><Icons.Calendar style={{ width: '16px', height: '16px', color: colors.gold, flexShrink: 0 }} /><span style={{ fontSize: '14px', color: colors.dark }}>Every Monday · 7:30 PM CST</span></div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}><Icons.MapPin style={{ width: '16px', height: '16px', color: colors.gold, flexShrink: 0 }} /><span style={{ fontSize: '14px', color: colors.dark }}>Embassy Suites · College Station, TX</span></div>
