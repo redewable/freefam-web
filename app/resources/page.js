@@ -727,6 +727,11 @@ export default function ResourcesDashboard() {
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [accessLevel, setAccessLevel] = useState(null);
+  const [avWebcastRegs, setAvWebcastRegs] = useState([]);
+  const [avLineups, setAvLineups] = useState([]);
+  const [avZoomLink, setAvZoomLink] = useState('');
+  const [avLoading, setAvLoading] = useState(false);
 
   useEffect(() => {
     const init = async () => {
@@ -746,6 +751,12 @@ export default function ResourcesDashboard() {
         body: JSON.stringify({ action: 'page_view', pagePath: '/resources' }),
       });
 
+      // Check leadership access level (for A/V tabs)
+      fetch('/api/admin/leadership-access?action=check')
+        .then(r => r.json())
+        .then(data => { if (data.hasAccess) setAccessLevel(data.level); })
+        .catch(() => {});
+
       // Fetch resources
       fetch('/api/resources').then(r => r.json()).then(data => setResources(data.resources || [])).catch(() => setResources([]));
 
@@ -762,6 +773,31 @@ export default function ResourcesDashboard() {
     };
     init();
   }, []);
+
+  // Fetch A/V data when webcast or lineup tab is opened
+  useEffect(() => {
+    if (!accessLevel) return;
+    const isAV = accessLevel === 'av';
+    if (!isAV) return;
+    if (tab === 'webcast' && avWebcastRegs.length === 0) {
+      setAvLoading(true);
+      Promise.all([
+        fetch('/api/registrations').then(r => r.json()),
+        fetch('/api/webcast').then(r => r.json()),
+      ]).then(([regData, wcData]) => {
+        const allRegs = regData.registrations || [];
+        const wcRegs = allRegs.filter(r => r.source === 'webcast' || (r.type && r.type.startsWith('webcast-')));
+        setAvWebcastRegs(wcRegs);
+        setAvZoomLink(wcData.zoomLink || '');
+      }).catch(() => {}).finally(() => setAvLoading(false));
+    }
+    if (tab === 'lineup' && avLineups.length === 0) {
+      setAvLoading(true);
+      fetch('/api/lineup').then(r => r.json()).then(data => {
+        setAvLineups(data.lineups || []);
+      }).catch(() => {}).finally(() => setAvLoading(false));
+    }
+  }, [tab, accessLevel]);
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
@@ -787,11 +823,16 @@ export default function ResourcesDashboard() {
   const isAdminOrSponsor = profile?.role === 'admin' || profile?.role === 'sponsor';
   const isPlaced = !!(profile?.sponsor_id) || profile?.role === 'admin';
 
+  const isAVUser = accessLevel === 'av';
   const tabs = [
     { id: 'library', label: 'Library', icon: Icons.Book },
     { id: 'los', label: 'My LOS', icon: Icons.Users },
     { id: 'events', label: 'My Events', icon: Icons.Calendar },
     { id: 'activity', label: 'Activity', icon: Icons.Clock },
+    ...(isAVUser ? [
+      { id: 'webcast', label: 'Webcast', icon: Icons.Video },
+      { id: 'lineup', label: 'Lineup', icon: Icons.Calendar },
+    ] : []),
   ];
 
   // Flexible search: split query into words, match against title, description, category, type
@@ -1075,6 +1116,106 @@ export default function ResourcesDashboard() {
                     <span style={{ fontSize: '11px', color: 'rgba(26,26,26,0.3)', flexShrink: 0 }}>{formatTime(log.created_at)}</span>
                   </div>
                 ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* WEBCAST TAB (A/V) */}
+        {tab === 'webcast' && isAVUser && (
+          <div>
+            <h1 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: '28px', color: colors.dark, fontWeight: 400, margin: '0 0 8px' }}>Webcast</h1>
+            <p style={{ fontSize: '13px', color: 'rgba(26,26,26,0.5)', margin: '0 0 24px' }}>Registrations for this week's webcast</p>
+
+            {avZoomLink && (
+              <div style={{ background: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.15)', padding: '14px 16px', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                  <p style={{ fontSize: '10px', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.4)', margin: '0 0 4px' }}>Zoom Link</p>
+                  <p style={{ fontSize: '13px', color: '#3b82f6', margin: 0, wordBreak: 'break-all' }}>{avZoomLink}</p>
+                </div>
+                <button onClick={() => { navigator.clipboard.writeText(avZoomLink); }} style={{ padding: '6px 12px', fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', background: 'white', border: '1px solid rgba(59,130,246,0.2)', color: '#3b82f6', cursor: 'pointer', flexShrink: 0 }}>
+                  Copy
+                </button>
+              </div>
+            )}
+
+            {avLoading ? (
+              <div style={{ textAlign: 'center', padding: '40px 0' }}>
+                <p style={{ color: 'rgba(26,26,26,0.4)' }}>Loading...</p>
+              </div>
+            ) : avWebcastRegs.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '60px 20px' }}>
+                <Icons.Video style={{ width: '32px', height: '32px', color: 'rgba(26,26,26,0.15)', margin: '0 auto 16px' }} />
+                <p style={{ color: 'rgba(26,26,26,0.4)', fontSize: '14px' }}>No webcast registrations this week</p>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <p style={{ fontSize: '12px', color: 'rgba(26,26,26,0.4)', margin: '0 0 4px' }}>{avWebcastRegs.length} registered</p>
+                {avWebcastRegs.map(reg => {
+                  const wcType = reg.type?.replace('webcast-', '') || 'ibo';
+                  const badge = wcType === 'guest' ? { label: 'Guest', bg: 'rgba(59,130,246,0.1)', color: '#3b82f6' }
+                    : wcType === 'apprentice' ? { label: 'Apprentice', bg: 'rgba(168,85,247,0.1)', color: '#a855f7' }
+                    : { label: 'IBO', bg: 'rgba(184,149,107,0.15)', color: colors.gold };
+                  return (
+                    <div key={reg.id} style={{ padding: '10px 14px', background: 'white', border: '1px solid rgba(26,26,26,0.08)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ fontSize: '14px', fontWeight: 500, color: colors.dark, margin: '0 0 1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{reg.name}</p>
+                        <p style={{ fontSize: '11px', color: 'rgba(26,26,26,0.5)', margin: 0 }}>{reg.email}</p>
+                      </div>
+                      <span style={{ padding: '3px 8px', background: badge.bg, fontSize: '9px', fontWeight: 600, color: badge.color, textTransform: 'uppercase', whiteSpace: 'nowrap', flexShrink: 0 }}>{badge.label}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* LINEUP TAB (A/V) */}
+        {tab === 'lineup' && isAVUser && (
+          <div>
+            <h1 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: '28px', color: colors.dark, fontWeight: 400, margin: '0 0 8px' }}>Meeting Lineup</h1>
+            <p style={{ fontSize: '13px', color: 'rgba(26,26,26,0.5)', margin: '0 0 24px' }}>Upcoming meeting lineup and schedule</p>
+
+            {avLoading ? (
+              <div style={{ textAlign: 'center', padding: '40px 0' }}>
+                <p style={{ color: 'rgba(26,26,26,0.4)' }}>Loading...</p>
+              </div>
+            ) : avLineups.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '60px 20px' }}>
+                <Icons.Calendar style={{ width: '32px', height: '32px', color: 'rgba(26,26,26,0.15)', margin: '0 auto 16px' }} />
+                <p style={{ color: 'rgba(26,26,26,0.4)', fontSize: '14px' }}>No lineups scheduled yet</p>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {avLineups.map(lineup => {
+                  const lineupDate = new Date(lineup.date + 'T12:00:00-06:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', timeZone: 'America/Chicago' });
+                  return (
+                    <div key={lineup.date} style={{ background: 'white', border: '1px solid rgba(26,26,26,0.08)' }}>
+                      <div style={{ padding: '14px 16px', borderBottom: '1px solid rgba(26,26,26,0.06)' }}>
+                        <p style={{ fontSize: '15px', fontWeight: 500, color: colors.dark, margin: '0 0 2px' }}>{lineupDate}</p>
+                        {lineup.topics && <p style={{ fontSize: '12px', color: 'rgba(26,26,26,0.4)', margin: 0 }}>Training: {lineup.topics}</p>}
+                      </div>
+                      <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        {(lineup.segments || []).map((seg, i) => {
+                          const isInfo = ['host', 'plan', 'nextsteps'].includes(seg.key);
+                          return (
+                            <div key={i} style={{ display: 'flex', alignItems: 'baseline', gap: '10px', padding: '6px 0', borderBottom: i < (lineup.segments || []).length - 1 ? '1px solid rgba(26,26,26,0.04)' : 'none' }}>
+                              <span style={{ fontSize: '11px', color: 'rgba(26,26,26,0.35)', minWidth: '55px', flexShrink: 0 }}>{seg.time}</span>
+                              <span style={{ fontSize: '13px', fontWeight: 500, color: colors.dark }}>{seg.label}</span>
+                              {seg.speaker && <span style={{ fontSize: '12px', color: isInfo ? colors.gold : 'rgba(26,26,26,0.5)' }}>— {seg.speaker}</span>}
+                            </div>
+                          );
+                        })}
+                      </div>
+                      {lineup.notes && (
+                        <div style={{ padding: '0 16px 12px' }}>
+                          <p style={{ fontSize: '11px', color: 'rgba(26,26,26,0.4)', margin: 0, fontStyle: 'italic' }}>{lineup.notes}</p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
