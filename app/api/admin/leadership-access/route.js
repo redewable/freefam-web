@@ -5,9 +5,10 @@ import { NextResponse } from 'next/server';
 // Access levels:
 // 'leadership' — Full access: check-in, lineups, finances, history, user management
 // 'admin' — Can check in and view check-in history. No finances, user management, or lineup
+// 'av' — A/V Team: webcast registrations + lineup only
 // 'viewer' — Read-only access to all data
 // 'member' — No access to admin dashboard or leadership portals (not stored in KV, just means no entry)
-const VALID_LEVELS = ['leadership', 'admin', 'viewer'];
+const VALID_LEVELS = ['leadership', 'admin', 'av', 'viewer'];
 
 // GET - Check current user's access OR list all access entries (admin only)
 export async function GET(request) {

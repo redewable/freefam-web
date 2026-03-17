@@ -52,9 +52,13 @@ export async function GET(request) {
     // 1. Fetch paid registrations from Stripe
     let paidRegs = [];
     try {
+      // Only fetch sessions from last 5 weeks max (covers monthly5 tickets)
+      const fiveWeeksAgo = new Date(weekStart);
+      fiveWeeksAgo.setDate(fiveWeeksAgo.getDate() - 35);
       const sessions = await stripe.checkout.sessions.list({
         limit: 100,
         status: 'complete',
+        created: { gte: Math.floor(fiveWeeksAgo.getTime() / 1000) },
       });
 
       const rawPaid = sessions.data
@@ -151,8 +155,20 @@ export async function GET(request) {
       console.error('KV error:', kvError.message);
     }
 
-    // 3. Get check-in statuses
-    const allRegs = [...paidRegs, ...freeRegs];
+    // 3. Dedup — keep only the most recent registration per person (by email or name)
+    const allRegsRaw = [...paidRegs, ...freeRegs];
+    const seen = new Map(); // key → registration (keeps newest)
+    for (const reg of allRegsRaw) {
+      // Dedup key: lowercase email if available, else lowercase name
+      const dedupKey = reg.email && reg.email !== 'Unknown'
+        ? reg.email.toLowerCase().trim()
+        : reg.name.toLowerCase().trim();
+      const existing = seen.get(dedupKey);
+      if (!existing || new Date(reg.createdAt) > new Date(existing.createdAt)) {
+        seen.set(dedupKey, reg);
+      }
+    }
+    const allRegs = Array.from(seen.values());
 
     // Build a set of IDs that were checked in at last week's meeting
     // Using history set (365-day TTL) instead of check-in keys (which expire end-of-week)
@@ -187,6 +203,13 @@ export async function GET(request) {
       } catch (e) {}
     }
 
+    // 4a. Check for hidden registrations (removed by admin)
+    let hiddenIds = new Set();
+    try {
+      const hidden = await kv.smembers(`hidden:${weekKey}`) || [];
+      hiddenIds = new Set(hidden);
+    } catch (e) {}
+
     // Remove anyone already checked in during the previous week's meeting
     // BUT keep monthly ticket holders — they should show every week with fresh status
     const isMonthly = (r) => r.priceType === 'monthly' || r.priceType === 'monthly5';
@@ -195,7 +218,7 @@ export async function GET(request) {
         reg.checkedInPrevWeek = false; // Reset so they appear as pending this week
       }
     }
-    const visibleRegs = allRegs.filter(r => !r.checkedInPrevWeek);
+    const visibleRegs = allRegs.filter(r => !r.checkedInPrevWeek && !hiddenIds.has(r.id));
 
     // 4. Filter if needed
     let filtered = visibleRegs;
@@ -213,6 +236,7 @@ export async function GET(request) {
       debug: {
         paidCount: paidRegs.length,
         freeCount: freeRegs.length,
+        dedupRemoved: allRegsRaw.length - allRegs.length,
         totalCount: filtered.length,
         weekStart: weekStart.toISOString(),
         registrationCutoff: registrationCutoff.toISOString(),
@@ -225,5 +249,33 @@ export async function GET(request) {
   } catch (error) {
     console.error('Error fetching registrations:', error);
     return NextResponse.json({ error: error.message, registrations: [] }, { status: 500 });
+  }
+}
+
+// DELETE — hide/remove a registration from the check-in list
+// For free registrations: deletes from KV
+// For Stripe registrations: adds to a "hidden" set so they're excluded on next fetch
+export async function DELETE(request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+    if (!id) return NextResponse.json({ error: 'Registration ID required' }, { status: 400 });
+
+    // If it's a free registration, delete from KV
+    if (id.startsWith('free_')) {
+      await kv.del(`registration:${id}`);
+    }
+
+    // Also add to the hidden set (covers both free and paid)
+    const weekStart = getWeekStart();
+    const weekKey = getWeekKey();
+    await kv.sadd(`hidden:${weekKey}`, id);
+    // TTL of 2 weeks
+    await kv.expire(`hidden:${weekKey}`, 14 * 24 * 60 * 60);
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Error removing registration:', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

@@ -1,5 +1,6 @@
 import { kv } from '@vercel/kv';
 import { NextResponse } from 'next/server';
+import { sendWebcastLink } from '@/app/lib/email';
 
 export async function POST(request) {
   try {
@@ -38,8 +39,9 @@ export async function POST(request) {
     const key = `registration:${id}`;
     await kv.set(key, registration);
 
-    // For webcast registrations, also create an access token so they can retrieve the Zoom link later
+    // For webcast registrations, create access token and auto-send Zoom link
     let webcastToken = null;
+    let emailSent = false;
     if (isWebcast) {
       webcastToken = `wc_${Date.now()}_${Math.random().toString(36).substr(2, 12)}`;
       await kv.set(`webcast-token:${webcastToken}`, { email, name: `${firstName} ${lastName}`, type, createdAt: timestamp });
@@ -47,9 +49,24 @@ export async function POST(request) {
       const existing = await kv.get(`webcast-email:${email.toLowerCase().trim()}`) || [];
       existing.push(webcastToken);
       await kv.set(`webcast-email:${email.toLowerCase().trim()}`, existing);
+
+      // Auto-send Zoom link if available
+      try {
+        const zoomLink = await kv.get('webcast:zoom-link');
+        if (zoomLink && email) {
+          const result = await sendWebcastLink({
+            to: email,
+            name: `${firstName} ${lastName}`,
+            zoomLink,
+          });
+          emailSent = result.success;
+        }
+      } catch (emailErr) {
+        console.error('Auto-send webcast link error:', emailErr);
+      }
     }
 
-    return NextResponse.json({ success: true, id, webcastToken });
+    return NextResponse.json({ success: true, id, webcastToken, emailSent });
   } catch (error) {
     console.error('Registration error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });

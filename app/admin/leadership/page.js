@@ -408,6 +408,44 @@ export default function LeadershipPage() {
     setUpdating(null);
   };
 
+  const removeRegistration = async (reg) => {
+    if (!confirm(`Remove ${reg.name} from this week's check-in list?`)) return;
+    setUpdating(reg.id);
+    try {
+      const res = await fetch(`/api/registrations?id=${reg.id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) {
+        setRegs(prev => prev.filter(r => r.id !== reg.id));
+        setExpandedReg(null);
+        showToast(`${reg.name} removed`);
+      }
+    } catch (e) { console.error(e); }
+    setUpdating(null);
+  };
+
+  const sendWebcastLinkToReg = async (reg) => {
+    if (!reg.email || reg.email === 'Unknown') {
+      showToast('No email address available');
+      return;
+    }
+    setSendingLink(reg.id);
+    try {
+      const res = await fetch('/api/webcast/send-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: reg.email, name: reg.name }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSentLinks(prev => [...prev, reg.id]);
+        showToast(`Link sent to ${reg.email}`);
+      } else {
+        showToast(data.error || 'Failed to send');
+      }
+    } catch (e) { showToast('Error sending link'); }
+    setSendingLink(null);
+  };
+
   const fixHistoryDates = async () => {
     try {
       setFixMsg('Fixing...');
@@ -632,7 +670,13 @@ export default function LeadershipPage() {
     </div>
   );
 
-  if (!auth) return <LoginGate onSuccess={(level, profile) => { setAuth(true); setAccessLevel(level); setAuthProfile(profile); }} />;
+  if (!auth) return <LoginGate onSuccess={(level, profile) => {
+    setAuth(true);
+    setAccessLevel(level);
+    setAuthProfile(profile);
+    // A/V users default to webcast tab
+    if (level === 'av' && tab === 'overview') setTab('settings');
+  }} />;
 
   // ═══════ FILTER/SORT for check-in ═══════
   const getBadge = (reg) => {
@@ -673,20 +717,23 @@ export default function LeadershipPage() {
   // Access level permissions:
   // leadership — Full access: check-in, lineups, finances, history, user management
   // admin — Can check in and view check-in history only. No finances, user management, or lineup
-  // viewer — Read-only access to all data
+  // Access level permissions
   const isLeadership = accessLevel === 'leadership';
   const canCheckIn = accessLevel === 'leadership' || accessLevel === 'admin';
   const canViewAll = accessLevel === 'leadership' || accessLevel === 'viewer';
+  const isAV = accessLevel === 'av';
+  const canSeeWebcast = canCheckIn || isAV;
+  const canSeeLineups = canViewAll || isAV;
 
   const tabs = [
-    { id: 'overview', label: 'Overview' },
-    { id: 'checkin', label: 'Check-In' },
-    ...(canViewAll ? [{ id: 'lineups', label: 'Lineups' }] : []),
+    ...(!isAV ? [{ id: 'overview', label: 'Overview' }] : []),
+    ...(!isAV ? [{ id: 'checkin', label: 'Check-In' }] : []),
+    ...(canSeeLineups ? [{ id: 'lineups', label: 'Lineups' }] : []),
     ...(canViewAll ? [{ id: 'finances', label: 'Finances' }] : []),
-    { id: 'history', label: 'History' },
+    ...(!isAV ? [{ id: 'history', label: 'History' }] : []),
     ...(isLeadership ? [{ id: 'users', label: 'Users' }] : []),
     ...(isLeadership ? [{ id: 'los-builder', label: 'LOS Builder', href: '/admin/los-builder' }] : []),
-    ...(canCheckIn ? [{ id: 'settings', label: 'Webcast' }] : []),
+    ...(canSeeWebcast ? [{ id: 'settings', label: 'Webcast' }] : []),
     ...(canCheckIn ? [{ id: 'event', label: 'Event' }] : []),
   ];
 
@@ -1053,6 +1100,22 @@ export default function LeadershipPage() {
                               {reg.amount > 0 && <div><p style={{ fontSize: '9px', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.4)', margin: '0 0 2px' }}>Paid</p><p style={{ fontSize: '13px', color: colors.dark, margin: 0 }}>${reg.amount}</p></div>}
                               {reg.date && <div><p style={{ fontSize: '9px', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.4)', margin: '0 0 2px' }}>Registered</p><p style={{ fontSize: '13px', color: colors.dark, margin: 0 }}>{reg.date}</p></div>}
                             </div>
+                            {canCheckIn && (
+                              <div style={{ display: 'flex', gap: '8px', marginTop: '12px', paddingTop: '10px', borderTop: '1px solid rgba(26,26,26,0.06)' }}>
+                                {isWebcastReg(reg) && (
+                                  <button onClick={(e) => { e.stopPropagation(); sendWebcastLinkToReg(reg); }}
+                                    disabled={sendingLink === reg.id || sentLinks.includes(reg.id)}
+                                    style={{ flex: 1, padding: '8px', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', background: sentLinks.includes(reg.id) ? 'rgba(34,197,94,0.1)' : colors.dark, color: sentLinks.includes(reg.id) ? '#22c55e' : colors.bg, border: 'none', cursor: sendingLink === reg.id || sentLinks.includes(reg.id) ? 'default' : 'pointer', opacity: sendingLink === reg.id ? 0.5 : 1 }}>
+                                    {sentLinks.includes(reg.id) ? '✓ Link Sent' : sendingLink === reg.id ? 'Sending...' : 'Send Webcast Link'}
+                                  </button>
+                                )}
+                                <button onClick={(e) => { e.stopPropagation(); removeRegistration(reg); }}
+                                  disabled={updating === reg.id}
+                                  style={{ padding: '8px 12px', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', background: 'rgba(239,68,68,0.08)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.2)', cursor: 'pointer', opacity: updating === reg.id ? 0.5 : 1, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                  <Icons.Trash style={{ width: '12px', height: '12px' }} /> Remove
+                                </button>
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
@@ -1562,7 +1625,7 @@ export default function LeadershipPage() {
                           ) : currentLevel ? (
                             /* Has granted access — show level buttons with active one highlighted */
                             <div style={{ display: 'flex', gap: '3px', alignItems: 'center' }}>
-                              {['leadership', 'admin', 'viewer'].map(level => (
+                              {['leadership', 'admin', 'av', 'viewer'].map(level => (
                                 <button
                                   key={level}
                                   onClick={() => { if (level !== currentLevel) grantAccess(p, level); }}
@@ -1592,7 +1655,7 @@ export default function LeadershipPage() {
                           ) : (
                             /* No access — show grant buttons */
                             <div style={{ display: 'flex', gap: '3px' }}>
-                              {['leadership', 'admin', 'viewer'].map(level => (
+                              {['leadership', 'admin', 'av', 'viewer'].map(level => (
                                 <button
                                   key={level}
                                   onClick={() => grantAccess(p, level)}
@@ -1628,7 +1691,7 @@ export default function LeadershipPage() {
               </div>
             </>
           // ═══════════════ SETTINGS TAB ═══════════════
-          ) : tab === 'settings' && canCheckIn ? (
+          ) : tab === 'settings' && canSeeWebcast ? (
             <>
               <h2 style={{ fontSize: '18px', color: colors.dark, margin: '0 0 16px', fontWeight: 500 }}>Webcast</h2>
 
@@ -1740,22 +1803,39 @@ export default function LeadershipPage() {
                                 onClick={async (e) => {
                                   e.stopPropagation();
                                   setSendingLink(reg.id);
-                                  const shareText = `Hi ${reg.name.split(' ')[0]}! Here's your webcast link for tonight's meeting:`;
-                                  if (navigator.share) {
-                                    try {
-                                      await navigator.share({ title: 'Webcast Link', text: shareText, url: zoomLink });
+                                  try {
+                                    // Try to email the link via API
+                                    const res = await fetch('/api/webcast/send-link', {
+                                      method: 'POST',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ email: reg.email, name: reg.name }),
+                                    });
+                                    const data = await res.json();
+                                    if (data.success) {
                                       setSentLinks(prev => [...prev, reg.id]);
-                                    } catch (e) {
-                                      if (e.name !== 'AbortError') {
+                                      setToast(`Link emailed to ${reg.email}`);
+                                    } else {
+                                      // Fallback to native share / clipboard
+                                      const shareText = `Hi ${reg.name.split(' ')[0]}! Here's your webcast link for tonight's meeting:`;
+                                      if (navigator.share) {
+                                        try {
+                                          await navigator.share({ title: 'Webcast Link', text: shareText, url: zoomLink });
+                                          setSentLinks(prev => [...prev, reg.id]);
+                                        } catch (shareErr) {
+                                          if (shareErr.name !== 'AbortError') {
+                                            navigator.clipboard.writeText(`${shareText}\n${zoomLink}`);
+                                            setSentLinks(prev => [...prev, reg.id]);
+                                            setToast('Link copied!');
+                                          }
+                                        }
+                                      } else {
                                         navigator.clipboard.writeText(`${shareText}\n${zoomLink}`);
                                         setSentLinks(prev => [...prev, reg.id]);
                                         setToast('Link copied!');
                                       }
                                     }
-                                  } else {
-                                    navigator.clipboard.writeText(`${shareText}\n${zoomLink}`);
-                                    setSentLinks(prev => [...prev, reg.id]);
-                                    setToast('Link copied!');
+                                  } catch (err) {
+                                    setToast('Error sending link');
                                   }
                                   setSendingLink(null);
                                 }}
