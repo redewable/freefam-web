@@ -2,7 +2,7 @@ import { Resend } from 'resend';
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
-const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'Freedom Family <noreply@freedomfamily.app>';
+const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'Freedom Family <noreply@freefam.casa>';
 
 export async function sendWebcastLink({ to, name, zoomLink }) {
   if (!resend) {
