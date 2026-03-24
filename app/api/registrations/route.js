@@ -155,14 +155,14 @@ export async function GET(request) {
       console.error('KV error:', kvError.message);
     }
 
-    // 3. Dedup — keep only the most recent registration per person (by email or name)
+    // 3. Dedup — keep only the most recent registration per person (by name+email)
+    // Spouse entries share the same email as the primary, so we use name as part of the key
     const allRegsRaw = [...paidRegs, ...freeRegs];
     const seen = new Map(); // key → registration (keeps newest)
     for (const reg of allRegsRaw) {
-      // Dedup key: lowercase email if available, else lowercase name
-      const dedupKey = reg.email && reg.email !== 'Unknown'
-        ? reg.email.toLowerCase().trim()
-        : reg.name.toLowerCase().trim();
+      const namePart = (reg.name || '').toLowerCase().trim();
+      const emailPart = reg.email && reg.email !== 'Unknown' ? reg.email.toLowerCase().trim() : '';
+      const dedupKey = emailPart ? `${namePart}::${emailPart}` : namePart;
       const existing = seen.get(dedupKey);
       if (!existing || new Date(reg.createdAt) > new Date(existing.createdAt)) {
         seen.set(dedupKey, reg);
