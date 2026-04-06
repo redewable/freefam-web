@@ -591,19 +591,37 @@ export default function FreedomFamily() {
           {upcomingEvents.map((evt, i) => (
             <React.Fragment key={evt.id}>
               {i > 0 && <div style={{ height: '1px', background: 'linear-gradient(to right, transparent, rgba(26,26,26,0.08), transparent)', marginBottom: '40px' }} />}
-              <div style={{ marginBottom: '40px' }}>
-                <h2 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 'clamp(26px, 5vw, 36px)', color: colors.dark, marginBottom: '8px', fontWeight: 400 }}>{evt.title}</h2>
-                {evt.subtitle && <p style={{ fontSize: '15px', color: 'rgba(26,26,26,0.5)', marginBottom: '4px' }}>{evt.subtitle}</p>}
-                <p style={{ fontSize: '15px', color: 'rgba(26,26,26,0.5)', marginBottom: evt.location ? '4px' : '8px' }}>
-                  {formatEventDate(evt.date)}{evt.time ? ` · ${evt.time}` : ''}
-                </p>
-                {evt.location && <p style={{ fontSize: '14px', color: 'rgba(26,26,26,0.4)', marginBottom: '16px' }}>{evt.location}</p>}
-                {evt.url && (
-                  <a href={evt.url} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 20px', background: colors.dark, color: colors.bg, fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase', textDecoration: 'none' }}>
-                    {evt.buttonLabel || 'Details'}<Icons.ArrowRight style={{ width: '12px', height: '12px' }} />
-                  </a>
-                )}
-              </div>
+              {evt.highlight ? (
+                <div style={{ marginBottom: '40px', padding: '32px 24px', background: 'linear-gradient(135deg, rgba(184,149,107,0.06) 0%, rgba(184,149,107,0.02) 100%)', border: '1px solid rgba(184,149,107,0.2)', position: 'relative', overflow: 'hidden' }}>
+                  <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: `linear-gradient(to right, transparent, ${colors.gold}, transparent)` }} />
+                  <p style={{ color: colors.gold, fontSize: '9px', letterSpacing: '0.3em', textTransform: 'uppercase', marginBottom: '10px' }}>Featured</p>
+                  <h2 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 'clamp(30px, 6vw, 44px)', color: colors.dark, marginBottom: '10px', fontWeight: 400, lineHeight: 1.1 }}>{evt.title}</h2>
+                  {evt.subtitle && <p style={{ fontSize: '16px', color: colors.gold, marginBottom: '6px', fontWeight: 400 }}>{evt.subtitle}</p>}
+                  <p style={{ fontSize: '15px', color: 'rgba(26,26,26,0.5)', marginBottom: evt.location ? '4px' : '12px' }}>
+                    {formatEventDate(evt.date)}{evt.time ? ` · ${evt.time}` : ''}
+                  </p>
+                  {evt.location && <p style={{ fontSize: '14px', color: 'rgba(26,26,26,0.4)', marginBottom: '16px' }}>{evt.location}</p>}
+                  {evt.url && (
+                    <a href={evt.url} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '12px 28px', background: `linear-gradient(135deg, ${colors.dark} 0%, #2a2a2a 100%)`, color: colors.bg, fontSize: '11px', letterSpacing: '0.15em', textTransform: 'uppercase', textDecoration: 'none', boxShadow: '0 4px 16px rgba(26,26,26,0.12)' }}>
+                      {evt.buttonLabel || 'Details'}<Icons.ArrowRight style={{ width: '12px', height: '12px' }} />
+                    </a>
+                  )}
+                </div>
+              ) : (
+                <div style={{ marginBottom: '40px' }}>
+                  <h2 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 'clamp(26px, 5vw, 36px)', color: colors.dark, marginBottom: '8px', fontWeight: 400 }}>{evt.title}</h2>
+                  {evt.subtitle && <p style={{ fontSize: '15px', color: 'rgba(26,26,26,0.5)', marginBottom: '4px' }}>{evt.subtitle}</p>}
+                  <p style={{ fontSize: '15px', color: 'rgba(26,26,26,0.5)', marginBottom: evt.location ? '4px' : '8px' }}>
+                    {formatEventDate(evt.date)}{evt.time ? ` · ${evt.time}` : ''}
+                  </p>
+                  {evt.location && <p style={{ fontSize: '14px', color: 'rgba(26,26,26,0.4)', marginBottom: '16px' }}>{evt.location}</p>}
+                  {evt.url && (
+                    <a href={evt.url} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 20px', background: colors.dark, color: colors.bg, fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase', textDecoration: 'none' }}>
+                      {evt.buttonLabel || 'Details'}<Icons.ArrowRight style={{ width: '12px', height: '12px' }} />
+                    </a>
+                  )}
+                </div>
+              )}
             </React.Fragment>
           ))}
         </div>

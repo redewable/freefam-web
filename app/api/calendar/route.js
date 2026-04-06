@@ -3,25 +3,48 @@ import { NextResponse } from 'next/server';
 
 const KEY = 'calendar-events';
 
-// GET — list all upcoming events, sorted by date
+// GET — list all events in stored order (manual sort)
 export async function GET() {
   try {
     const events = await kv.get(KEY) || [];
-    // Sort by date ascending
-    events.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
     return NextResponse.json({ events });
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
 
-// POST — create or update an event
-// Body: { id?, title, subtitle, date, time, location, url, buttonLabel, type }
-// If id is provided, updates that event. Otherwise creates a new one.
+// POST — create, update, or reorder events
+// Body: { id?, title, subtitle, date, time, location, url, buttonLabel, type, highlight? }
+// Special: { action: 'reorder', id, direction: 'up'|'down' }
 export async function POST(request) {
   try {
     const body = await request.json();
     const events = await kv.get(KEY) || [];
+
+    // Reorder action
+    if (body.action === 'reorder') {
+      const idx = events.findIndex(e => e.id === body.id);
+      if (idx === -1) return NextResponse.json({ error: 'Event not found' }, { status: 404 });
+      // Find swap target within the same type
+      const evtType = events[idx].type;
+      if (body.direction === 'up') {
+        for (let i = idx - 1; i >= 0; i--) {
+          if (events[i].type === evtType) {
+            [events[i], events[idx]] = [events[idx], events[i]];
+            break;
+          }
+        }
+      } else {
+        for (let i = idx + 1; i < events.length; i++) {
+          if (events[i].type === evtType) {
+            [events[i], events[idx]] = [events[idx], events[i]];
+            break;
+          }
+        }
+      }
+      await kv.set(KEY, events);
+      return NextResponse.json({ success: true, events });
+    }
 
     if (body.id) {
       // Update existing
@@ -40,7 +63,8 @@ export async function POST(request) {
         location: body.location || '',
         url: body.url || '',
         buttonLabel: body.buttonLabel || 'Details',
-        type: body.type || 'upcoming', // 'upcoming' or 'info-session'
+        type: body.type || 'upcoming',
+        highlight: body.highlight || false,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       });

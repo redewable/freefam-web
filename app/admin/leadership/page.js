@@ -23,6 +23,9 @@ const Icons = {
   X: ({ style }) => <svg style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M18 6L6 18M6 6l12 12" /></svg>,
   List: ({ style }) => <svg style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" /><line x1="3" y1="6" x2="3.01" y2="6" /><line x1="3" y1="12" x2="3.01" y2="12" /><line x1="3" y1="18" x2="3.01" y2="18" /></svg>,
   Clock: ({ style }) => <svg style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></svg>,
+  ChevronUp: ({ style }) => <svg style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M18 15l-6-6-6 6" /></svg>,
+  ChevronDown: ({ style }) => <svg style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M6 9l6 6 6-6" /></svg>,
+  Star: ({ style, fill }) => <svg style={style} viewBox="0 0 24 24" fill={fill || 'none'} stroke="currentColor" strokeWidth="1.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 22 12 18.27 5.82 22 7 14.14l-5-4.87 6.91-1.01L12 2z" /></svg>,
 };
 
 const formatDate = (d) => new Date(d + 'T12:00:00-06:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', timeZone: 'America/Chicago' });
@@ -235,7 +238,22 @@ export default function LeadershipPage() {
   const [calendarEvents, setCalendarEvents] = useState([]);
   const [calendarLoading, setCalendarLoading] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
-  const [eventForm, setEventForm] = useState({ title: '', subtitle: '', date: '', time: '', location: '', url: '', buttonLabel: 'Details', type: 'upcoming' });
+  const [eventForm, setEventForm] = useState({ title: '', subtitle: '', date: '', time: '', location: '', url: '', buttonLabel: 'Details', type: 'upcoming', highlight: false });
+
+  const reorderEvent = async (id, direction) => {
+    try {
+      const res = await fetch('/api/calendar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'reorder', id, direction }) });
+      const data = await res.json();
+      if (data.success) setCalendarEvents(data.events);
+    } catch (e) { console.error(e); }
+  };
+  const toggleHighlight = async (evt) => {
+    try {
+      const res = await fetch('/api/calendar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: evt.id, highlight: !evt.highlight }) });
+      const data = await res.json();
+      if (data.success) { setCalendarEvents(data.events); showToast(evt.highlight ? 'Highlight removed' : 'Event highlighted'); }
+    } catch (e) { console.error(e); }
+  };
 
   // Lineup editor
   const [editingLineup, setEditingLineup] = useState(null);
@@ -2038,7 +2056,7 @@ export default function LeadershipPage() {
             <>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
                 <h2 style={{ fontSize: '18px', color: colors.dark, margin: 0, fontWeight: 500 }}>Upcoming Events</h2>
-                <button onClick={() => { setEditingEvent(null); setEventForm({ title: '', subtitle: '', date: '', time: '', location: '', url: '', buttonLabel: 'Details', type: 'upcoming' }); }}
+                <button onClick={() => { setEditingEvent(null); setEventForm({ title: '', subtitle: '', date: '', time: '', location: '', url: '', buttonLabel: 'Details', type: 'upcoming', highlight: false }); }}
                   style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', background: colors.dark, color: colors.bg, fontSize: '11px', letterSpacing: '0.08em', textTransform: 'uppercase', border: 'none', cursor: 'pointer' }}>
                   <Icons.Plus style={{ width: '14px', height: '14px' }} />New Event
                 </button>
@@ -2101,6 +2119,14 @@ export default function LeadershipPage() {
                           style={{ width: '100%', padding: '10px', border: '1px solid rgba(26,26,26,0.15)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
                       </div>
                     </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', background: eventForm.highlight ? 'rgba(184,149,107,0.06)' : 'rgba(26,26,26,0.02)', border: eventForm.highlight ? `1px solid ${colors.gold}` : '1px solid rgba(26,26,26,0.08)', cursor: 'pointer' }}
+                      onClick={() => setEventForm(f => ({ ...f, highlight: !f.highlight }))}>
+                      <Icons.Star style={{ width: '16px', height: '16px', color: eventForm.highlight ? colors.gold : 'rgba(26,26,26,0.25)' }} fill={eventForm.highlight ? colors.gold : 'none'} />
+                      <div>
+                        <p style={{ fontSize: '13px', fontWeight: 500, color: eventForm.highlight ? colors.gold : 'rgba(26,26,26,0.5)', margin: 0 }}>Highlight this event</p>
+                        <p style={{ fontSize: '11px', color: 'rgba(26,26,26,0.35)', margin: '2px 0 0' }}>Emphasized styling on the home page — gold accent, larger text</p>
+                      </div>
+                    </div>
                     <div>
                       <label style={{ display: 'block', fontSize: '10px', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.5)', marginBottom: '4px' }}>Section</label>
                       <div style={{ display: 'flex', gap: '8px' }}>
@@ -2138,7 +2164,7 @@ export default function LeadershipPage() {
                         {editingEvent ? 'Update Event' : 'Add Event'}
                       </button>
                       {(editingEvent || editingEvent === null) && (
-                        <button onClick={() => { setEditingEvent('none'); setEventForm({ title: '', subtitle: '', date: '', time: '', location: '', url: '', buttonLabel: 'Details', type: 'upcoming' }); }}
+                        <button onClick={() => { setEditingEvent('none'); setEventForm({ title: '', subtitle: '', date: '', time: '', location: '', url: '', buttonLabel: 'Details', type: 'upcoming', highlight: false }); }}
                           style={{ padding: '12px 20px', fontSize: '12px', letterSpacing: '0.1em', textTransform: 'uppercase', background: 'white', color: 'rgba(26,26,26,0.5)', border: '1px solid rgba(26,26,26,0.15)', cursor: 'pointer' }}>
                           Cancel
                         </button>
@@ -2162,20 +2188,38 @@ export default function LeadershipPage() {
                     <div style={{ marginBottom: '24px' }}>
                       <p style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: colors.gold, marginBottom: '10px' }}>Upcoming Events</p>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        {calendarEvents.filter(e => e.type === 'upcoming').map(evt => (
-                          <div key={evt.id} style={{ background: 'white', border: '1px solid rgba(26,26,26,0.08)', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+                        {calendarEvents.filter(e => e.type === 'upcoming').map((evt, i, arr) => (
+                          <div key={evt.id} style={{ background: evt.highlight ? 'rgba(184,149,107,0.04)' : 'white', border: evt.highlight ? `1px solid ${colors.gold}` : '1px solid rgba(26,26,26,0.08)', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            {/* Reorder arrows */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', flexShrink: 0 }}>
+                              <button onClick={() => reorderEvent(evt.id, 'up')} disabled={i === 0}
+                                style={{ padding: '2px', background: 'none', border: 'none', cursor: i === 0 ? 'default' : 'pointer', opacity: i === 0 ? 0.2 : 0.5 }}>
+                                <Icons.ChevronUp style={{ width: '14px', height: '14px' }} />
+                              </button>
+                              <button onClick={() => reorderEvent(evt.id, 'down')} disabled={i === arr.length - 1}
+                                style={{ padding: '2px', background: 'none', border: 'none', cursor: i === arr.length - 1 ? 'default' : 'pointer', opacity: i === arr.length - 1 ? 0.2 : 0.5 }}>
+                                <Icons.ChevronDown style={{ width: '14px', height: '14px' }} />
+                              </button>
+                            </div>
                             <div style={{ flex: 1, minWidth: 0 }}>
-                              <p style={{ fontSize: '15px', fontWeight: 500, color: colors.dark, margin: '0 0 4px' }}>{evt.title}</p>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                                <p style={{ fontSize: '15px', fontWeight: 500, color: colors.dark, margin: 0 }}>{evt.title}</p>
+                                {evt.highlight && <Icons.Star style={{ width: '12px', height: '12px', color: colors.gold }} fill={colors.gold} />}
+                              </div>
                               {evt.subtitle && <p style={{ fontSize: '13px', color: 'rgba(26,26,26,0.5)', margin: '0 0 2px' }}>{evt.subtitle}</p>}
                               <p style={{ fontSize: '12px', color: 'rgba(26,26,26,0.4)', margin: 0 }}>
                                 {evt.date ? formatDate(evt.date) : ''}{evt.time ? ` · ${evt.time}` : ''}
                                 {evt.location ? ` — ${evt.location}` : ''}
                               </p>
                             </div>
-                            <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+                            <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
+                              <button onClick={() => toggleHighlight(evt)} title={evt.highlight ? 'Remove highlight' : 'Highlight event'}
+                                style={{ padding: '6px', background: 'none', border: '1px solid rgba(26,26,26,0.1)', cursor: 'pointer' }}>
+                                <Icons.Star style={{ width: '14px', height: '14px', color: evt.highlight ? colors.gold : 'rgba(26,26,26,0.25)' }} fill={evt.highlight ? colors.gold : 'none'} />
+                              </button>
                               <button onClick={() => {
                                 setEditingEvent(evt.id);
-                                setEventForm({ title: evt.title, subtitle: evt.subtitle || '', date: evt.date || '', time: evt.time || '', location: evt.location || '', url: evt.url || '', buttonLabel: evt.buttonLabel || 'Details', type: evt.type || 'upcoming' });
+                                setEventForm({ title: evt.title, subtitle: evt.subtitle || '', date: evt.date || '', time: evt.time || '', location: evt.location || '', url: evt.url || '', buttonLabel: evt.buttonLabel || 'Details', type: evt.type || 'upcoming', highlight: evt.highlight || false });
                               }} style={{ padding: '6px', background: 'none', border: '1px solid rgba(26,26,26,0.1)', cursor: 'pointer' }}>
                                 <Icons.Edit style={{ width: '14px', height: '14px', color: 'rgba(26,26,26,0.4)' }} />
                               </button>
@@ -2199,16 +2243,26 @@ export default function LeadershipPage() {
                     <div>
                       <p style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: colors.gold, marginBottom: '10px' }}>Other Info Sessions</p>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        {calendarEvents.filter(e => e.type === 'info-session').map(evt => (
-                          <div key={evt.id} style={{ background: 'white', border: '1px solid rgba(26,26,26,0.08)', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+                        {calendarEvents.filter(e => e.type === 'info-session').map((evt, i, arr) => (
+                          <div key={evt.id} style={{ background: 'white', border: '1px solid rgba(26,26,26,0.08)', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', flexShrink: 0 }}>
+                              <button onClick={() => reorderEvent(evt.id, 'up')} disabled={i === 0}
+                                style={{ padding: '2px', background: 'none', border: 'none', cursor: i === 0 ? 'default' : 'pointer', opacity: i === 0 ? 0.2 : 0.5 }}>
+                                <Icons.ChevronUp style={{ width: '14px', height: '14px' }} />
+                              </button>
+                              <button onClick={() => reorderEvent(evt.id, 'down')} disabled={i === arr.length - 1}
+                                style={{ padding: '2px', background: 'none', border: 'none', cursor: i === arr.length - 1 ? 'default' : 'pointer', opacity: i === arr.length - 1 ? 0.2 : 0.5 }}>
+                                <Icons.ChevronDown style={{ width: '14px', height: '14px' }} />
+                              </button>
+                            </div>
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <p style={{ fontSize: '14px', fontWeight: 500, color: colors.dark, margin: '0 0 2px' }}>{evt.title}</p>
                               <p style={{ fontSize: '12px', color: 'rgba(26,26,26,0.4)', margin: 0 }}>{evt.location || evt.subtitle || ''}</p>
                             </div>
-                            <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+                            <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
                               <button onClick={() => {
                                 setEditingEvent(evt.id);
-                                setEventForm({ title: evt.title, subtitle: evt.subtitle || '', date: evt.date || '', time: evt.time || '', location: evt.location || '', url: evt.url || '', buttonLabel: evt.buttonLabel || 'Details', type: evt.type || 'info-session' });
+                                setEventForm({ title: evt.title, subtitle: evt.subtitle || '', date: evt.date || '', time: evt.time || '', location: evt.location || '', url: evt.url || '', buttonLabel: evt.buttonLabel || 'Details', type: evt.type || 'info-session', highlight: evt.highlight || false });
                               }} style={{ padding: '6px', background: 'none', border: '1px solid rgba(26,26,26,0.1)', cursor: 'pointer' }}>
                                 <Icons.Edit style={{ width: '14px', height: '14px', color: 'rgba(26,26,26,0.4)' }} />
                               </button>
