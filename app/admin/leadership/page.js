@@ -231,6 +231,12 @@ export default function LeadershipPage() {
   const [eventSettings, setEventSettings] = useState({ mainPresenter: '', mainDate: '', bcsPresenter: '', bcsDate: '' });
   const [eventSaving, setEventSaving] = useState(false);
 
+  // Calendar events
+  const [calendarEvents, setCalendarEvents] = useState([]);
+  const [calendarLoading, setCalendarLoading] = useState(false);
+  const [editingEvent, setEditingEvent] = useState(null);
+  const [eventForm, setEventForm] = useState({ title: '', subtitle: '', date: '', time: '', location: '', url: '', buttonLabel: 'Details', type: 'upcoming' });
+
   // Lineup editor
   const [editingLineup, setEditingLineup] = useState(null);
   const [lineupDate, setLineupDate] = useState('');
@@ -376,6 +382,12 @@ export default function LeadershipPage() {
       fetch('/api/event-settings').then(r => r.json()).then(data => {
         setEventSettings(data);
       }).catch(() => {});
+    }
+    if (tab === 'calendar' && auth) {
+      setCalendarLoading(true);
+      fetch('/api/calendar').then(r => r.json()).then(data => {
+        setCalendarEvents(data.events || []);
+      }).catch(() => {}).finally(() => setCalendarLoading(false));
     }
   }, [tab, auth]);
 
@@ -735,6 +747,7 @@ export default function LeadershipPage() {
     ...(isLeadership ? [{ id: 'los-builder', label: 'LOS Builder', href: '/admin/los-builder' }] : []),
     ...(canSeeWebcast ? [{ id: 'settings', label: 'Webcast' }] : []),
     ...(canCheckIn ? [{ id: 'event', label: 'Event' }] : []),
+    ...(canCheckIn ? [{ id: 'calendar', label: 'Calendar' }] : []),
   ];
 
   const handleLogout = async () => {
@@ -2020,6 +2033,202 @@ export default function LeadershipPage() {
               >
                 {eventSaving ? 'Saving...' : 'Save Changes'}
               </button>
+            </>
+          ) : tab === 'calendar' && canCheckIn ? (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                <h2 style={{ fontSize: '18px', color: colors.dark, margin: 0, fontWeight: 500 }}>Upcoming Events</h2>
+                <button onClick={() => { setEditingEvent(null); setEventForm({ title: '', subtitle: '', date: '', time: '', location: '', url: '', buttonLabel: 'Details', type: 'upcoming' }); }}
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', background: colors.dark, color: colors.bg, fontSize: '11px', letterSpacing: '0.08em', textTransform: 'uppercase', border: 'none', cursor: 'pointer' }}>
+                  <Icons.Plus style={{ width: '14px', height: '14px' }} />New Event
+                </button>
+              </div>
+              <p style={{ fontSize: '12px', color: 'rgba(26,26,26,0.5)', marginBottom: '20px', lineHeight: 1.5 }}>
+                Manage the events shown in the &quot;Upcoming Events&quot; and &quot;Other Info Sessions&quot; sections on the home page.
+              </p>
+
+              {/* Add / Edit Form */}
+              {(editingEvent !== undefined && editingEvent !== 'none') || editingEvent === null ? (
+                <div style={{ background: 'white', border: '1px solid rgba(26,26,26,0.08)', padding: '20px', marginBottom: '20px' }}>
+                  <h3 style={{ fontSize: '14px', fontWeight: 600, color: colors.dark, margin: '0 0 14px' }}>
+                    {editingEvent ? 'Edit Event' : 'Add New Event'}
+                  </h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '10px', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.5)', marginBottom: '4px' }}>Event Title *</label>
+                      <input type="text" placeholder="e.g. HFT, Team Meeting, Spring Leadership" value={eventForm.title}
+                        onChange={(e) => setEventForm(f => ({ ...f, title: e.target.value }))}
+                        style={{ width: '100%', padding: '10px', border: '1px solid rgba(26,26,26,0.15)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '10px', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.5)', marginBottom: '4px' }}>Subtitle / Speaker</label>
+                      <input type="text" placeholder="e.g. Joel Weinberg STP" value={eventForm.subtitle}
+                        onChange={(e) => setEventForm(f => ({ ...f, subtitle: e.target.value }))}
+                        style={{ width: '100%', padding: '10px', border: '1px solid rgba(26,26,26,0.15)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '10px', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.5)', marginBottom: '4px' }}>Date *</label>
+                        <input type="date" value={eventForm.date}
+                          onChange={(e) => setEventForm(f => ({ ...f, date: e.target.value }))}
+                          style={{ width: '100%', padding: '10px', border: '1px solid rgba(26,26,26,0.15)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
+                        {eventForm.date && <p style={{ fontSize: '11px', color: colors.gold, margin: '4px 0 0' }}>{formatDate(eventForm.date)}</p>}
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '10px', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.5)', marginBottom: '4px' }}>Time</label>
+                        <input type="text" placeholder="e.g. 1:00 PM" value={eventForm.time}
+                          onChange={(e) => setEventForm(f => ({ ...f, time: e.target.value }))}
+                          style={{ width: '100%', padding: '10px', border: '1px solid rgba(26,26,26,0.15)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
+                      </div>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '10px', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.5)', marginBottom: '4px' }}>Location</label>
+                      <input type="text" placeholder="e.g. Holiday Inn – Galleria, Houston, TX" value={eventForm.location}
+                        onChange={(e) => setEventForm(f => ({ ...f, location: e.target.value }))}
+                        style={{ width: '100%', padding: '10px', border: '1px solid rgba(26,26,26,0.15)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '10px', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.5)', marginBottom: '4px' }}>Link / URL</label>
+                        <input type="url" placeholder="https://..." value={eventForm.url}
+                          onChange={(e) => setEventForm(f => ({ ...f, url: e.target.value }))}
+                          style={{ width: '100%', padding: '10px', border: '1px solid rgba(26,26,26,0.15)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '10px', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.5)', marginBottom: '4px' }}>Button Label</label>
+                        <input type="text" placeholder="e.g. Details, Register, More Info" value={eventForm.buttonLabel}
+                          onChange={(e) => setEventForm(f => ({ ...f, buttonLabel: e.target.value }))}
+                          style={{ width: '100%', padding: '10px', border: '1px solid rgba(26,26,26,0.15)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
+                      </div>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '10px', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.5)', marginBottom: '4px' }}>Section</label>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        {[{ id: 'upcoming', label: 'Upcoming Event' }, { id: 'info-session', label: 'Info Session Link' }].map(opt => (
+                          <button key={opt.id} onClick={() => setEventForm(f => ({ ...f, type: opt.id }))}
+                            style={{ flex: 1, padding: '10px', fontSize: '12px', border: eventForm.type === opt.id ? `1px solid ${colors.gold}` : '1px solid rgba(26,26,26,0.15)',
+                              background: eventForm.type === opt.id ? 'rgba(184,149,107,0.08)' : 'white', color: eventForm.type === opt.id ? colors.gold : 'rgba(26,26,26,0.5)',
+                              cursor: 'pointer', fontWeight: eventForm.type === opt.id ? 500 : 400 }}>
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                      <button
+                        onClick={async () => {
+                          if (!eventForm.title || !eventForm.date) return;
+                          try {
+                            const payload = editingEvent ? { ...eventForm, id: editingEvent } : eventForm;
+                            const res = await fetch('/api/calendar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                            const data = await res.json();
+                            if (data.success) {
+                              setCalendarEvents(data.events);
+                              setEditingEvent('none');
+                              setEventForm({ title: '', subtitle: '', date: '', time: '', location: '', url: '', buttonLabel: 'Details', type: 'upcoming' });
+                              showToast(editingEvent ? 'Event updated!' : 'Event added!');
+                            }
+                          } catch (e) { console.error(e); }
+                        }}
+                        disabled={!eventForm.title || !eventForm.date}
+                        style={{ flex: 1, padding: '12px', fontSize: '12px', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600,
+                          background: (!eventForm.title || !eventForm.date) ? 'rgba(26,26,26,0.15)' : colors.dark,
+                          color: (!eventForm.title || !eventForm.date) ? 'rgba(26,26,26,0.4)' : colors.bg,
+                          border: 'none', cursor: (!eventForm.title || !eventForm.date) ? 'not-allowed' : 'pointer' }}>
+                        {editingEvent ? 'Update Event' : 'Add Event'}
+                      </button>
+                      {(editingEvent || editingEvent === null) && (
+                        <button onClick={() => { setEditingEvent('none'); setEventForm({ title: '', subtitle: '', date: '', time: '', location: '', url: '', buttonLabel: 'Details', type: 'upcoming' }); }}
+                          style={{ padding: '12px 20px', fontSize: '12px', letterSpacing: '0.1em', textTransform: 'uppercase', background: 'white', color: 'rgba(26,26,26,0.5)', border: '1px solid rgba(26,26,26,0.15)', cursor: 'pointer' }}>
+                          Cancel
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+
+              {/* Upcoming Events list */}
+              {calendarLoading ? (
+                <p style={{ textAlign: 'center', fontSize: '13px', color: 'rgba(26,26,26,0.4)', padding: '40px 0' }}>Loading events...</p>
+              ) : calendarEvents.filter(e => e.type === 'upcoming').length === 0 && calendarEvents.filter(e => e.type === 'info-session').length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '40px 0' }}>
+                  <Icons.Calendar style={{ width: '32px', height: '32px', color: 'rgba(26,26,26,0.15)', margin: '0 auto 12px' }} />
+                  <p style={{ fontSize: '13px', color: 'rgba(26,26,26,0.4)' }}>No events yet. Click &quot;New Event&quot; to add one.</p>
+                </div>
+              ) : (
+                <>
+                  {calendarEvents.filter(e => e.type === 'upcoming').length > 0 && (
+                    <div style={{ marginBottom: '24px' }}>
+                      <p style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: colors.gold, marginBottom: '10px' }}>Upcoming Events</p>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {calendarEvents.filter(e => e.type === 'upcoming').map(evt => (
+                          <div key={evt.id} style={{ background: 'white', border: '1px solid rgba(26,26,26,0.08)', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <p style={{ fontSize: '15px', fontWeight: 500, color: colors.dark, margin: '0 0 4px' }}>{evt.title}</p>
+                              {evt.subtitle && <p style={{ fontSize: '13px', color: 'rgba(26,26,26,0.5)', margin: '0 0 2px' }}>{evt.subtitle}</p>}
+                              <p style={{ fontSize: '12px', color: 'rgba(26,26,26,0.4)', margin: 0 }}>
+                                {evt.date ? formatDate(evt.date) : ''}{evt.time ? ` · ${evt.time}` : ''}
+                                {evt.location ? ` — ${evt.location}` : ''}
+                              </p>
+                            </div>
+                            <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+                              <button onClick={() => {
+                                setEditingEvent(evt.id);
+                                setEventForm({ title: evt.title, subtitle: evt.subtitle || '', date: evt.date || '', time: evt.time || '', location: evt.location || '', url: evt.url || '', buttonLabel: evt.buttonLabel || 'Details', type: evt.type || 'upcoming' });
+                              }} style={{ padding: '6px', background: 'none', border: '1px solid rgba(26,26,26,0.1)', cursor: 'pointer' }}>
+                                <Icons.Edit style={{ width: '14px', height: '14px', color: 'rgba(26,26,26,0.4)' }} />
+                              </button>
+                              <button onClick={async () => {
+                                if (!confirm('Remove this event?')) return;
+                                try {
+                                  const res = await fetch(`/api/calendar?id=${evt.id}`, { method: 'DELETE' });
+                                  if (res.ok) { setCalendarEvents(prev => prev.filter(e => e.id !== evt.id)); showToast('Event removed'); }
+                                } catch (e) { console.error(e); }
+                              }} style={{ padding: '6px', background: 'none', border: '1px solid rgba(26,26,26,0.1)', cursor: 'pointer' }}>
+                                <Icons.Trash style={{ width: '14px', height: '14px', color: 'rgba(220,38,38,0.5)' }} />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {calendarEvents.filter(e => e.type === 'info-session').length > 0 && (
+                    <div>
+                      <p style={{ fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: colors.gold, marginBottom: '10px' }}>Other Info Sessions</p>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {calendarEvents.filter(e => e.type === 'info-session').map(evt => (
+                          <div key={evt.id} style={{ background: 'white', border: '1px solid rgba(26,26,26,0.08)', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <p style={{ fontSize: '14px', fontWeight: 500, color: colors.dark, margin: '0 0 2px' }}>{evt.title}</p>
+                              <p style={{ fontSize: '12px', color: 'rgba(26,26,26,0.4)', margin: 0 }}>{evt.location || evt.subtitle || ''}</p>
+                            </div>
+                            <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+                              <button onClick={() => {
+                                setEditingEvent(evt.id);
+                                setEventForm({ title: evt.title, subtitle: evt.subtitle || '', date: evt.date || '', time: evt.time || '', location: evt.location || '', url: evt.url || '', buttonLabel: evt.buttonLabel || 'Details', type: evt.type || 'info-session' });
+                              }} style={{ padding: '6px', background: 'none', border: '1px solid rgba(26,26,26,0.1)', cursor: 'pointer' }}>
+                                <Icons.Edit style={{ width: '14px', height: '14px', color: 'rgba(26,26,26,0.4)' }} />
+                              </button>
+                              <button onClick={async () => {
+                                if (!confirm('Remove this info session?')) return;
+                                try {
+                                  const res = await fetch(`/api/calendar?id=${evt.id}`, { method: 'DELETE' });
+                                  if (res.ok) { setCalendarEvents(prev => prev.filter(e => e.id !== evt.id)); showToast('Info session removed'); }
+                                } catch (e) { console.error(e); }
+                              }} style={{ padding: '6px', background: 'none', border: '1px solid rgba(26,26,26,0.1)', cursor: 'pointer' }}>
+                                <Icons.Trash style={{ width: '14px', height: '14px', color: 'rgba(220,38,38,0.5)' }} />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
             </>
           ) : null
         )}

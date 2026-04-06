@@ -16,7 +16,12 @@ const Icons = {
   Link: ({ style }) => <svg style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" /></svg>,
 };
 
-const LTD_DISCLOSURES = `This event is produced by Leadership Team Development, Inc. (LTD). No audio or video recording is allowed. The techniques suggested may have worked for others but results are not guaranteed. Success depicted may reflect income from multiple sources. Purchase is optional. Registrations are non-transferable. Holder assumes all risks. No refunds except as provided. Event details subject to change.`;
+const formatEventDate = (d) => {
+  if (!d) return '';
+  try { return new Date(d + 'T12:00:00-06:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', timeZone: 'America/Chicago' }); } catch { return d; }
+};
+
+const LTD_DISCLOSURES =`This event is produced by Leadership Team Development, Inc. (LTD). No audio or video recording is allowed. The techniques suggested may have worked for others but results are not guaranteed. Success depicted may reflect income from multiple sources. Purchase is optional. Registrations are non-transferable. Holder assumes all risks. No refunds except as provided. Event details subject to change.`;
 
 // Toast
 const Toast = ({ message, isVisible, onClose }) => {
@@ -476,11 +481,18 @@ export default function FreedomFamily() {
   const [zoomLink, setZoomLink] = useState('');
   const [eventPresenter, setEventPresenter] = useState('');
   const [eventDate, setEventDate] = useState('');
+  const [upcomingEvents, setUpcomingEvents] = useState([]);
+  const [infoSessions, setInfoSessions] = useState([]);
 
   useEffect(() => {
     fetch('/api/event-settings').then(r => r.json()).then(data => {
       if (data.mainPresenter) setEventPresenter(data.mainPresenter);
       if (data.mainDate) setEventDate(data.mainDate);
+    }).catch(() => {});
+    fetch('/api/calendar').then(r => r.json()).then(data => {
+      const events = data.events || [];
+      setUpcomingEvents(events.filter(e => e.type === 'upcoming'));
+      setInfoSessions(events.filter(e => e.type === 'info-session'));
     }).catch(() => {});
   }, []);
 
@@ -571,61 +583,56 @@ export default function FreedomFamily() {
 
       <div style={{ maxWidth: '700px', margin: '0 auto', padding: '0 20px' }}><div style={{ height: '1px', background: 'linear-gradient(to right, transparent, rgba(26,26,26,0.1), transparent)' }} /></div>
 
+      {upcomingEvents.length > 0 && (
       <section style={{ padding: '70px 20px' }}>
         <div style={{ maxWidth: '580px', margin: '0 auto', textAlign: 'center' }}>
           <p style={{ color: colors.gold, fontSize: '10px', letterSpacing: '0.25em', textTransform: 'uppercase', marginBottom: '14px' }}>Upcoming Events</p>
 
-          <div style={{ marginBottom: '40px' }}>
-            <h2 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 'clamp(26px, 5vw, 36px)', color: colors.dark, marginBottom: '8px', fontWeight: 400 }}>HFT</h2>
-            <p style={{ fontSize: '15px', color: 'rgba(26,26,26,0.5)', marginBottom: '4px' }}>Joel Weinberg STP</p>
-            <p style={{ fontSize: '15px', color: 'rgba(26,26,26,0.5)', marginBottom: '8px' }}>Tuesday, March 3, 2026</p>
-            <a href="https://app.waiverelectronic.com/render/splash/HFT_Houston" target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 20px', background: colors.dark, color: colors.bg, fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase', textDecoration: 'none' }}>Details &amp; Registration<Icons.ArrowRight style={{ width: '12px', height: '12px' }} /></a>
-          </div>
-
-          <div style={{ height: '1px', background: 'linear-gradient(to right, transparent, rgba(26,26,26,0.08), transparent)', marginBottom: '40px' }} />
-
-          <div style={{ marginBottom: '40px' }}>
-            <h2 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 'clamp(26px, 5vw, 36px)', color: colors.dark, marginBottom: '8px', fontWeight: 400 }}>Trevino Team Meeting</h2>
-            <p style={{ fontSize: '15px', color: 'rgba(26,26,26,0.5)', marginBottom: '4px' }}>Saturday, March 21, 2026 · 1:00 PM</p>
-            <p style={{ fontSize: '14px', color: 'rgba(26,26,26,0.4)', marginBottom: '16px' }}>Holiday Inn – Galleria, Houston, TX</p>
-            <a href="https://app.waiverelectronic.com/render/splash/666104722c4d2f5b80675ddc" target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 20px', background: colors.dark, color: colors.bg, fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase', textDecoration: 'none' }}>Register<Icons.ArrowRight style={{ width: '12px', height: '12px' }} /></a>
-          </div>
-
-          <div style={{ height: '1px', background: 'linear-gradient(to right, transparent, rgba(26,26,26,0.08), transparent)', marginBottom: '40px' }} />
-
-          <div>
-            <h2 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 'clamp(26px, 5vw, 36px)', color: colors.dark, marginBottom: '8px', fontWeight: 400 }}>Winter&#39;s Spring Leadership</h2>
-            <p style={{ fontSize: '15px', color: 'rgba(26,26,26,0.5)', marginBottom: '8px' }}>April 17–19, 2026</p>
-            <p style={{ fontSize: '14px', color: 'rgba(26,26,26,0.4)', marginBottom: '16px' }}>Virtual Event · Save the Date!</p>
-            <a href="https://www.ltdteam.com" target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 20px', background: 'transparent', color: colors.dark, fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase', textDecoration: 'none', border: '1px solid rgba(26,26,26,0.2)' }}>More Info<Icons.ArrowRight style={{ width: '12px', height: '12px' }} /></a>
-          </div>
+          {upcomingEvents.map((evt, i) => (
+            <React.Fragment key={evt.id}>
+              {i > 0 && <div style={{ height: '1px', background: 'linear-gradient(to right, transparent, rgba(26,26,26,0.08), transparent)', marginBottom: '40px' }} />}
+              <div style={{ marginBottom: '40px' }}>
+                <h2 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 'clamp(26px, 5vw, 36px)', color: colors.dark, marginBottom: '8px', fontWeight: 400 }}>{evt.title}</h2>
+                {evt.subtitle && <p style={{ fontSize: '15px', color: 'rgba(26,26,26,0.5)', marginBottom: '4px' }}>{evt.subtitle}</p>}
+                <p style={{ fontSize: '15px', color: 'rgba(26,26,26,0.5)', marginBottom: evt.location ? '4px' : '8px' }}>
+                  {formatEventDate(evt.date)}{evt.time ? ` · ${evt.time}` : ''}
+                </p>
+                {evt.location && <p style={{ fontSize: '14px', color: 'rgba(26,26,26,0.4)', marginBottom: '16px' }}>{evt.location}</p>}
+                {evt.url && (
+                  <a href={evt.url} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 20px', background: colors.dark, color: colors.bg, fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase', textDecoration: 'none' }}>
+                    {evt.buttonLabel || 'Details'}<Icons.ArrowRight style={{ width: '12px', height: '12px' }} />
+                  </a>
+                )}
+              </div>
+            </React.Fragment>
+          ))}
         </div>
       </section>
+      )}
 
       {/* Other Info Sessions */}
+      {infoSessions.length > 0 && (
+      <>
       <div style={{ maxWidth: '700px', margin: '0 auto', padding: '0 20px' }}><div style={{ height: '1px', background: 'linear-gradient(to right, transparent, rgba(26,26,26,0.1), transparent)' }} /></div>
 
       <section style={{ padding: '50px 20px' }}>
         <div style={{ maxWidth: '580px', margin: '0 auto' }}>
-          <p style={{ color: colors.gold, fontSize: '10px', letterSpacing: '0.25em', textTransform: 'uppercase', marginBottom: '18px', textAlign: 'center' }}>Other Info Sessions in Texas</p>
+          <p style={{ color: colors.gold, fontSize: '10px', letterSpacing: '0.25em', textTransform: 'uppercase', marginBottom: '18px', textAlign: 'center' }}>Other Info Sessions</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <a href="https://www.waiverelectronic.com/render/splash/Trevino_Houston" target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', background: 'white', border: '1px solid rgba(26,26,26,0.1)', textDecoration: 'none', transition: 'border-color 0.2s' }}>
-              <div>
-                <p style={{ fontSize: '14px', fontWeight: 500, color: colors.dark, margin: '0 0 2px' }}>Trevino Info Session</p>
-                <p style={{ fontSize: '12px', color: 'rgba(26,26,26,0.4)', margin: 0 }}>Houston, TX</p>
-              </div>
-              <Icons.ArrowRight style={{ width: '16px', height: '16px', color: 'rgba(26,26,26,0.3)' }} />
-            </a>
-            <a href="https://central-texas-ltd-team.square.site/product/gala-double-diamond-mindset-webcast-9-6-23/3" target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', background: 'white', border: '1px solid rgba(26,26,26,0.1)', textDecoration: 'none', transition: 'border-color 0.2s' }}>
-              <div>
-                <p style={{ fontSize: '14px', fontWeight: 500, color: colors.dark, margin: '0 0 2px' }}>Central Texas Info Session</p>
-                <p style={{ fontSize: '12px', color: 'rgba(26,26,26,0.4)', margin: 0 }}>Central Texas</p>
-              </div>
-              <Icons.ArrowRight style={{ width: '16px', height: '16px', color: 'rgba(26,26,26,0.3)' }} />
-            </a>
+            {infoSessions.map(evt => (
+              <a key={evt.id} href={evt.url || '#'} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', background: 'white', border: '1px solid rgba(26,26,26,0.1)', textDecoration: 'none', transition: 'border-color 0.2s' }}>
+                <div>
+                  <p style={{ fontSize: '14px', fontWeight: 500, color: colors.dark, margin: '0 0 2px' }}>{evt.title}</p>
+                  <p style={{ fontSize: '12px', color: 'rgba(26,26,26,0.4)', margin: 0 }}>{evt.location || evt.subtitle || ''}</p>
+                </div>
+                <Icons.ArrowRight style={{ width: '16px', height: '16px', color: 'rgba(26,26,26,0.3)' }} />
+              </a>
+            ))}
           </div>
         </div>
       </section>
+      </>
+      )}
 
       <footer style={{ padding: '24px 16px', borderTop: '1px solid rgba(26,26,26,0.05)' }}>
         <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
