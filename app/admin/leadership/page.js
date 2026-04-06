@@ -1882,7 +1882,7 @@ export default function LeadershipPage() {
             <>
               <h2 style={{ fontSize: '18px', color: colors.dark, margin: '0 0 16px', fontWeight: 500 }}>Event Details</h2>
               <p style={{ fontSize: '12px', color: 'rgba(26,26,26,0.5)', marginBottom: '20px', lineHeight: 1.5 }}>
-                Update the presenter name and date shown on the registration pages. Changes take effect immediately.
+                Update the presenter, date, and pricing for the registration pages. Changes take effect immediately.
               </p>
 
               {/* Main Page */}
@@ -1896,14 +1896,19 @@ export default function LeadershipPage() {
                   </div>
                   <div>
                     <label style={{ display: 'block', fontSize: '10px', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.5)', marginBottom: '4px' }}>Date</label>
-                    <input type="text" placeholder="e.g. Monday, March 9, 2026" value={eventSettings.mainDate} onChange={(e) => setEventSettings(s => ({ ...s, mainDate: e.target.value }))}
+                    <input type="date" value={eventSettings.mainDateRaw || ''} onChange={(e) => {
+                      const raw = e.target.value;
+                      const formatted = raw ? new Date(raw + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) : '';
+                      setEventSettings(s => ({ ...s, mainDateRaw: raw, mainDate: formatted }));
+                    }}
                       style={{ width: '100%', padding: '10px', border: '1px solid rgba(26,26,26,0.15)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
+                    {eventSettings.mainDate && <p style={{ fontSize: '12px', color: colors.gold, margin: '6px 0 0' }}>{eventSettings.mainDate}</p>}
                   </div>
                 </div>
               </div>
 
               {/* BCS Page */}
-              <div style={{ background: 'white', border: '1px solid rgba(26,26,26,0.08)', padding: '20px', marginBottom: '20px' }}>
+              <div style={{ background: 'white', border: '1px solid rgba(26,26,26,0.08)', padding: '20px', marginBottom: '16px' }}>
                 <h3 style={{ fontSize: '14px', fontWeight: 600, color: colors.dark, margin: '0 0 14px' }}>BCS Page</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   <div>
@@ -1913,8 +1918,81 @@ export default function LeadershipPage() {
                   </div>
                   <div>
                     <label style={{ display: 'block', fontSize: '10px', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.5)', marginBottom: '4px' }}>Date</label>
-                    <input type="text" placeholder="e.g. Monday, March 9, 2026" value={eventSettings.bcsDate} onChange={(e) => setEventSettings(s => ({ ...s, bcsDate: e.target.value }))}
+                    <input type="date" value={eventSettings.bcsDateRaw || ''} onChange={(e) => {
+                      const raw = e.target.value;
+                      const formatted = raw ? new Date(raw + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) : '';
+                      setEventSettings(s => ({ ...s, bcsDateRaw: raw, bcsDate: formatted }));
+                    }}
                       style={{ width: '100%', padding: '10px', border: '1px solid rgba(26,26,26,0.15)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
+                    {eventSettings.bcsDate && <p style={{ fontSize: '12px', color: colors.gold, margin: '6px 0 0' }}>{eventSettings.bcsDate}</p>}
+                  </div>
+                </div>
+              </div>
+
+              {/* Pricing */}
+              <div style={{ background: 'white', border: '1px solid rgba(26,26,26,0.08)', padding: '20px', marginBottom: '16px' }}>
+                <h3 style={{ fontSize: '14px', fontWeight: 600, color: colors.dark, margin: '0 0 14px' }}>Pricing</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '10px', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.5)', marginBottom: '4px' }}>Single Week ($)</label>
+                      <input type="number" min="0" step="1" value={eventSettings.singlePrice ?? 12} onChange={(e) => setEventSettings(s => ({ ...s, singlePrice: Number(e.target.value) }))}
+                        style={{ width: '100%', padding: '10px', border: '1px solid rgba(26,26,26,0.15)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '10px', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.5)', marginBottom: '4px' }}>Webcast ($)</label>
+                      <input type="number" min="0" step="1" value={eventSettings.webcastPrice ?? 5} onChange={(e) => setEventSettings(s => ({ ...s, webcastPrice: Number(e.target.value) }))}
+                        style={{ width: '100%', padding: '10px', border: '1px solid rgba(26,26,26,0.15)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
+                    </div>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '10px', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.5)', marginBottom: '4px' }}>Monthly Price ($)</label>
+                      <input type="number" min="0" step="1" value={eventSettings.monthlyPrice ?? 50} onChange={(e) => setEventSettings(s => ({ ...s, monthlyPrice: Number(e.target.value) }))}
+                        style={{ width: '100%', padding: '10px', border: '1px solid rgba(26,26,26,0.15)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '10px', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.5)', marginBottom: '4px' }}>Monthly Weeks</label>
+                      <input type="number" min="1" max="6" step="1" value={eventSettings.monthlyWeeks ?? 5} onChange={(e) => setEventSettings(s => ({ ...s, monthlyWeeks: Number(e.target.value) }))}
+                        style={{ width: '100%', padding: '10px', border: '1px solid rgba(26,26,26,0.15)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
+                    </div>
+                  </div>
+
+                  {/* Reduced Monthly (catch-up) */}
+                  <div style={{ borderTop: '1px solid rgba(26,26,26,0.06)', paddingTop: '14px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                      <p style={{ fontSize: '12px', fontWeight: 600, color: colors.dark, margin: 0 }}>Reduced Monthly Option</p>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '11px', color: 'rgba(26,26,26,0.5)' }}>
+                        <input type="checkbox" checked={(eventSettings.monthlyReducedPrice || 0) > 0}
+                          onChange={(e) => setEventSettings(s => ({ ...s, monthlyReducedPrice: e.target.checked ? (s.monthlyReducedPrice || 40) : 0 }))}
+                          style={{ width: '14px', height: '14px', accentColor: colors.gold }} />
+                        Enable
+                      </label>
+                    </div>
+                    <p style={{ fontSize: '11px', color: 'rgba(26,26,26,0.4)', margin: '0 0 10px', lineHeight: 1.4 }}>
+                      For individuals who already paid for part of the month (e.g. double pay). Shows as a third option on the registration page.
+                    </p>
+                    {(eventSettings.monthlyReducedPrice || 0) > 0 && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                          <div>
+                            <label style={{ display: 'block', fontSize: '10px', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.5)', marginBottom: '4px' }}>Price ($)</label>
+                            <input type="number" min="0" step="1" value={eventSettings.monthlyReducedPrice} onChange={(e) => setEventSettings(s => ({ ...s, monthlyReducedPrice: Number(e.target.value) }))}
+                              style={{ width: '100%', padding: '10px', border: '1px solid rgba(26,26,26,0.15)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
+                          </div>
+                          <div>
+                            <label style={{ display: 'block', fontSize: '10px', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.5)', marginBottom: '4px' }}>Weeks</label>
+                            <input type="number" min="1" max="5" step="1" value={eventSettings.monthlyReducedWeeks || 3} onChange={(e) => setEventSettings(s => ({ ...s, monthlyReducedWeeks: Number(e.target.value) }))}
+                              style={{ width: '100%', padding: '10px', border: '1px solid rgba(26,26,26,0.15)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
+                          </div>
+                        </div>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '10px', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(26,26,26,0.5)', marginBottom: '4px' }}>Label (shown to registrant)</label>
+                          <input type="text" placeholder="e.g. 3 weeks (catch-up)" value={eventSettings.monthlyReducedLabel || ''} onChange={(e) => setEventSettings(s => ({ ...s, monthlyReducedLabel: e.target.value }))}
+                            style={{ width: '100%', padding: '10px', border: '1px solid rgba(26,26,26,0.15)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

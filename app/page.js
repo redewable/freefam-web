@@ -155,6 +155,14 @@ const RegistrationModal = ({ isOpen, onClose, ticketType, setTicketType }) => {
   const [addSpouse, setAddSpouse] = useState(false);
   const [spouseForm, setSpouseForm] = useState({ firstName: '', lastName: '', ltdId: '' });
   const formRef = useRef(null);
+  const [pricing, setPricing] = useState(null);
+
+  // Fetch dynamic pricing from event settings
+  useEffect(() => {
+    if (isOpen && !pricing) {
+      fetch('/api/event-settings').then(r => r.json()).then(data => setPricing(data)).catch(() => {});
+    }
+  }, [isOpen]);
 
   // After autofill blurs the email field, refocus the next empty visible input
   const handleEmailBlur = () => {
@@ -190,7 +198,15 @@ const RegistrationModal = ({ isOpen, onClose, ticketType, setTicketType }) => {
     if (needsPayment) {
       try {
         const priceType = effectiveType === 'webcast-ibo' ? 'webcast' : form.paymentOption;
-        const checkoutBody = { priceType, customerEmail: form.email, customerName: `${form.firstName} ${form.lastName}`, ltdId: form.ltdId, uplinePlatinum: form.uplinePlatinum, source: effectiveType === 'webcast-ibo' ? 'webcast' : 'main' };
+        // Resolve dynamic amount from pricing settings
+        let dynamicAmount = 0;
+        if (pricing) {
+          if (priceType === 'single') dynamicAmount = pricing.singlePrice || 12;
+          else if (priceType === 'monthly5') dynamicAmount = pricing.monthlyPrice || 50;
+          else if (priceType === 'monthlyReduced') dynamicAmount = pricing.monthlyReducedPrice || 0;
+          else if (priceType === 'webcast') dynamicAmount = pricing.webcastPrice || 5;
+        }
+        const checkoutBody = { priceType, dynamicAmount, customerEmail: form.email, customerName: `${form.firstName} ${form.lastName}`, ltdId: form.ltdId, uplinePlatinum: form.uplinePlatinum, source: effectiveType === 'webcast-ibo' ? 'webcast' : 'main' };
         if (addSpouse && spouseForm.firstName && spouseForm.lastName && spouseForm.ltdId) {
           checkoutBody.spouse = { name: `${spouseForm.firstName} ${spouseForm.lastName}`, ltdId: spouseForm.ltdId };
         }
@@ -350,9 +366,27 @@ const RegistrationModal = ({ isOpen, onClose, ticketType, setTicketType }) => {
                 {effectiveType === 'ibo' && (
                   <div>
                     <label style={label}>Payment Option</label>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      {[{ id: 'single', label: 'Single · $12', sub: 'This week' }, { id: 'monthly5', label: 'Monthly · $50', sub: '5 weeks' }].map(o => (
-                        <label key={o.id} style={{ flex: 1, padding: '12px', textAlign: 'center', border: form.paymentOption === o.id ? `1px solid ${colors.dark}` : '1px solid rgba(26,26,26,0.15)', background: form.paymentOption === o.id ? colors.dark : 'white', color: form.paymentOption === o.id ? colors.bg : colors.dark, cursor: 'pointer' }}>
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                      {(() => {
+                        const sp = pricing?.singlePrice || 12;
+                        const mp = pricing?.monthlyPrice || 50;
+                        const mw = pricing?.monthlyWeeks || 5;
+                        const opts = [
+                          { id: 'single', label: `Single · $${sp}`, sub: 'This week', amount: sp },
+                          { id: 'monthly5', label: `Monthly · $${mp}`, sub: `${mw} weeks`, amount: mp },
+                        ];
+                        // Add reduced monthly if configured
+                        if (pricing?.monthlyReducedPrice > 0) {
+                          opts.push({
+                            id: 'monthlyReduced',
+                            label: `Monthly · $${pricing.monthlyReducedPrice}`,
+                            sub: pricing.monthlyReducedLabel || `${pricing.monthlyReducedWeeks || 3} weeks`,
+                            amount: pricing.monthlyReducedPrice,
+                          });
+                        }
+                        return opts;
+                      })().map(o => (
+                        <label key={o.id} style={{ flex: 1, minWidth: '90px', padding: '12px', textAlign: 'center', border: form.paymentOption === o.id ? `1px solid ${colors.dark}` : '1px solid rgba(26,26,26,0.15)', background: form.paymentOption === o.id ? colors.dark : 'white', color: form.paymentOption === o.id ? colors.bg : colors.dark, cursor: 'pointer' }}>
                           <input type="radio" name="payment" value={o.id} checked={form.paymentOption === o.id} onChange={(e) => setForm({ ...form, paymentOption: e.target.value })} style={{ display: 'none' }} required />
                           <p style={{ fontSize: '13px', fontWeight: 500, margin: 0 }}>{o.label}</p>
                           <p style={{ fontSize: '10px', opacity: 0.7, margin: '2px 0 0' }}>{o.sub}</p>
