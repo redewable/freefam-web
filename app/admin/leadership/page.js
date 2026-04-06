@@ -374,7 +374,7 @@ export default function LeadershipPage() {
     }
     if (tab === 'event' && auth) {
       fetch('/api/event-settings').then(r => r.json()).then(data => {
-        setEventSettings({ mainPresenter: data.mainPresenter || '', mainDate: data.mainDate || '', bcsPresenter: data.bcsPresenter || '', bcsDate: data.bcsDate || '' });
+        setEventSettings(data);
       }).catch(() => {});
     }
   }, [tab, auth]);
