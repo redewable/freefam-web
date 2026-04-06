@@ -394,6 +394,11 @@ const RegistrationModal = ({ isOpen, onClose, ticketType, setTicketType }) => {
                         </label>
                       ))}
                     </div>
+                    {pricing?.monthlyReducedPrice > 0 && pricing?.monthlyReducedLabel && (
+                      <p style={{ fontSize: '11px', color: 'rgba(26,26,26,0.45)', margin: '8px 0 0', lineHeight: 1.4, fontStyle: 'italic' }}>
+                        * The {pricing.monthlyReducedWeeks || 3}-week option is for {pricing.monthlyReducedLabel}
+                      </p>
+                    )}
                   </div>
                 )}
 
