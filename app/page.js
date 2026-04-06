@@ -371,25 +371,26 @@ const RegistrationModal = ({ isOpen, onClose, ticketType, setTicketType }) => {
                         const sp = pricing?.singlePrice || 12;
                         const mp = pricing?.monthlyPrice || 50;
                         const mw = pricing?.monthlyWeeks || 5;
+                        const rw = pricing?.monthlyReducedWeeks || 3;
                         const opts = [
-                          { id: 'single', label: `Single · $${sp}`, sub: 'This week', amount: sp },
-                          { id: 'monthly5', label: `Monthly · $${mp}`, sub: `${mw} weeks`, amount: mp },
+                          { id: 'single', label: `$${sp}`, sub: '1 week', amount: sp },
+                          { id: 'monthly5', label: `$${mp}`, sub: `${mw} weeks`, amount: mp },
                         ];
                         // Add reduced monthly if configured
                         if (pricing?.monthlyReducedPrice > 0) {
                           opts.push({
                             id: 'monthlyReduced',
-                            label: `Monthly · $${pricing.monthlyReducedPrice}`,
-                            sub: pricing.monthlyReducedLabel || `${pricing.monthlyReducedWeeks || 3} weeks`,
+                            label: `$${pricing.monthlyReducedPrice}`,
+                            sub: `${rw} weeks`,
                             amount: pricing.monthlyReducedPrice,
                           });
                         }
                         return opts;
                       })().map(o => (
-                        <label key={o.id} style={{ flex: 1, minWidth: '90px', padding: '12px', textAlign: 'center', border: form.paymentOption === o.id ? `1px solid ${colors.dark}` : '1px solid rgba(26,26,26,0.15)', background: form.paymentOption === o.id ? colors.dark : 'white', color: form.paymentOption === o.id ? colors.bg : colors.dark, cursor: 'pointer' }}>
+                        <label key={o.id} style={{ flex: 1, minWidth: '80px', padding: '14px 8px', textAlign: 'center', border: form.paymentOption === o.id ? `1px solid ${colors.dark}` : '1px solid rgba(26,26,26,0.15)', background: form.paymentOption === o.id ? colors.dark : 'white', color: form.paymentOption === o.id ? colors.bg : colors.dark, cursor: 'pointer' }}>
                           <input type="radio" name="payment" value={o.id} checked={form.paymentOption === o.id} onChange={(e) => setForm({ ...form, paymentOption: e.target.value })} style={{ display: 'none' }} required />
-                          <p style={{ fontSize: '13px', fontWeight: 500, margin: 0 }}>{o.label}</p>
-                          <p style={{ fontSize: '10px', opacity: 0.7, margin: '2px 0 0' }}>{o.sub}</p>
+                          <p style={{ fontSize: '17px', fontWeight: 600, margin: 0, letterSpacing: '-0.02em' }}>{o.label}</p>
+                          <p style={{ fontSize: '10px', opacity: 0.5, margin: '4px 0 0', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{o.sub}</p>
                         </label>
                       ))}
                     </div>
@@ -438,7 +439,16 @@ const RegistrationModal = ({ isOpen, onClose, ticketType, setTicketType }) => {
 
                 <button type="submit" disabled={processing || !form.agreed || !form.signature || (effectiveType === 'ibo' && !form.paymentOption)}
                   style={{ width: '100%', padding: '14px', background: processing || !form.agreed || !form.signature || (effectiveType === 'ibo' && !form.paymentOption) ? 'rgba(26,26,26,0.2)' : colors.dark, color: processing || !form.agreed || !form.signature || (effectiveType === 'ibo' && !form.paymentOption) ? 'rgba(26,26,26,0.4)' : colors.bg, fontSize: '12px', letterSpacing: '0.1em', textTransform: 'uppercase', border: 'none', cursor: processing || !form.agreed || !form.signature || (effectiveType === 'ibo' && !form.paymentOption) ? 'not-allowed' : 'pointer', marginTop: '4px' }}>
-                  {processing ? 'Processing...' : needsPayment ? (() => { const base = effectiveType === 'webcast-ibo' ? 10 : form.paymentOption === 'monthly5' ? 50 : 12; const total = addSpouse ? base * 2 : base; return `Continue — $${total}${addSpouse ? ' (2 tickets)' : ''}`; })() : 'Complete Registration'}
+                  {processing ? 'Processing...' : needsPayment ? (() => {
+                    let base;
+                    if (effectiveType === 'webcast-ibo') base = pricing?.webcastPrice || 5;
+                    else if (form.paymentOption === 'single') base = pricing?.singlePrice || 12;
+                    else if (form.paymentOption === 'monthly5') base = pricing?.monthlyPrice || 50;
+                    else if (form.paymentOption === 'monthlyReduced') base = pricing?.monthlyReducedPrice || 30;
+                    else base = pricing?.singlePrice || 12;
+                    const total = addSpouse ? base * 2 : base;
+                    return `Continue — $${total}${addSpouse ? ' (2 tickets)' : ''}`;
+                  })() : 'Complete Registration'}
                 </button>
               </div>
             </form>
